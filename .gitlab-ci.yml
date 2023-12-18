@@ -244,8 +244,9 @@ test-api-doc-examples:
 
 docker-build:
   stage: 🚀 deploy
+  image: docker:24-cli
   tags:
-    - linux_vm
+    - saas-linux-large-amd64
   variables:
     IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   script:
