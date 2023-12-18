@@ -256,6 +256,7 @@ docker-build-test:
     - docker build . -t $IMAGE_TAG -f docker/Dockerfile
     - mkdir data
     - cp tests/fixtures/simple.ply data
+    - id -u
     # Sanity check: convert then check if there is the right amount of points in the tileset
     - docker run --rm
         --mount type=bind,source="$(pwd)"/data,target=/data/
