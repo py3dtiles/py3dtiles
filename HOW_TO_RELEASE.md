@@ -13,6 +13,7 @@ migration guide for instance.
 - edit the version in [sonar-project.properties](sonar-project.properties) (field `sonar.projectVersion`)
 - create a merge request with these changes
 - once it is merged, create a tagged release on gitlab.
+- switch to the newly created tag
 - wait for the execution of pages that will update the documentation
 - publish on pypi:
 ```bash
