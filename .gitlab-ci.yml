@@ -244,9 +244,9 @@ test-api-doc-examples:
 
 docker-build-test:
   stage: 🚀 deploy
-  image: $CI_REGISTRY/group/project/docker:24.0.7
+  image: docker:24.0.7
   services:
-    - name: $CI_REGISTRY/group/project/docker:24.0.7-dind
+    - name: docker:24.0.7-dind
       alias: docker
   tags:
     - saas-linux-large-amd64
@@ -267,11 +267,15 @@ docker-build-test:
         $IMAGE_TAG
         -c "from py3dtiles.tileset.utils import number_of_points_in_tileset;from pathlib import Path;exit(number_of_points_in_tileset(Path('3dtiles/tileset.json')) != 22300);"
     # push the image
+    # gitlab registry
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker push $IMAGE_TAG
-  # only:
-  #   refs:
-  #     - tags
+    # docker hub
+    # - docker login -u $DOCKER_HUB_USER -p $DOCKER_HUB_PASSWORD
+    # - docker push $IMAGE_TAG
+  only:
+    refs:
+      - tags
 
 sonarcloud-check:
   stage: 🤞 test
