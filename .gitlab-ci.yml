@@ -1,5 +1,5 @@
 stages:
-  # - 🐍 lint
+  - 🐍 lint
   - 🤞 test
   - 🚀 deploy
 
@@ -243,7 +243,7 @@ test-api-doc-examples:
       - main
 
 docker-build-tes-testt:
-  stage: 🤞 test
+  stage: 🐍 lint
   image: $CI_REGISTRY/group/project/docker:24.0.7
   services:
     - name: $CI_REGISTRY/group/project/docker:24.0.7-dind
