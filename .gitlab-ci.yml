@@ -117,7 +117,7 @@ lint-commit:
     - cz check --rev-range $CI_MERGE_REQUEST_DIFF_BASE_SHA..HEAD
   only:
     refs:
-      - foo
+      - merge_requests
 
 # -- TEST JOBS --------------------------------------------------------------------------
 test:
@@ -243,7 +243,7 @@ test-api-doc-examples:
       - main
 
 docker-build-test:
-  stage: 🐍 lint
+  stage: 🚀 deploy
   image: $CI_REGISTRY/group/project/docker:24.0.7
   services:
     - name: $CI_REGISTRY/group/project/docker:24.0.7-dind
