@@ -1,5 +1,5 @@
 stages:
-  - 🐍 lint
+  # - 🐍 lint
   - 🤞 test
   - 🚀 deploy
 
@@ -117,7 +117,7 @@ lint-commit:
     - cz check --rev-range $CI_MERGE_REQUEST_DIFF_BASE_SHA..HEAD
   only:
     refs:
-      - merge_requests
+      - foo
 
 # -- TEST JOBS --------------------------------------------------------------------------
 test:
