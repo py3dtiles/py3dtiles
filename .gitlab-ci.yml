@@ -242,7 +242,7 @@ test-api-doc-examples:
       - tags
       - main
 
-docker-build-tes-testt:
+docker-build-tes-test:
   stage: 🐍 lint
   image: $CI_REGISTRY/group/project/docker:24.0.7
   services:
