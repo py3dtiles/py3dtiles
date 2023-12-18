@@ -28,7 +28,7 @@ RUN pip install .
 
 # prepare work env
 RUN mkdir /data
-RUN chown py3dtiles:py3dtiles data
+RUN chown py3dtiles:py3dtiles /data
 VOLUME /data
 WORKDIR /data
 
