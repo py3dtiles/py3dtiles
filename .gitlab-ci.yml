@@ -243,7 +243,8 @@ test-api-doc-examples:
       - main
 
 docker-build-tes-testt:
-  stage: 🚀 deploy
+  stage: 🤞 test
+
   image: docker:24-cli
   tags:
     - saas-linux-large-amd64
