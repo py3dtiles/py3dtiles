@@ -8,13 +8,7 @@ RUN apt-get update && apt-get install -y liblaszip8 \
 RUN useradd py3dtiles
 
 # prepare app dir
-WORKDIR app/
-
-# prepare work env
-RUN mkdir data/
-RUN chown py3dtiles:py3dtiles data
-VOLUME data/
-WORKDIR data/
+WORKDIR /app
 
 # allow numba to do its thing even with unprivileged user
 ENV NUMBA_CACHE_DIR=/tmp
@@ -31,6 +25,12 @@ COPY py3dtiles py3dtiles
 COPY README.rst README.rst
 # install py3dtiles
 RUN pip install .
+
+# prepare work env
+RUN mkdir /data
+RUN chown py3dtiles:py3dtiles data
+VOLUME /data
+WORKDIR /data
 
 # Then switch to unprivileged user
 USER py3dtiles
