@@ -260,6 +260,7 @@ docker-build-test:
     # Sanity check: convert then check if there is the right amount of points in the tileset
     - docker run --rm
         --mount type=bind,source="$(pwd)"/data,target=/data/
+        --volume /etc/passwd:/etc/passwd:ro --volume /etc/group:/etc/group:ro --user $(id -u):$(id -g)
         $IMAGE_TAG convert simple.ply
     - docker run
         --rm
