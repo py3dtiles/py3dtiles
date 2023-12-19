@@ -275,7 +275,7 @@ docker-build-test:
     # docker hub
     - "[ \"$DOCKER_HUB_PASSWORD\" = \"\" ] && echo \"empty\" || echo \"not empty\""
     - docker login -u autra -p $DOCKER_HUB_PASSWORD
-    - docker push $IMAGE_TAG
+    - docker push py3dtiles/py3dtiles:$CI_COMMIT_REF_SLUG
   only:
     refs:
       - tags
