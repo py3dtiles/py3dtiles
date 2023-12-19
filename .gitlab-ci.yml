@@ -254,6 +254,9 @@ docker-build-test:
     IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   script:
     - docker build . -t $IMAGE_TAG -f docker/Dockerfile
+    - docker images
+    - echo "$CI_COMMIT_REF_SLUG"
+    - echo "$CI_REGISTRY_IMAGE"
     - mkdir data
     - cp tests/fixtures/simple.ply data
     - id -u
