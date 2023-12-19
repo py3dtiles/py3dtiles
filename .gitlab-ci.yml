@@ -253,7 +253,7 @@ docker-build-test:
   variables:
     IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG
   script:
-    - docker build . -t $IMAGE_TAG -f docker/Dockerfile
+    - docker build . -t $IMAGE_TAG -t py3dtiles/py3dtiles:$CI_COMMIT_REF_SLUG -f docker/Dockerfile
     - docker images
     - echo "$CI_COMMIT_REF_SLUG"
     - echo "$CI_REGISTRY_IMAGE"
