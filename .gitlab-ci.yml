@@ -273,6 +273,7 @@ docker-build-test:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker push $IMAGE_TAG
     # docker hub
+    - "[ \"$DOCKER_HUB_PASSWORD\" = \"\" ] && echo \"empty\" || echo \"not empty\""
     - docker login -u autra -p $DOCKER_HUB_PASSWORD
     - docker push $IMAGE_TAG
   only:
