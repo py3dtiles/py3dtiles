@@ -24,7 +24,7 @@ pkgs.mkShell rec {
 
     if [ ! -x $VENVPATH/bin/py3dtiles ] > /dev/null 2>&1; then
       python -m pip install --cache-dir=$TMPDIR --upgrade pip
-      python -m pip install --cache-dir="$TMPDIR" -e .\[postgres,las,ply,dev,doc,pack\]
+      python -m pip install --cache-dir="$TMPDIR" -e .\[postgres,las,ply,ifc,dev,doc,pack\]
       # keep this line after so that ipython deps doesn't conflict with other deps
       python -m pip install ipython debugpy
     fi
