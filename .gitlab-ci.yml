@@ -109,7 +109,7 @@ typing-check:
     - paths:
       - ${PIP_CACHE_DIR}
   before_script:
-    - pip install .[dev]
+    - pip install .[dev,ifc]
   script:
     - mypy
   only:
@@ -150,7 +150,7 @@ test:
       - ${PIP_CACHE_DIR}
   before_script:
     - pip install -U pip setuptools
-    - pip install .[postgres,ply,las,dev]
+    - pip install .[postgres,ply,las,ifc,dev]
   script:
     - pytest
     # TODO move that in unit tests
@@ -221,7 +221,7 @@ windows-test:
     - choco install -y python --version=3.9.5
     - RefreshEnv
     - python -m pip install --upgrade pip setuptools wheel
-    - python -m pip install .[postgres,ply,las,dev]
+    - python -m pip install .[postgres,ply,las,ifc,dev]
   script:
     - pytest
     - py3dtiles info tests/fixtures/pointCloudRGB.pnts
