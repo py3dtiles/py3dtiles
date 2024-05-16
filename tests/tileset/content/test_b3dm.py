@@ -406,6 +406,7 @@ class TestTexturedTileBuilder(unittest.TestCase):
 
         # get an array
         t.to_array()
+
         self.assertEqual(t.header.version, 1.0)
         self.assertEqual(t.header.tile_byte_length, 5496)
         self.assertEqual(t.header.ft_json_byte_length, 20)

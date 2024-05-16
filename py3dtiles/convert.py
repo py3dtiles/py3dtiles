@@ -29,6 +29,16 @@ from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
 from py3dtiles.tilers.point.point_tiler import PointTiler
 from py3dtiles.utils import mkdir_or_raise, str_to_CRS
 
+try:
+    from py3dtiles.tilers.ifc.ifc_tiler import IfcTiler
+
+    HAS_IFC_SUPPORT = True
+except ImportError as e:
+    if e.name == "ifcopenshell":
+        HAS_IFC_SUPPORT = False
+    else:
+        raise
+
 # IPC protocol is not supported on Windows
 if os.name == "nt":
     URI = "tcp://127.0.0.1:0"
@@ -285,8 +295,11 @@ def convert(
             verbose,
             jobs,
             extra_fields=extra_fields,
-        )
+        ),
     ]
+    if HAS_IFC_SUPPORT:
+        tilers.append(IfcTiler(cache_size, verbose, jobs))
+
     converter = Converter(
         tilers,
         overwrite=overwrite,

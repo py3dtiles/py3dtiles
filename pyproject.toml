@@ -54,7 +54,7 @@ version_provider = "pep621"
 postgres = ["psycopg2-binary"]
 las = ["laspy>=2.5,<3.0"]
 ply = ["plyfile"]
-ifc = ["ifcopenshell"]
+ifc = ["ifcopenshell", "lark"]
 
 dev = [
     "line_profiler",
