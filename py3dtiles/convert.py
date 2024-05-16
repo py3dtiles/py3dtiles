@@ -285,8 +285,15 @@ def convert(
             verbose,
             jobs,
             extra_fields=extra_fields,
-        )
+        ),
     ]
+    try:
+        from py3dtiles.tilers.ifc.ifc_tiler import IfcTiler
+
+        tilers.append(IfcTiler(cache_size, verbose, jobs))
+    except ImportError:
+        pass
+
     converter = Converter(
         tilers,
         overwrite=overwrite,
