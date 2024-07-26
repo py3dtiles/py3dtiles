@@ -394,3 +394,10 @@ def xyz() -> npt.NDArray[np.float32]:
         ],
         dtype=np.float32,
     )
+
+
+@fixture
+def z_up_matrix() -> npt.NDArray[np.float32]:
+    return np.array(
+        [[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=np.float32
+    )

@@ -12,6 +12,7 @@ def clean_test_artifacts() -> None:
     # Remove files created by the tested files.
     Path("./mymodel.b3dm").unlink(missing_ok=True)
     Path("./mypoints.pnts").unlink(missing_ok=True)
+    Path("./test.glb").unlink(missing_ok=True)
     shutil.rmtree("./3dtiles_output", ignore_errors=True)
     shutil.rmtree("./my3dtiles", ignore_errors=True)
     shutil.rmtree("./my3dtiles2", ignore_errors=True)

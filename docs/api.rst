@@ -268,11 +268,11 @@ Tile content
 The py3dtiles module provides some classes to fit into the
 specification:
 
-- *TileContent* with a header *TileContentHeader* and a body *TileContentBody*
-- *TileContentHeader* represents the metadata of the tile (magic value, version, ...)
-- *TileContentBody* contains varying semantic and geometric data depending on the the tile's type
+- `TileContent` with a header `TileContentHeader` and a body `TileContentBody`
+- `TileContentHeader` represents the metadata of the tile (magic value, version, ...)
+- `TileContentBody` contains varying semantic and geometric data depending on the the tile's type
 
-Moreover, a utility module *tile_content_reader.py* provides a function *read_binary_tile_content* to read a tile
+Moreover, a utility module `tile_content_reader.py` provides a function `read_binary_tile_content` to read a tile
 file as well as a simple command line tool to retrieve basic information about a tile:
 **py3dtiles info**. We also provide a utility to generate a tileset from a list of 3D models in
 WKB format or stored in a postGIS table.
@@ -371,7 +371,8 @@ Batched 3D Model
 Batched 3D Model Tile Format:
 https://docs.ogc.org/cs/22-025r4/22-025r4.html#toc27
 
-**How to read a .b3dm file**
+How to read a .b3dm file
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
@@ -406,7 +407,37 @@ https://docs.ogc.org/cs/22-025r4/22-025r4.html#toc27
     >>> gltf.asset
     Asset(extensions={}, extras={}, generator='py3dtiles', copyright=None, version='2.0', minVersion=None)
 
-**How to write a .b3dm file**
+How to write a .b3dm file
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+By Hand
+.......
+
+Py3dtiles provides 2 helper classes to create gltf meshes and primitives more easily: `GltfMesh` and `GltfPrimitive`. They are intented for a more high-level process than creating pygltflib counterparts directly.
+
+In a nutshell:
+
+.. code-block:: python
+
+    >>> from py3dtiles.tileset.content.gltf_utils import GltfMesh, GltfPrimitive, gltf_from_meshes
+    >>> from pygltflib import Material, PbrMetallicRoughness
+    >>> import numpy as np
+    >>>
+    >>> m1 = Material(pbrMetallicRoughness=PbrMetallicRoughness(baseColorFactor=[1, 0, 0]))
+    >>> m2 = Material(pbrMetallicRoughness=PbrMetallicRoughness(baseColorFactor=[0, 1, 0]))
+    >>>
+    >>> p1 = GltfPrimitive(triangles=np.array([0, 1, 3], dtype=np.uint8), material=m1)
+    >>> p2 = GltfPrimitive(triangles=np.array([1, 2, 3], dtype=np.uint8), material=m2)
+    >>> mesh = GltfMesh(points=np.array([[0, 0, 0], [1, 0, 0], [1, 1, 1], [0, 0, 1]], dtype=np.float32), primitives=[p1, p2])
+    >>>
+    >>> gltf = gltf_from_meshes([mesh])
+    >>> gltf.save("test.glb")
+    True
+
+.. image:: ./_static/img/glb.png
+
+From Wkb
+........
 
 To write a Batched 3D Model file, you have to import the geometry from a wkb file containing
 polyhedralsurfaces or multipolygons. For now, `py3dtiles` only supports `ISOWKB`_ format. It is of
