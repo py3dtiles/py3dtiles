@@ -1,7 +1,7 @@
 import copy
 import json
 import shutil
-from collections.abc import Generator, Iterator
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -24,8 +24,8 @@ from .fixtures.mock_extension import MockExtension
 DATA_DIRECTORY = Path(__file__).parent / "fixtures"
 
 
-@fixture
-def tmp_dir() -> Generator[Path, None, None]:
+@fixture()
+def tmp_dir() -> Iterator[Path]:
     tmp_dir = Path("tmp/")
     tmp_dir.mkdir()
     yield tmp_dir
@@ -37,14 +37,19 @@ def tmp_dir() -> Generator[Path, None, None]:
 
 
 @fixture
-def tmp_dir_with_content(tmp_dir: Path) -> Generator[Path, None, None]:
+def tmp_dir_with_content(tmp_dir: Path) -> Iterator[Path]:
     tileset_folder = tmp_dir / "simple_xyz"
     convert(DATA_DIRECTORY / "simple.xyz", outfolder=tileset_folder, overwrite=True)
     yield tileset_folder
 
 
+@fixture()
+def fixtures_dir() -> Path:
+    return (Path(__file__).parent / "fixtures").absolute()
+
+
 @fixture
-def tileset_path_1(tmp_dir: Path) -> Generator[Path, None, None]:
+def tileset_path_1(tmp_dir: Path) -> Iterator[Path]:
     tileset_folder = tmp_dir / "1"
     convert(
         DATA_DIRECTORY / "with_srs_3857.las",
@@ -62,7 +67,7 @@ def tileset_1(tileset_path_1: Path) -> TileSet:
 
 
 @fixture
-def tileset_path_2(tmp_dir: Path) -> Generator[Path, None, None]:
+def tileset_path_2(tmp_dir: Path) -> Iterator[Path]:
     tileset_folder = tmp_dir / "2"
     convert(DATA_DIRECTORY / "with_srs_3950.las", outfolder=tileset_folder)
     yield tileset_folder / "tileset.json"
@@ -76,31 +81,56 @@ def tileset_2(tileset_path_2: Path) -> TileSet:
 
 
 @fixture
-def ply_filepath() -> Generator[Path, None, None]:
-    yield DATA_DIRECTORY / "simple.ply"
+def ply_filepath() -> Path:
+    return DATA_DIRECTORY / "simple.ply"
 
 
 @fixture
-def buggy_ply_filepath() -> Generator[Path, None, None]:
-    yield DATA_DIRECTORY / "buggy.ply"
+def buggy_ply_filepath() -> Path:
+    return DATA_DIRECTORY / "buggy.ply"
 
 
 @fixture
-def northing_easting_ordering_2326_xyz() -> Iterator[Path]:
+def ply_with_extra_fields_filepath() -> Path:
+    return DATA_DIRECTORY / "simple_with_classification_and_intensity.ply"
+
+
+@fixture
+def ply_with_extra_fields_as_f4_filepath() -> Path:
+    return DATA_DIRECTORY / "simple_with_classification_and_intensity_f4.ply"
+
+
+@fixture
+def ply_with_intensity_filepath() -> Path:
+    return DATA_DIRECTORY / "simple_with_intensity.ply"
+
+
+@fixture
+def ply_with_classification_filepath() -> Path:
+    return DATA_DIRECTORY / "simple_with_classification.ply"
+
+
+@fixture
+def northing_easting_ordering_2326_xyz() -> Path:
     # "correct" ordering, the one mandated by the definition
     # NOTE: this is the victoria peak in Hong Kong
-    yield DATA_DIRECTORY / "northing_easting_ordering_2326.xyz"
+    return DATA_DIRECTORY / "northing_easting_ordering_2326.xyz"
 
 
 @fixture
-def easting_northing_ordering_2326_xyz() -> Iterator[Path]:
+def easting_northing_ordering_2326_xyz() -> Path:
     # traditional gis ordering: easting northing
     # NOTE: this is the victoria peak in Hong Kong
-    yield DATA_DIRECTORY / "easting_northing_ordering_2326.xyz"
+    return DATA_DIRECTORY / "easting_northing_ordering_2326.xyz"
+
+
+@fixture
+def ripple_filepath() -> Path:
+    return DATA_DIRECTORY / "ripple.las"
 
 
 @fixture(params=["wrongname", "vertex"])
-def buggy_ply_data(request) -> Generator[dict[str, Any], None, None]:  # type: ignore [no-untyped-def]
+def buggy_ply_data(request) -> dict[str, Any]:  # type: ignore [no-untyped-def]
     """This ply data does not contain any 'vertex' element!"""
     types = [("x", np.float32, (5,)), ("y", np.float32, (5,)), ("z", np.float32, (5,))]
     data = [(np.random.sample(5), np.random.sample(5), np.random.sample(5))]
@@ -110,7 +140,7 @@ def buggy_ply_data(request) -> Generator[dict[str, Any], None, None]:  # type: i
         arr = np.array([data[0][:2]], np.dtype(types[:2]))
     ply_item = plyfile.PlyElement.describe(data=arr, name=request.param)
     ply_data = plyfile.PlyData(elements=[ply_item])
-    yield {
+    return {
         "data": ply_data,
         "msg": "vertex" if request.param == "wrongname" else "x, y, z",
     }
@@ -153,7 +183,7 @@ def tileset() -> TileSet:
 
 
 @fixture
-def tileset_on_disk_with_sub_tileset_path(tmp_dir: Path) -> Generator[Path, None, None]:
+def tileset_on_disk_with_sub_tileset_path(tmp_dir: Path) -> Iterator[Path]:
     convert(DATA_DIRECTORY / "simple.xyz", outfolder=tmp_dir, overwrite=True)
 
     sub_tileset_path = tmp_dir / "tileset.json"
