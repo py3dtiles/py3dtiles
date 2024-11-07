@@ -1,7 +1,7 @@
 import math
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -9,6 +9,7 @@ from plyfile import PlyData, PlyElement
 from pyproj import Transformer
 
 from py3dtiles.typing import (
+    ExtraFieldsDescription,
     MetadataReaderType,
     OffsetScaleType,
     PortionItemType,
@@ -26,9 +27,16 @@ def get_metadata(path: Path) -> MetadataReaderType:
     ply_vertices = ply_point_cloud["vertex"]
     point_count = ply_vertices.count
     base_fields = []
+    extra_fields = []
     for ply_prop in ply_vertices.properties:
         if ply_prop.name in ("x", "y", "z", "red", "green", "blue"):
             base_fields.append(ply_prop.name)
+        else:
+            extra_fields.append(
+                ExtraFieldsDescription(
+                    name=ply_prop.name, dtype=np.dtype(ply_prop.dtype())
+                )
+            )
     if any(coord not in base_fields for coord in ("x", "y", "z")):
         raise KeyError(
             "At least one of the basic coordinate feature (x, y, z) is missing in the input file."
@@ -50,6 +58,7 @@ def get_metadata(path: Path) -> MetadataReaderType:
         "point_count": point_count,
         "avg_min": aabb[0],
         "has_color": has_color,
+        "extra_fields": extra_fields,
     }
 
 
@@ -60,13 +69,12 @@ def run(
     transformer: Optional[Transformer],
     color_scale: Optional[float],
     with_rgb: bool,
-    write_intensity: bool,
+    extra_fields: list[ExtraFieldsDescription],
 ) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
         Optional[npt.NDArray[np.uint8]],
-        npt.NDArray[np.uint8],
-        npt.NDArray[np.uint8],
+        dict[str, npt.NDArray[Any]],
     ],
 ]:
     """
@@ -129,27 +137,18 @@ def run(
         elif with_rgb:
             colors = np.zeros(coords.shape, dtype=np.uint8)
 
-        if "classification" in ply_vertices:
-            classification = np.array(
-                ply_vertices["classification"].reshape(-1, 1), dtype=np.uint8
-            )
-        else:
-            classification = np.zeros((coords.shape[0], 1), dtype=np.uint8)
-
-        if "intensity" in ply_vertices and write_intensity:
-            if ply_vertices["intensity"].dtype != np.uint8:
-                print(
-                    "Warning: At the moment, only intensity in uint8 format is supported for ply files"
+        extra_fields_data = {}
+        for field in extra_fields:
+            if field.name in ply_vertices:
+                extra_fields_data[field.name] = np.array(
+                    ply_vertices[field.name].reshape(-1, 1), dtype=field.dtype
                 )
-                intensity = np.zeros((coords.shape[0], 1), dtype=np.uint8)
             else:
-                intensity = np.array(
-                    ply_vertices["intensity"].reshape(-1, 1), dtype=np.uint8
+                extra_fields_data[field.name] = np.zeros(
+                    (len(coords), 1), dtype=field.dtype
                 )
-        else:
-            intensity = np.zeros((coords.shape[0], 1), dtype=np.uint8)
 
-        yield coords, colors, classification, intensity
+        yield coords, colors, extra_fields_data
 
 
 def create_plydata_with_renamed_property(

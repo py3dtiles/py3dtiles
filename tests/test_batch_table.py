@@ -91,9 +91,7 @@ class TestBatchTable(unittest.TestCase):
     def test_add_property_as_binary(self) -> None:
         bt = BatchTable()
 
-        bt.add_property_as_binary(
-            "property_1", np.array([1, 2, 3], np.uint8), "UNSIGNED_BYTE", "SCALAR"
-        )
+        bt.add_property_as_binary("property_1", np.array([1, 2, 3], np.uint8), "SCALAR")
         self.assertTrue(set(bt.header.data.keys()) == {"property_1"})
         self.assertEqual(
             bt.header.data["property_1"],
@@ -103,7 +101,7 @@ class TestBatchTable(unittest.TestCase):
         np.testing.assert_equal(bt.body.data[0], np.array([1, 2, 3], np.uint8))
 
         bt.add_property_as_binary(
-            "property_2", np.array([4, 5, 6], np.float32), "FLOAT", "SCALAR"
+            "property_2", np.array([4, 5, 6], np.float32), "SCALAR"
         )
         self.assertTrue(set(bt.header.data.keys()) == {"property_1", "property_2"})
         self.assertEqual(
@@ -120,12 +118,8 @@ class TestBatchTable(unittest.TestCase):
 
     def test_to_array_with_non_empty_body(self) -> None:
         bt = BatchTable()
-        bt.add_property_as_binary(
-            "property_1", np.array([1, 2, 3], np.uint8), "UNSIGNED_BYTE", "SCALAR"
-        )
-        bt.add_property_as_binary(
-            "property_2", np.array([4, 5, 6], np.uint8), "UNSIGNED_BYTE", "SCALAR"
-        )
+        bt.add_property_as_binary("property_1", np.array([1, 2, 3], np.uint8), "SCALAR")
+        bt.add_property_as_binary("property_2", np.array([4, 5, 6], np.uint8), "SCALAR")
         self.assertTrue(
             np.array_equal(
                 bt.to_array(),

@@ -23,14 +23,52 @@ NOTE: we assume RGB are 8 bits components.
 import csv
 import math
 from collections.abc import Iterator
+from io import TextIOBase
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 import numpy.typing as npt
 from pyproj import Transformer
 
-from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionItemType
+from py3dtiles.typing import (
+    ExtraFieldsDescription,
+    MetadataReaderType,
+    OffsetScaleType,
+    PortionItemType,
+)
+
+
+def get_csv_infos(f: TextIOBase) -> tuple[bool, int, str]:
+    file_sample = f.read(2048)  # For performance reasons we just snif the first part
+    dialect = csv.Sniffer().sniff(file_sample)
+    has_header = csv.Sniffer().has_header(file_sample)
+    f.seek(0)
+    # skip eventual header
+    if has_header:
+        f.readline()
+    feature_nb = len(f.readline().split(dialect.delimiter))
+
+    f.seek(0)
+    return has_header, feature_nb, dialect.delimiter
+
+
+def get_colors(
+    points: npt.NDArray[np.float32],
+    feature_nb: int,
+    color_scale: Optional[float],
+    with_rgb: bool,
+) -> Optional[npt.NDArray[np.uint8]]:
+    if with_rgb and feature_nb < 6:
+        return np.zeros((len(points), 3), dtype=np.uint8)
+    elif with_rgb:
+        start = 4 if feature_nb >= 7 else 3
+        colors = points[:, start : start + 3]
+        if color_scale is not None:
+            colors = np.clip(colors * color_scale, 0, 255)
+        return colors.astype(np.uint8)
+    else:
+        return None
 
 
 def get_metadata(path: Path) -> MetadataReaderType:
@@ -39,20 +77,8 @@ def get_metadata(path: Path) -> MetadataReaderType:
     seek_values = []
 
     with path.open() as f:
-        file_sample = f.read(
-            2048
-        )  # For performance reasons we just snif the first part
-        dialect = csv.Sniffer().sniff(file_sample)
-        has_header = csv.Sniffer().has_header(file_sample)
+        has_header, feature_nb, delimiter = get_csv_infos(f)
 
-        f.seek(0)
-        # skip eventual header
-        if has_header:
-            f.readline()
-        line = f.readline()
-        feature_nb = len(f.readline().split(dialect.delimiter))
-
-        f.seek(0)
         if has_header:
             f.readline()
 
@@ -66,7 +92,7 @@ def get_metadata(path: Path) -> MetadataReaderType:
                 if not line:
                     points = np.resize(points, (i, 3))
                     break
-                points[i] = [float(s) for s in line.split(dialect.delimiter)][:3]
+                points[i] = [float(s) for s in line.split(delimiter)][:3]
 
             if points.shape[0] == 0:
                 break
@@ -100,6 +126,17 @@ def get_metadata(path: Path) -> MetadataReaderType:
 
         has_color = feature_nb >= 6
 
+        # extra fields
+        extra_fields = []
+        if feature_nb in (4, 7, 8):
+            extra_fields.append(
+                ExtraFieldsDescription(name="intensity", dtype=np.dtype(np.float32))
+            )
+        if feature_nb > 7:
+            extra_fields.append(
+                ExtraFieldsDescription(name="classification", dtype=np.dtype(np.uint32))
+            )
+
     if aabb is None:
         raise ValueError(f"There is no point in the file {path}")
 
@@ -110,6 +147,7 @@ def get_metadata(path: Path) -> MetadataReaderType:
         "point_count": point_count,
         "avg_min": aabb[0],
         "has_color": has_color,
+        "extra_fields": extra_fields,
     }
 
 
@@ -120,27 +158,20 @@ def run(
     transformer: Optional[Transformer],
     color_scale: Optional[float],
     with_rgb: bool,
-    write_intensity: bool,
+    extra_fields: list[ExtraFieldsDescription],
 ) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
         Optional[npt.NDArray[np.uint8]],
-        npt.NDArray[np.uint8],
-        npt.NDArray[np.uint8],
+        dict[str, npt.NDArray[Any]],
     ],
 ]:
     with open(filename) as f:
 
-        dialect = csv.Sniffer().sniff(f.read(2048))
-        f.seek(0)
-        f.readline()  # skip first line in case there is a header we promised to ignore
-        feature_nb = len(f.readline().split(dialect.delimiter))
-        if feature_nb < 8:
-            feature_nb = 7  # we pad to 7 columns with 0
-        if feature_nb > 8:
-            feature_nb = 8  # We ignore other data as downstream only 1 value for classification data is supported.
-            # Once downstream supports multiple classification values this reader will as well
-            # when this line is removed.
+        has_header, feature_nb, delimiter = get_csv_infos(f)
+
+        if has_header:
+            f.readline()  # skip first line in case there is a header we promised to ignore
 
         point_count = portion[1] - portion[0]
 
@@ -156,16 +187,7 @@ def run(
                 if not line:
                     points = np.resize(points, (j, feature_nb))
                     break
-                line_features: list[Optional[float]] = [
-                    float(s) for s in line.split(dialect.delimiter)[:feature_nb]
-                ]
-                if len(line_features) == 3:
-                    line_features += [None] * 4  # Insert intensity and RGB
-                elif len(line_features) == 4:
-                    line_features += [None] * 3  # Insert RGB
-                elif len(line_features) == 6:
-                    line_features.insert(3, None)  # Insert intensity
-                points[j] = line_features
+                points[j] = [float(s) for s in line.split(delimiter)[:feature_nb]]
 
             x, y, z = (points[:, c] for c in [0, 1, 2])
 
@@ -186,25 +208,18 @@ def run(
             coords = np.ascontiguousarray(coords.astype(np.float32))
 
             # Read colors: 3 last columns when excluding classification data
-            colors = None
-            if with_rgb and feature_nb < 6:
-                colors = np.zeros(coords.shape, dtype=np.uint8)
-            elif with_rgb:
-                if color_scale is None:
-                    colors = points[:, 4:7].astype(np.uint8)
+            colors = get_colors(points, feature_nb, color_scale, with_rgb)
+
+            extra_fields_data = {}
+            for field in extra_fields:
+                if field.name == "intensity":
+                    data = points[:, 3]
+                elif field.name == "classification":
+                    data = points[:, 7]
                 else:
-                    colors = np.clip(points[:, 4:7] * color_scale, 0, 255).astype(
-                        np.uint8
-                    )
+                    data = np.zeros((len(points), 1), dtype=field.dtype)
+                extra_fields_data[field.name] = np.array(data, dtype=np.uint8).reshape(
+                    -1, 1
+                )
 
-            if feature_nb > 7:  # we have classification data
-                classification = np.array(points[:, 7:], dtype=np.uint8).reshape(-1, 1)
-            else:
-                classification = np.zeros((points.shape[0], 1), dtype=np.uint8)
-
-            if feature_nb in (4, 7, 8) and write_intensity:
-                intensity = np.array(points[:, 3], dtype=np.uint8).reshape(-1, 1)
-            else:
-                intensity = np.zeros((points.shape[0], 1), dtype=np.uint8)
-
-            yield coords, colors, classification, intensity
+            yield coords, colors, extra_fields_data

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import struct
 from pathlib import Path
+from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.exceptions import InvalidPntsError
+from py3dtiles.points import Points
 
 from .batch_table import BatchTable
 from .pnts_feature_table import (
@@ -16,6 +18,19 @@ from .pnts_feature_table import (
     SemanticPoint,
 )
 from .tile_content import TileContent, TileContentBody, TileContentHeader
+
+
+def get_color_semantic(
+    colors: npt.NDArray[np.uint8 | np.uint16] | None,
+) -> Literal[SemanticPoint.RGB, SemanticPoint.RGB565] | None:
+    if colors is None:
+        return None
+    elif colors.dtype.type is np.uint8:
+        return SemanticPoint.RGB
+    elif colors.dtype.type is np.uint16:
+        return SemanticPoint.RGB565
+    else:
+        raise ValueError(f"dtype {colors.dtype} not supported for colors")
 
 
 class Pnts(TileContent):
@@ -93,73 +108,62 @@ class Pnts(TileContent):
 
     @staticmethod
     def from_points(
-        points: npt.NDArray[np.uint8],
-        include_rgb: bool,
-        include_classification: bool,
-        include_intensity: bool,
+        positions: npt.NDArray[np.float32 | np.uint16],
+        colors: npt.NDArray[np.uint8 | np.uint16] | None = None,
+        extra_fields: dict[str, npt.NDArray[Any]] | None = None,
     ) -> Pnts:
         """
-        Create a pnts from an uint8 data array containing:
+        Create a pnts from data array:
 
-        - points as SemanticPoint.POSITION
-        - if include_rgb, rgb as SemanticPoint.RGB
-        - if include_classification, classification as a single np.uint8 value that will be put in the batch table
-        - if include_intensity, intensity as a single np.uint8 value that will be put in the batch table
+        - positions will be included as SemanticPoint.POSITION
+        - if rgb is not None, it will be included as SemanticPoint.RGB
+        - all the extra_fields are included in the batch table
 
-        :param include_rgb: Whether the points array contains rgb values
-        :param include_classification: Whether the point array contains classification values
-        :param include_intensity: whether the point array contains intensity values
-        :param points: the points array. Contains at least 3
+        :param positions: the positions 1D array
+        :param colors: the colors 1D array
+        :param extra_fields: a dict of extra arrays to include in the batch_table. The dict keys are the name of the fields, the values are 1D np arrays containing values for each field.
         """
-        if len(points) == 0:
-            raise ValueError("The argument points cannot be empty.")
-
-        point_size = (
-            3 * 4
-            + (3 if include_rgb else 0)
-            + (1 if include_classification else 0)
-            + (1 if include_intensity else 0)
-        )
-
-        if len(points) % point_size != 0:
+        if len(positions) == 0:
+            raise ValueError("The 'positions' array cannot be empty.")
+        if positions.ndim != 1:
             raise ValueError(
-                f"The length of points array is {len(points)} but the point size is {point_size}."
-                f"There is a rest of {len(points) % point_size}"
+                f"The 'positions' array should be flatten, got a NDArray with {positions.ndim} dimensions"
             )
 
-        count = len(points) // point_size
+        if len(positions) % 3 != 0:
+            raise ValueError("The 'positions' array elem count is not a multiple of 3")
+
+        count = len(positions) // 3
+
+        if colors is not None:
+            if colors.ndim != 1:
+                raise ValueError(
+                    f"The 'colors' array should be flatten, got a NDArray with {colors.ndim} dimensions"
+                )
+            if (len(colors) // 3) != count:
+                raise ValueError(
+                    "The 'colors' array does not have the same number of elements as the 'position' array"
+                )
 
         ft = PntsFeatureTable()
+        color_semantic = get_color_semantic(colors)
         ft.header = PntsFeatureTableHeader.from_semantic(
             SemanticPoint.POSITION,
-            SemanticPoint.RGB if include_rgb else None,
+            color_semantic,
             None,
             count,
         )
-        ft.body = PntsFeatureTableBody.from_array(ft.header, points)
+        ft.body = PntsFeatureTableBody(positions=positions, color=colors)
 
         bt = BatchTable()
-        if include_classification:
-            sdt = np.dtype([("Classification", "u1")])
-            offset = count * (3 * 4 + (3 if include_rgb else 0))
-            bt.add_property_as_binary(
-                "Classification",
-                points[offset : offset + count * sdt.itemsize],
-                "UNSIGNED_BYTE",
-                "SCALAR",
-            )
+        if extra_fields:
+            for fieldname, array in extra_fields.items():
+                if array.ndim != 1:
+                    raise ValueError(
+                        f"The '{fieldname}' array in 'extra_fields' should be flatten, got a NDArray with {array.ndim} dimensions"
+                    )
 
-        if include_intensity:
-            sdt = np.dtype([("Intensity", "u1")])
-            offset = count * (
-                3 * 4 + (3 if include_rgb else 0) + (1 if include_classification else 0)
-            )
-            bt.add_property_as_binary(
-                "Intensity",
-                points[offset : offset + count * sdt.itemsize],
-                "UNSIGNED_BYTE",
-                "SCALAR",
-            )
+                bt.add_property_as_binary(fieldname, array, "SCALAR")
 
         body = PntsBody()
         body.feature_table = ft
@@ -262,9 +266,7 @@ class PntsBody(TileContentBody):
         batch_table_array = self.batch_table.to_array()
         return np.concatenate((feature_table_array, batch_table_array))
 
-    def get_points(
-        self, transform: npt.NDArray[np.float64] | None
-    ) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.uint8 | np.uint16] | None]:
+    def get_points(self, transform: npt.NDArray[np.float64] | None) -> Points:
         fth = self.feature_table.header
 
         xyz = self.feature_table.body.position.view(np.float32).reshape(
@@ -280,12 +282,17 @@ class PntsBody(TileContentBody):
         else:
             rgb = None
 
+        # data in batch table
+        extra_fields = {}
+        for field in self.batch_table.get_property_names():
+            extra_fields[field] = self.batch_table.get_binary_property(field)
+
         if transform is not None:
             transform = transform.reshape((4, 4), order="F")
             xyzw = np.hstack((xyz, np.ones((xyz.shape[0], 1), dtype=xyz.dtype)))
             xyz = np.dot(xyzw, transform.astype(xyz.dtype))[:, :3]
 
-        return xyz, rgb
+        return Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
 
     @staticmethod
     def from_array(header: PntsHeader, array: npt.NDArray[np.uint8]) -> PntsBody:

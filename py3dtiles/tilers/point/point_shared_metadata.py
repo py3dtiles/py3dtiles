@@ -7,6 +7,7 @@ import numpy.typing as npt
 from pyproj import Transformer
 
 from py3dtiles.tilers.base_tiler import SharedMetadata
+from py3dtiles.typing import ExtraFieldsDescription
 
 
 @dataclass(frozen=True)
@@ -18,6 +19,5 @@ class PointSharedMetadata(SharedMetadata):
     out_folder: Path
     write_rgb: bool
     color_scale: Optional[float]
-    write_classification: bool
-    write_intensity: bool
+    extra_fields_to_include: list[ExtraFieldsDescription]
     verbosity: int

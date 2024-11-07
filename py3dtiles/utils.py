@@ -15,7 +15,6 @@ from py3dtiles.reader import xyz_reader
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec
 
-    from py3dtiles.tilers.point.node import Node
 
 _T = TypeVar("_T", bound=npt.NBitBase)
 
@@ -161,19 +160,6 @@ def make_aabb_valid(aabb: npt.NDArray[np.float64]) -> None:
     for i in range(3):
         if aabb[0][i] == aabb[1][i]:
             aabb[1][i] = aabb[1][i] + MIN_AABB_SIZE
-
-
-def node_from_name(
-    name: bytes,
-    parent_aabb: npt.NDArray[np.floating[_T]],
-    parent_spacing: float,
-) -> Node:
-    from py3dtiles.tilers.point.node import Node
-
-    spacing = parent_spacing * 0.5
-    aabb = split_aabb(parent_aabb, int(name[-1])) if len(name) > 0 else parent_aabb
-    # let's build a new Node
-    return Node(name, aabb.astype(np.float64), spacing)
 
 
 def mkdir_or_raise(folder: Path, overwrite: bool = False) -> None:

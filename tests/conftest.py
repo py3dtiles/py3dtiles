@@ -17,6 +17,7 @@ from py3dtiles.tileset import BoundingVolumeBox, Tile, TileSet
 from py3dtiles.tileset.extension.batch_table_hierarchy_extension import (
     BatchTableHierarchy,
 )
+from py3dtiles.typing import ExtraFieldsDescription
 from py3dtiles.utils import compute_spacing
 
 from .fixtures.mock_extension import MockExtension
@@ -55,6 +56,7 @@ def tileset_path_1(tmp_dir: Path) -> Iterator[Path]:
         DATA_DIRECTORY / "with_srs_3857.las",
         crs_out=CRS.from_epsg(3950),
         outfolder=tileset_folder,
+        extra_fields=["intensity", "raw_classification"],
     )
     yield tileset_folder / "tileset.json"
 
@@ -69,7 +71,11 @@ def tileset_1(tileset_path_1: Path) -> TileSet:
 @fixture
 def tileset_path_2(tmp_dir: Path) -> Iterator[Path]:
     tileset_folder = tmp_dir / "2"
-    convert(DATA_DIRECTORY / "with_srs_3950.las", outfolder=tileset_folder)
+    convert(
+        DATA_DIRECTORY / "with_srs_3950.las",
+        outfolder=tileset_folder,
+        extra_fields=["intensity", "raw_classification"],
+    )
     yield tileset_folder / "tileset.json"
 
 
@@ -149,12 +155,36 @@ def buggy_ply_data(request) -> dict[str, Any]:  # type: ignore [no-untyped-def]
 @fixture
 def node() -> Node:
     bbox = np.array([[0, 0, 0], [2, 2, 2]])
-    return Node(b"noeud", bbox, compute_spacing(bbox))
+    return Node(
+        b"noeud",
+        bbox,
+        compute_spacing(bbox),
+        True,
+        [
+            ExtraFieldsDescription(name="classification", dtype=np.dtype(np.uint8)),
+            ExtraFieldsDescription(name="intensity", dtype=np.dtype(np.uint8)),
+        ],
+    )
+
+
+@fixture
+def node_position_only() -> Node:
+    bbox = np.array([[0, 0, 0], [2, 2, 2]])
+    return Node(b"noeud", bbox, compute_spacing(bbox), False, [])
 
 
 @fixture
 def grid(node: Node) -> Grid:
-    return Grid(node)
+    return Grid(node.spacing, node.include_rgb, node.extra_fields)
+
+
+@fixture
+def grid_position_only(node_position_only: Node) -> Grid:
+    return Grid(
+        node_position_only.spacing,
+        node_position_only.include_rgb,
+        node_position_only.extra_fields,
+    )
 
 
 @fixture

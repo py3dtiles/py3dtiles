@@ -249,6 +249,7 @@ def test_convert_xyz_rgb_i_c(tmp_dir: Path, fixtures_dir: Path) -> None:
         fixtures_dir / "simple_with_irgb_and_classification.csv",
         outfolder=tmp_dir,
         jobs=1,
+        extra_fields=["intensity", "classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
     assert Path(tmp_dir, "r.pnts").exists()
@@ -281,8 +282,8 @@ def test_convert_xyz_rgb_i_c(tmp_dir: Path, fixtures_dir: Path) -> None:
     assert_array_equal(ft_body.color, [0, 0, 200, 10, 0, 0, 0, 10, 0])
     # batch table
     bt = tile_content.body.batch_table
-    assert_array_equal(bt.get_binary_property("Intensity"), [3, 1, 2])
-    assert_array_equal(bt.get_binary_property("Classification"), [22, 21, 22])
+    assert_array_equal(bt.get_binary_property("intensity"), [3, 1, 2])
+    assert_array_equal(bt.get_binary_property("classification"), [22, 21, 22])
 
 
 def test_convert_xyz_rgb_i_c_with_srs(tmp_dir: Path, fixtures_dir: Path) -> None:
@@ -523,31 +524,19 @@ def test_convert_ply_with_color_scale(tmp_dir: Path, fixtures_dir: Path) -> None
 def test_convert_ply_with_wrong_classification(
     tmp_dir: Path, fixtures_dir: Path
 ) -> None:
-    # Buggy feature name, classification is lost.
+    # Buggy feature name, but conversion should still pass
     convert(
         fixtures_dir / "simple.ply",
         outfolder=tmp_dir,
         jobs=1,
-        classification=True,
+        extra_fields=["classification"],
     )
-    assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
-
-    for py3dt_file in tmp_dir.iterdir():
-        if py3dt_file.suffix != ".pnts":
-            continue
-        tile_content = Pnts.from_file(py3dt_file)
-        assert "Classification" in tile_content.body.batch_table.header.data
-        assert np.array_equal(
-            np.unique(tile_content.body.batch_table.body.data[0]),
-            np.array([0], dtype=np.uint8),  # classification is lost
-        )
 
 
 def test_convert_ply_with_good_classification(
     tmp_dir: Path, fixtures_dir: Path
 ) -> None:
-    EXPECTED_LABELS = np.array([0, 1, 2, -1], dtype=np.uint8)
+    EXPECTED_LABELS = np.array([-1, 0, 1, 2], dtype=np.int32)
     # Change the classification property name in the tested .ply file
     ply_data = plyfile.PlyData.read(fixtures_dir / "simple.ply")
     ply_data = create_plydata_with_renamed_property(ply_data, "label", "classification")
@@ -558,7 +547,7 @@ def test_convert_ply_with_good_classification(
         modified_ply_filename,
         outfolder=tmp_dir,
         jobs=1,
-        classification=True,
+        extra_fields=["classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
     assert Path(tmp_dir, "r.pnts").exists()
@@ -568,10 +557,11 @@ def test_convert_ply_with_good_classification(
         if py3dt_file.suffix != ".pnts":
             continue
         tile_content = Pnts.from_file(py3dt_file)
-        assert "Classification" in tile_content.body.batch_table.header.data
-        pnts_labels = np.unique(tile_content.body.batch_table.body.data[0])
+        assert "classification" in tile_content.body.batch_table.header.data
         # classification is OK for each pnts
-        assert np.all([labels in EXPECTED_LABELS for labels in pnts_labels])
+        pnts_labels = tile_content.body.batch_table.get_binary_property(
+            "classification"
+        )
         tileset_labels = np.unique(np.append(tileset_labels, pnts_labels))
     # Every label is encountered in the global tileset
     assert np.array_equal(tileset_labels, EXPECTED_LABELS)
@@ -585,7 +575,7 @@ def test_convert_ply_with_intensity(tmp_dir: Path, fixtures_dir: Path) -> None:
         fixtures_dir / "simple_with_intensity.ply",
         outfolder=tmp_dir,
         jobs=1,
-        intensity=True,
+        extra_fields=["intensity"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
     assert Path(tmp_dir, "r.pnts").exists()
@@ -595,10 +585,10 @@ def test_convert_ply_with_intensity(tmp_dir: Path, fixtures_dir: Path) -> None:
         tile_content.body.feature_table.body.position,
         [0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1],
     )
-    assert "Intensity" in tile_content.body.batch_table.header.data
+    assert "intensity" in tile_content.body.batch_table.header.data
     assert_array_equal(
         [80, 129, 15, 90],
-        tile_content.body.batch_table.get_binary_property("Intensity"),
+        tile_content.body.batch_table.get_binary_property("intensity"),
     )
 
 
@@ -610,7 +600,7 @@ def test_convert_ply_with_classification_and_intensity(
         ply_with_extra_fields_filepath,
         outfolder=tmp_dir,
         jobs=1,
-        intensity=True,
+        extra_fields=["intensity", "classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
     assert Path(tmp_dir, "r.pnts").exists()
@@ -620,15 +610,15 @@ def test_convert_ply_with_classification_and_intensity(
         tile_content.body.feature_table.body.position,
         [0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1],
     )
-    assert "Classification" in tile_content.body.batch_table.header.data
+    assert "classification" in tile_content.body.batch_table.header.data
     assert_array_equal(
         [1, 2, 2, 1],
-        tile_content.body.batch_table.get_binary_property("Classification"),
+        tile_content.body.batch_table.get_binary_property("classification"),
     )
-    assert "Intensity" in tile_content.body.batch_table.header.data
+    assert "intensity" in tile_content.body.batch_table.header.data
     assert_array_equal(
-        [80, 129, 15, 90],
-        tile_content.body.batch_table.get_binary_property("Intensity"),
+        [-80, 129129.19, 15.3, 90.2],
+        tile_content.body.batch_table.get_binary_property("intensity"),
     )
 
 
@@ -640,16 +630,7 @@ def test_convert_ply_with_classification_and_intensity_f4(
         ply_with_extra_fields_as_f4_filepath,
         outfolder=tmp_dir,
         jobs=1,
-        intensity=True,
-    )
-
-    # without intensity
-    convert(
-        ply_with_extra_fields_as_f4_filepath,
-        outfolder=tmp_dir,
-        jobs=1,
-        intensity=False,
-        overwrite=True,
+        extra_fields=["intensity", "classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
     assert Path(tmp_dir, "r.pnts").exists()
@@ -659,12 +640,39 @@ def test_convert_ply_with_classification_and_intensity_f4(
         tile_content.body.feature_table.body.position,
         [0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1],
     )
-    assert "Classification" in tile_content.body.batch_table.header.data
+    assert "classification" in tile_content.body.batch_table.header.data
     assert_array_equal(
         [1, 2, 2, 1],
-        tile_content.body.batch_table.get_binary_property("Classification"),
+        tile_content.body.batch_table.get_binary_property("classification"),
     )
-    assert "Intensity" not in tile_content.body.batch_table.header.data
+    assert "intensity" in tile_content.body.batch_table.header.data
+    assert_array_almost_equal(
+        tile_content.body.batch_table.get_binary_property("intensity"),
+        np.array([80.1, -129.0, -15.0, 90.4], dtype=np.float32),
+    )
+
+    # without intensity
+    convert(
+        ply_with_extra_fields_as_f4_filepath,
+        outfolder=tmp_dir,
+        jobs=1,
+        overwrite=True,
+        extra_fields=["classification"],
+    )
+    assert Path(tmp_dir, "tileset.json").exists()
+    assert Path(tmp_dir, "r.pnts").exists()
+
+    tile_content = Pnts.from_file(tmp_dir / "r.pnts")
+    assert_array_equal(
+        tile_content.body.feature_table.body.position,
+        [0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1],
+    )
+    assert "classification" in tile_content.body.batch_table.header.data
+    assert_array_equal(
+        [1, 2, 2, 1],
+        tile_content.body.batch_table.get_binary_property("classification"),
+    )
+    assert "intensity" not in tile_content.body.batch_table.header.data
 
 
 def test_convert_mix_las_xyz(tmp_dir: Path, fixtures_dir: Path) -> None:
@@ -880,7 +888,7 @@ def test_convert_rgb_classif(
     expected_raise: Union[nullcontext[None], RaisesContext[ValueError]]
     if not classif_bool:
         expected_raise = raises(
-            ValueError, match="The property Classification is not found"
+            ValueError, match="The property classification is not found"
         )
     else:
         # Ideally one does not raise if classification is required but pytest won't implement such
@@ -890,9 +898,8 @@ def test_convert_rgb_classif(
         expected_raise = nullcontext()
 
     input_filepath = fixtures_dir / "simple_with_classification.ply"
-    convert(
-        input_filepath, rgb=rgb_bool, classification=classif_bool, outfolder=tmp_dir
-    )
+    extra_fields = ["classification"] if classif_bool else []
+    convert(input_filepath, rgb=rgb_bool, extra_fields=extra_fields, outfolder=tmp_dir)
 
     assert Path(tmp_dir, "r.pnts").exists()
 
@@ -909,7 +916,7 @@ def test_convert_rgb_classif(
         assert rgb_bool ^ (tile_content.body.feature_table.body.color is None)
         with expected_raise:
             bt_prop = tile_content.body.batch_table.get_binary_property(
-                "Classification"
+                "classification"
             )
             assert len(bt_prop) > 0
 

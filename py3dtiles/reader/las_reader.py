@@ -1,14 +1,19 @@
 import math
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import laspy
 import numpy as np
 import numpy.typing as npt
 from pyproj import Transformer
 
-from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionItemType
+from py3dtiles.typing import (
+    ExtraFieldsDescription,
+    MetadataReaderType,
+    OffsetScaleType,
+    PortionItemType,
+)
 
 
 def get_metadata(filename: Path) -> MetadataReaderType:
@@ -29,6 +34,12 @@ def get_metadata(filename: Path) -> MetadataReaderType:
 
         has_color = "red" in f.header.point_format.dimension_names
 
+        # extra fields
+        extra_fields = []
+        for fname, t in f.header.point_format.dtype().fields.items():
+            if fname not in ("X", "Y", "Z", "red", "green", "blue"):
+                extra_fields.append(ExtraFieldsDescription(name=fname, dtype=t[0]))
+
     return {
         "portions": pointcloud_file_portions,
         "aabb": np.array([f.header.mins, f.header.maxs]),
@@ -36,6 +47,7 @@ def get_metadata(filename: Path) -> MetadataReaderType:
         "point_count": point_count,
         "avg_min": np.array(f.header.mins),
         "has_color": has_color,
+        "extra_fields": extra_fields,
     }
 
 
@@ -46,13 +58,12 @@ def run(
     transformer: Optional[Transformer],
     color_scale: Optional[float],
     with_rgb: bool,
-    write_intensity: bool,
+    extra_fields: list[ExtraFieldsDescription],
 ) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
         Optional[npt.NDArray[np.uint8]],
-        npt.NDArray[np.uint8],
-        npt.NDArray[np.uint8],
+        dict[str, npt.NDArray[Any]],
     ],
 ]:
     """
@@ -109,18 +120,17 @@ def run(
             elif with_rgb:
                 colors = np.zeros(coords.shape)
 
-            if "classification" in f.header.point_format.dimension_names:
-                classification = np.array(
-                    points["classification"], dtype=np.uint8
-                ).reshape(-1, 1)
-            else:
-                classification = np.zeros((len(points.x), 1), dtype=np.uint8)
+            extra_fields_data = {}
+            for extra_field in extra_fields:
+                if extra_field.name in f.header.point_format.dimension_names:
+                    extra_fields_data[extra_field.name] = (
+                        points[extra_field.name]
+                        .astype(extra_field.dtype)
+                        .reshape(-1, 1)
+                    )
+                else:
+                    extra_fields_data[extra_field.name] = np.zeros(
+                        (len(points), 1), dtype=extra_field.dtype
+                    )
 
-            if "intensity" in f.header.point_format.dimension_names:
-                intensity = np.array(points["intensity"] / 256, dtype=np.uint8).reshape(
-                    -1, 1
-                )
-            else:
-                intensity = np.zeros((len(points.x), 1), dtype=np.uint8)
-
-            yield coords, colors, classification, intensity
+            yield coords, colors, extra_fields_data

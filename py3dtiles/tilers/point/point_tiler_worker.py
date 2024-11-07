@@ -47,20 +47,15 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
             self.shared_metadata.transformer,
             self.shared_metadata.color_scale,
             self.shared_metadata.write_rgb,
-            self.shared_metadata.write_intensity,
+            self.shared_metadata.extra_fields_to_include,
         )
-        for coords, colors, classification, intensity in reader_gen:
+        for coords, colors, extra_fields in reader_gen:
             skt.send_multipart(
                 [
                     PointWorkerMessageType.NEW_TASK.value,
                     b"",
                     pickle.dumps(
-                        {
-                            "xyz": coords,
-                            "rgb": colors,
-                            "classification": classification,
-                            "intensity": intensity,
-                        }
+                        {"xyz": coords, "rgb": colors, "extra_fields": extra_fields}
                     ),
                     struct.pack(">I", len(coords)),
                 ],
@@ -75,9 +70,6 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
         pnts_writer_gen = pnts_writer.run(
             content,
             self.shared_metadata.out_folder,
-            self.shared_metadata.write_rgb,
-            self.shared_metadata.write_classification,
-            self.shared_metadata.write_intensity,
         )
         for total in pnts_writer_gen:
             skt.send_multipart(
@@ -112,6 +104,8 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
                 name,
                 self.shared_metadata.root_aabb,
                 self.shared_metadata.root_spacing,
+                self.shared_metadata.write_rgb,
+                self.shared_metadata.extra_fields_to_include,
             )
 
             node_process = NodeProcess(

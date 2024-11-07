@@ -3,6 +3,7 @@ import time
 from collections.abc import Generator
 from typing import Optional, TextIO
 
+from py3dtiles.points import Points
 from py3dtiles.tilers.point.node.node import Node
 from py3dtiles.tilers.point.node.node_catalog import NodeCatalog
 
@@ -123,10 +124,11 @@ class NodeProcess:
             # insert points in node (no children handling here)
             node.insert(
                 self.scale,
-                data["xyz"],
-                data["rgb"],
-                data["classification"],
-                data["intensity"],
+                Points(
+                    positions=data["xyz"],
+                    colors=data["rgb"],
+                    extra_fields=data["extra_fields"],
+                ),
                 halt_at_depth == 0,
             )
 
