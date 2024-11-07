@@ -189,6 +189,11 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
             file_info = reader.get_metadata(file)
 
+            if self.rgb and not file_info["has_color"]:
+                print(
+                    f"Warning: file ${file} does not have rgb, will default to (0, 0, 0)"
+                )
+
             pointcloud_file_portions += file_info["portions"]
             if aabb is None:
                 aabb = file_info["aabb"]

@@ -27,12 +27,15 @@ def get_metadata(filename: Path) -> MetadataReaderType:
 
         crs_in = f.header.parse_crs()
 
+        has_color = "red" in f.header.point_format.dimension_names
+
     return {
         "portions": pointcloud_file_portions,
         "aabb": np.array([f.header.mins, f.header.maxs]),
         "crs_in": crs_in,
         "point_count": point_count,
         "avg_min": np.array(f.header.mins),
+        "has_color": has_color,
     }
 
 
@@ -42,11 +45,12 @@ def run(
     portion: PortionItemType,
     transformer: Optional[Transformer],
     color_scale: Optional[float],
+    with_rgb: bool,
     write_intensity: bool,
 ) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
-        npt.NDArray[np.uint8],
+        Optional[npt.NDArray[np.uint8]],
         npt.NDArray[np.uint8],
         npt.NDArray[np.uint8],
     ],
@@ -88,23 +92,22 @@ def run(
             coords = np.ascontiguousarray(coords.astype(np.float32))
 
             # Read colors
-            if "red" in f.header.point_format.dimension_names:
+            colors = None
+            if with_rgb and "red" in f.header.point_format.dimension_names:
                 red = points["red"]
                 green = points["green"]
                 blue = points["blue"]
-            else:
-                red = points["intensity"]
-                green = points["intensity"]
-                blue = points["intensity"]
 
-            colors = np.vstack((red, green, blue)).transpose()
+                colors = np.vstack((red, green, blue)).transpose()
 
-            if color_scale is not None:
-                colors = np.clip(colors * color_scale, 0, 65535)
+                if color_scale is not None:
+                    colors = np.clip(colors * color_scale, 0, 65535)
 
-            # NOTE las spec says rgb is 16bits by components
-            # pnts are 8 bits (by default) by component, hence we divide by 256
-            colors = (colors / 256).astype(np.uint8)
+                # NOTE las spec says rgb is 16bits by components
+                # pnts are 8 bits (by default) by component, hence we divide by 256
+                colors = (colors / 256).astype(np.uint8)
+            elif with_rgb:
+                colors = np.zeros(coords.shape)
 
             if "classification" in f.header.point_format.dimension_names:
                 classification = np.array(

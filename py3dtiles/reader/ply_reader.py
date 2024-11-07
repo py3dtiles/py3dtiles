@@ -25,11 +25,16 @@ def get_metadata(path: Path) -> MetadataReaderType:
         )
     ply_vertices = ply_point_cloud["vertex"]
     point_count = ply_vertices.count
-    ply_features = [ply_prop.name for ply_prop in ply_vertices.properties]
-    if any(coord not in ply_features for coord in ("x", "y", "z")):
+    base_fields = []
+    for ply_prop in ply_vertices.properties:
+        if ply_prop.name in ("x", "y", "z", "red", "green", "blue"):
+            base_fields.append(ply_prop.name)
+    if any(coord not in base_fields for coord in ("x", "y", "z")):
         raise KeyError(
             "At least one of the basic coordinate feature (x, y, z) is missing in the input file."
         )
+
+    has_color = "red" in base_fields
 
     data = np.array(
         [ply_vertices["x"], ply_vertices["y"], ply_vertices["z"]]
@@ -44,6 +49,7 @@ def get_metadata(path: Path) -> MetadataReaderType:
         "crs_in": None,
         "point_count": point_count,
         "avg_min": aabb[0],
+        "has_color": has_color,
     }
 
 
@@ -53,11 +59,12 @@ def run(
     portion: PortionItemType,
     transformer: Optional[Transformer],
     color_scale: Optional[float],
+    with_rgb: bool,
     write_intensity: bool,
 ) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
-        npt.NDArray[np.uint8],
+        Optional[npt.NDArray[np.uint8]],
         npt.NDArray[np.uint8],
         npt.NDArray[np.uint8],
     ],
@@ -98,7 +105,8 @@ def run(
         # NOTE this code assume all the colors have the same type
         # I think it's a reasonable assumption to make at this point but it's
         # not mandated by the spec!
-        if "red" in ply_vertices:
+        colors = None
+        if with_rgb and "red" in ply_vertices:
             # val_dtype is of the form: i<nbytes>, u<nbytes>, float<nbytes>
             # see https://github.com/dranjan/python-plyfile/blob/d1f73004ed0a296fc8b9c1fad8139b5d90410639/plyfile.py#L32
             signed = ply_vertices.ply_property("red").val_dtype[0:1] == "i"
@@ -111,15 +119,15 @@ def run(
             red = ply_vertices["red"][start_offset : (start_offset + num)] / factor
             green = ply_vertices["green"][start_offset : (start_offset + num)] / factor
             blue = ply_vertices["blue"][start_offset : (start_offset + num)] / factor
-        else:
-            red = green = blue = np.zeros(num)
 
-        raw_colors = np.vstack((red, green, blue)).transpose()
+            raw_colors = np.vstack((red, green, blue)).transpose()
 
-        if color_scale is not None:
-            raw_colors = np.clip(raw_colors * color_scale, 0, 255)
+            if color_scale is not None:
+                raw_colors = np.clip(raw_colors * color_scale, 0, 255)
 
-        colors = raw_colors.astype(np.uint8)
+            colors = raw_colors.astype(np.uint8)
+        elif with_rgb:
+            colors = np.zeros(coords.shape, dtype=np.uint8)
 
         if "classification" in ply_vertices:
             classification = np.array(

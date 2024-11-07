@@ -43,9 +43,17 @@ def get_metadata(path: Path) -> MetadataReaderType:
             2048
         )  # For performance reasons we just snif the first part
         dialect = csv.Sniffer().sniff(file_sample)
+        has_header = csv.Sniffer().has_header(file_sample)
 
         f.seek(0)
-        if csv.Sniffer().has_header(file_sample):
+        # skip eventual header
+        if has_header:
+            f.readline()
+        line = f.readline()
+        feature_nb = len(f.readline().split(dialect.delimiter))
+
+        f.seek(0)
+        if has_header:
             f.readline()
 
         while True:
@@ -90,6 +98,8 @@ def get_metadata(path: Path) -> MetadataReaderType:
 
         pointcloud_file_portions = [(path, p) for p in portions]
 
+        has_color = feature_nb >= 6
+
     if aabb is None:
         raise ValueError(f"There is no point in the file {path}")
 
@@ -99,6 +109,7 @@ def get_metadata(path: Path) -> MetadataReaderType:
         "crs_in": None,
         "point_count": point_count,
         "avg_min": aabb[0],
+        "has_color": has_color,
     }
 
 
@@ -108,11 +119,12 @@ def run(
     portion: PortionItemType,
     transformer: Optional[Transformer],
     color_scale: Optional[float],
+    with_rgb: bool,
     write_intensity: bool,
 ) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
-        npt.NDArray[np.uint8],
+        Optional[npt.NDArray[np.uint8]],
         npt.NDArray[np.uint8],
         npt.NDArray[np.uint8],
     ],
@@ -174,10 +186,16 @@ def run(
             coords = np.ascontiguousarray(coords.astype(np.float32))
 
             # Read colors: 3 last columns when excluding classification data
-            if color_scale is None:
-                colors = points[:, 4:7].astype(np.uint8)
-            else:
-                colors = np.clip(points[:, 4:7] * color_scale, 0, 255).astype(np.uint8)
+            colors = None
+            if with_rgb and feature_nb < 6:
+                colors = np.zeros(coords.shape, dtype=np.uint8)
+            elif with_rgb:
+                if color_scale is None:
+                    colors = points[:, 4:7].astype(np.uint8)
+                else:
+                    colors = np.clip(points[:, 4:7] * color_scale, 0, 255).astype(
+                        np.uint8
+                    )
 
             if feature_nb > 7:  # we have classification data
                 classification = np.array(points[:, 7:], dtype=np.uint8).reshape(-1, 1)

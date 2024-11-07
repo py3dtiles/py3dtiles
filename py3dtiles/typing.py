@@ -112,6 +112,7 @@ class MetadataReaderType(TypedDict):
     crs_in: CRS | None
     point_count: int
     avg_min: npt.NDArray[np.float64]
+    has_color: bool
 
 
 OffsetScaleType = tuple[
