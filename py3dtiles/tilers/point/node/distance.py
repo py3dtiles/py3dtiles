@@ -33,6 +33,7 @@ def xyz_to_child_index(xyz, aabb_center):
 )
 def xyz_to_key(xyz, cell_count, aabb_min, inv_aabb_size, shift):
     a = ((cell_count * inv_aabb_size) * (xyz - aabb_min)).astype(np.int64)
+    # this is a clamp
     a = np.minimum(np.maximum(a, 0), cell_count - 1)
     a[:, 1] <<= shift
     a[:, 2] <<= 2 * shift
