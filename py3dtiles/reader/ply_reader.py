@@ -36,7 +36,7 @@ def get_metadata(path: Path) -> MetadataReaderType:
     ).transpose()
     aabb = np.array((np.min(data, axis=0), np.max(data, axis=0)))
 
-    pointcloud_file_portions: PortionsType = [(str(path), (0, point_count))]
+    pointcloud_file_portions: PortionsType = [(path, (0, point_count))]
 
     return {
         "portions": pointcloud_file_portions,

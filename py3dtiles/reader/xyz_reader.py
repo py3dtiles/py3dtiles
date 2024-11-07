@@ -66,7 +66,7 @@ def get_metadata(path: Path) -> MetadataReaderType:
             for i in range(steps)
         ]
 
-        pointcloud_file_portions = [(str(path), p) for p in portions]
+        pointcloud_file_portions = [(path, p) for p in portions]
 
     if aabb is None:
         raise ValueError(f"There is no point in the file {path}")
@@ -81,7 +81,7 @@ def get_metadata(path: Path) -> MetadataReaderType:
 
 
 def run(
-    filename: str,
+    filename: Path,
     offset_scale: OffsetScaleType,
     portion: PortionItemType,
     transformer: Optional[Transformer],

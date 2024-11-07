@@ -11,10 +11,9 @@ from pyproj import Transformer
 from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionItemType
 
 
-def get_metadata(path: Path) -> MetadataReaderType:
+def get_metadata(filename: Path) -> MetadataReaderType:
     pointcloud_file_portions = []
 
-    filename = str(path)
     with laspy.open(filename) as f:
         point_count = f.header.point_count
 
