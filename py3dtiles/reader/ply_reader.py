@@ -1,5 +1,5 @@
 import math
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Optional
 
@@ -54,15 +54,13 @@ def run(
     transformer: Optional[Transformer],
     color_scale: Optional[float],
     write_intensity: bool,
-) -> Generator[
+) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
         npt.NDArray[np.uint8],
         npt.NDArray[np.uint8],
         npt.NDArray[np.uint8],
     ],
-    None,
-    None,
 ]:
     """
     Reads points from a ply file.
