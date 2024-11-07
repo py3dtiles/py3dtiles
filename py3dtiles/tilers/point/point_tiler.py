@@ -71,7 +71,7 @@ def can_pnts_be_written(
 class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
     name = b"points"
 
-    file_info: dict[str, Any]
+    files_info: dict[str, Any]
     root_aabb: npt.NDArray[np.float64]
     root_scale: npt.NDArray[np.float32]
     root_spacing: float
@@ -132,7 +132,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         working_dir: Path,
         number_of_jobs: int,
     ) -> None:
-        self.file_info = self.get_file_info(self.crs_in, self.force_crs_in)
+        self.files_info = self.get_files_info(self.crs_in, self.force_crs_in)
         self.transformer = self.get_transformer(
             crs_out, always_xy=self.pyproj_always_xy
         )
@@ -148,7 +148,9 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
         self.node_store = SharedNodeStore(working_dir)
 
-        self.state = PointState(self.file_info["portions"], max(1, number_of_jobs // 2))
+        self.state = PointState(
+            self.files_info["portions"], max(1, number_of_jobs // 2)
+        )
 
         self.shared_metadata = PointSharedMetadata(
             self.transformer,
@@ -163,7 +165,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             self.verbosity,
         )
 
-    def get_file_info(
+    def get_files_info(
         self,
         crs_in: Optional[CRS],
         force_crs_in: bool = False,
@@ -225,13 +227,13 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         self, crs_out: Optional[CRS], always_xy: bool = False
     ) -> Optional[Transformer]:
         if crs_out:
-            if self.file_info["crs_in"] is None:
+            if self.files_info["crs_in"] is None:
                 raise SrsInMissingException(
                     "None file has a input srs specified. Should be provided."
                 )
 
             transformer = Transformer.from_crs(
-                self.file_info["crs_in"], crs_out, always_xy=always_xy
+                self.files_info["crs_in"], crs_out, always_xy=always_xy
             )
         else:
             transformer = None
@@ -243,8 +245,8 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
     ) -> tuple[
         npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]
     ]:
-        avg_min: npt.NDArray[np.float64] = self.file_info["avg_min"]
-        aabb: npt.NDArray[np.float64] = self.file_info["aabb"]
+        avg_min: npt.NDArray[np.float64] = self.files_info["avg_min"]
+        aabb: npt.NDArray[np.float64] = self.files_info["aabb"]
 
         rotation_matrix: npt.NDArray[np.float64] = np.identity(4)
         if crs_out is not None and transformer is not None:
@@ -306,7 +308,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
     def print_summary(self) -> None:
         print("Summary:")
-        print("  - points to process: {}".format(self.file_info["point_count"]))
+        print("  - points to process: {}".format(self.files_info["point_count"]))
         print(f"  - offset to use: {self.avg_min}")
         print(f"  - root spacing: {self.root_spacing / self.root_scale[0]}")
         print(f"  - root aabb: {self.root_aabb}")
@@ -465,10 +467,10 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             self.state.waiting_writing_nodes.clear()
 
     def validate_binary_data(self) -> None:
-        if self.state.points_in_pnts != self.file_info["point_count"]:
+        if self.state.points_in_pnts != self.files_info["point_count"]:
             raise ValueError(
                 "Invalid point count in the written .pnts"
-                + f"(expected: {self.file_info['point_count']}, was: {self.state.points_in_pnts})"
+                + f"(expected: {self.files_info['point_count']}, was: {self.state.points_in_pnts})"
             )
 
     def write_tileset(self, use_process_pool: bool = True) -> None:
@@ -630,7 +632,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                     round(
                         100
                         * self.state.processed_points
-                        / self.file_info["point_count"],
+                        / self.files_info["point_count"],
                         2,
                     ),
                     round(now, 1),
@@ -642,7 +644,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
         elif self.verbosity >= 0:
             percent = round(
-                100 * self.state.processed_points / self.file_info["point_count"],
+                100 * self.state.processed_points / self.files_info["point_count"],
                 2,
             )
             time_left = (100 - percent) * now / (percent + 0.001)
