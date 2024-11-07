@@ -11,9 +11,9 @@ from pyproj import Transformer
 from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionItemType
 
 
-def get_metadata(path: Path, fraction: int = 100) -> MetadataReaderType:
+def get_metadata(path: Path) -> MetadataReaderType:
     aabb = None
-    count = 0
+    point_count = 0
     seek_values = []
 
     with path.open() as f:
@@ -41,10 +41,10 @@ def get_metadata(path: Path, fraction: int = 100) -> MetadataReaderType:
             if points.shape[0] == 0:
                 break
 
-            if not count % 1_000_000:
+            if not point_count % 1_000_000:
                 seek_values += [offset]
 
-            count += points.shape[0]
+            point_count += points.shape[0]
             batch_aabb = np.array([np.min(points, axis=0), np.max(points, axis=0)])
 
             # Update aabb
@@ -54,18 +54,16 @@ def get_metadata(path: Path, fraction: int = 100) -> MetadataReaderType:
                 aabb[0] = np.minimum(aabb[0], batch_aabb[0])
                 aabb[1] = np.maximum(aabb[1], batch_aabb[1])
 
-        # We need an exact point count
-        point_count = count * fraction // 100
-
-        _1M = min(count, 1_000_000)
-        steps = math.ceil(count / _1M)
+        _1M = min(point_count, 1_000_000)
+        steps = math.ceil(point_count / _1M)
         if steps != len(seek_values):
             raise ValueError(
                 "the size of seek_values should be equal to steps,"
                 f"currently steps = {steps} and len(seek_values) = {len(seek_values)}"
             )
         portions: list[PortionItemType] = [
-            (i * _1M, min(count, (i + 1) * _1M), seek_values[i]) for i in range(steps)
+            (i * _1M, min(point_count, (i + 1) * _1M), seek_values[i])
+            for i in range(steps)
         ]
 
         pointcloud_file_portions = [(str(path), p) for p in portions]
