@@ -22,11 +22,9 @@ from py3dtiles.reader.ply_reader import create_plydata_with_renamed_property
 from py3dtiles.tileset import TileSet, number_of_points_in_tileset
 from py3dtiles.tileset.content import Pnts
 
-DATA_DIRECTORY = Path(__file__).parent / "fixtures"
 
-
-def test_convert(tmp_dir: Path) -> None:
-    path = DATA_DIRECTORY / "ripple.las"
+def test_convert(tmp_dir: Path, fixtures_dir: Path) -> None:
+    path = fixtures_dir / "ripple.las"
     convert(path, outfolder=tmp_dir)
 
     # basic asserts
@@ -46,10 +44,10 @@ def test_convert(tmp_dir: Path) -> None:
     assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
-def test_convert_with_prune(tmp_dir: Path) -> None:
+def test_convert_with_prune(tmp_dir: Path, fixtures_dir: Path) -> None:
     # This file has 1 point at (-2, -2, -2) and 20001 at (1, 1, 1)
     # like this, it triggers the prune mechanism
-    laz_path = DATA_DIRECTORY / "stacked_points.las"
+    laz_path = fixtures_dir / "stacked_points.las"
 
     convert(
         laz_path,
@@ -75,10 +73,10 @@ def test_convert_with_prune(tmp_dir: Path) -> None:
     assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
-def test_convert_without_srs(tmp_dir: Path) -> None:
+def test_convert_without_srs(tmp_dir: Path, fixtures_dir: Path) -> None:
     with raises(SrsInMissingException):
         convert(
-            DATA_DIRECTORY / "without_srs.las",
+            fixtures_dir / "without_srs.las",
             outfolder=tmp_dir,
             crs_out=CRS.from_epsg(4978),
             jobs=1,
@@ -86,7 +84,7 @@ def test_convert_without_srs(tmp_dir: Path) -> None:
     assert not tmp_dir.exists()
 
     convert(
-        DATA_DIRECTORY / "without_srs.las",
+        fixtures_dir / "without_srs.las",
         outfolder=tmp_dir,
         crs_in=CRS.from_epsg(3949),
         crs_out=CRS.from_epsg(4978),
@@ -103,7 +101,7 @@ def test_convert_without_srs(tmp_dir: Path) -> None:
 
     assert Path(tmp_dir, "r.pnts").exists()
 
-    with laspy.open(DATA_DIRECTORY / "without_srs.las") as f:
+    with laspy.open(fixtures_dir / "without_srs.las") as f:
         las_point_count = f.header.point_count
 
     assert las_point_count == number_of_points_in_tileset(tileset_path)
@@ -117,9 +115,9 @@ def test_convert_without_srs(tmp_dir: Path) -> None:
     assert_array_equal(pt1_color, np.array((187, 187, 187), dtype=np.uint8))
 
 
-def test_convert_las_color_scale(tmp_dir: Path) -> None:
+def test_convert_las_color_scale(tmp_dir: Path, fixtures_dir: Path) -> None:
     convert(
-        DATA_DIRECTORY / "without_srs.las",
+        fixtures_dir / "without_srs.las",
         outfolder=tmp_dir,
         jobs=1,
     )
@@ -131,7 +129,7 @@ def test_convert_las_color_scale(tmp_dir: Path) -> None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((187, 187, 187), dtype=np.uint8))
     convert(
-        DATA_DIRECTORY / "without_srs.las",
+        fixtures_dir / "without_srs.las",
         overwrite=True,
         color_scale=1.1,
         outfolder=tmp_dir,
@@ -146,7 +144,7 @@ def test_convert_las_color_scale(tmp_dir: Path) -> None:
     assert_array_equal(pt1_color, np.array((206, 206, 206), dtype=np.uint8))
 
     convert(
-        DATA_DIRECTORY / "without_srs.las",
+        fixtures_dir / "without_srs.las",
         overwrite=True,
         color_scale=1.5,
         outfolder=tmp_dir,
@@ -161,9 +159,9 @@ def test_convert_las_color_scale(tmp_dir: Path) -> None:
     assert_array_equal(pt1_color, np.array((255, 255, 255), dtype=np.uint8))
 
 
-def test_convert_with_srs(tmp_dir: Path) -> None:
+def test_convert_with_srs(tmp_dir: Path, fixtures_dir: Path) -> None:
     convert(
-        DATA_DIRECTORY / "with_srs_3857.las",
+        fixtures_dir / "with_srs_3857.las",
         outfolder=tmp_dir,
         crs_out=CRS.from_epsg(4978),
         jobs=1,
@@ -213,15 +211,15 @@ def test_convert_with_srs(tmp_dir: Path) -> None:
 
     assert Path(tmp_dir, "r.pnts").exists()
 
-    with laspy.open(DATA_DIRECTORY / "with_srs_3857.las") as f:
+    with laspy.open(fixtures_dir / "with_srs_3857.las") as f:
         las_point_count = f.header.point_count
 
     assert las_point_count == number_of_points_in_tileset(tileset_path)
 
 
-def test_convert_simple_xyz(tmp_dir: Path) -> None:
+def test_convert_simple_xyz(tmp_dir: Path, fixtures_dir: Path) -> None:
     convert(
-        DATA_DIRECTORY / "simple.xyz",
+        fixtures_dir / "simple.xyz",
         outfolder=tmp_dir,
         crs_in=CRS.from_epsg(3857),
         crs_out=CRS.from_epsg(4978),
@@ -231,7 +229,7 @@ def test_convert_simple_xyz(tmp_dir: Path) -> None:
     assert Path(tmp_dir, "r.pnts").exists()
 
     xyz_point_count = 0
-    with open(DATA_DIRECTORY / "simple.xyz") as f:
+    with open(fixtures_dir / "simple.xyz") as f:
         while line := f.readline():
             xyz_point_count += 1 if line != "" else 0
 
@@ -246,9 +244,9 @@ def test_convert_simple_xyz(tmp_dir: Path) -> None:
     assert box == expecting_box
 
 
-def test_convert_xyz_rgb_i_c(tmp_dir: Path) -> None:
+def test_convert_xyz_rgb_i_c(tmp_dir: Path, fixtures_dir: Path) -> None:
     convert(
-        DATA_DIRECTORY / "simple_with_irgb_and_classification.csv",
+        fixtures_dir / "simple_with_irgb_and_classification.csv",
         outfolder=tmp_dir,
         jobs=1,
     )
@@ -256,7 +254,7 @@ def test_convert_xyz_rgb_i_c(tmp_dir: Path) -> None:
     assert Path(tmp_dir, "r.pnts").exists()
 
     xyz_point_count = -1  # compensate for header line
-    with open(DATA_DIRECTORY / "simple_with_irgb_and_classification.csv") as f:
+    with open(fixtures_dir / "simple_with_irgb_and_classification.csv") as f:
         while line := f.readline():
             xyz_point_count += 1 if line != "" else 0
 
@@ -287,9 +285,9 @@ def test_convert_xyz_rgb_i_c(tmp_dir: Path) -> None:
     assert_array_equal(bt.get_binary_property("Classification"), [22, 21, 22])
 
 
-def test_convert_xyz_rgb_i_c_with_srs(tmp_dir: Path) -> None:
+def test_convert_xyz_rgb_i_c_with_srs(tmp_dir: Path, fixtures_dir: Path) -> None:
     convert(
-        DATA_DIRECTORY / "simple_with_irgb_and_classification.csv",
+        fixtures_dir / "simple_with_irgb_and_classification.csv",
         outfolder=tmp_dir,
         crs_in=CRS.from_epsg(28992),
         crs_out=CRS.from_epsg(4978),
@@ -299,7 +297,7 @@ def test_convert_xyz_rgb_i_c_with_srs(tmp_dir: Path) -> None:
     assert Path(tmp_dir, "r.pnts").exists()
 
     xyz_point_count = -1  # compensate for header line
-    with open(DATA_DIRECTORY / "simple_with_irgb_and_classification.csv") as f:
+    with open(fixtures_dir / "simple_with_irgb_and_classification.csv") as f:
         while line := f.readline():
             xyz_point_count += 1 if line != "" else 0
 
@@ -307,8 +305,8 @@ def test_convert_xyz_rgb_i_c_with_srs(tmp_dir: Path) -> None:
     assert xyz_point_count == number_of_points_in_tileset(tileset_path)
 
 
-def test_convert_xyz_with_rgb(tmp_dir: Path) -> None:
-    convert(DATA_DIRECTORY / "simple_with_rgb.xyz", outfolder=tmp_dir)
+def test_convert_xyz_with_rgb(tmp_dir: Path, fixtures_dir: Path) -> None:
+    convert(fixtures_dir / "simple_with_rgb.xyz", outfolder=tmp_dir)
 
     tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
@@ -335,8 +333,8 @@ def test_convert_xyz_with_rgb(tmp_dir: Path) -> None:
     assert_array_equal(pt3_color, np.array((0, 10, 0), dtype=np.uint8))
 
 
-def test_convert_xyz_with_rgb_color_scale(tmp_dir: Path) -> None:
-    convert(DATA_DIRECTORY / "simple_with_rgb.xyz", outfolder=tmp_dir, color_scale=1.5)
+def test_convert_xyz_with_rgb_color_scale(tmp_dir: Path, fixtures_dir: Path) -> None:
+    convert(fixtures_dir / "simple_with_rgb.xyz", outfolder=tmp_dir, color_scale=1.5)
 
     tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
@@ -363,8 +361,8 @@ def test_convert_xyz_with_rgb_color_scale(tmp_dir: Path) -> None:
     assert_array_equal(pt3_color, np.array((0, 15, 0), dtype=np.uint8))
 
 
-def test_convert_ply(tmp_dir: Path) -> None:
-    convert(DATA_DIRECTORY / "simple.ply", outfolder=tmp_dir, jobs=1)
+def test_convert_ply(tmp_dir: Path, fixtures_dir: Path) -> None:
+    convert(fixtures_dir / "simple.ply", outfolder=tmp_dir, jobs=1)
     assert Path(tmp_dir, "tileset.json").exists()
     assert Path(tmp_dir, "r.pnts").exists()
 
@@ -400,9 +398,9 @@ def test_convert_ply(tmp_dir: Path) -> None:
     assert_array_equal(pt1_color, np.array((0, 0, 0), dtype=np.uint8))
 
 
-def test_convert_ply_with_color(tmp_dir: Path) -> None:
+def test_convert_ply_with_color(tmp_dir: Path, fixtures_dir: Path) -> None:
     # 8 bits color
-    convert(DATA_DIRECTORY / "simple_with_8_bits_colors.ply", outfolder=tmp_dir, jobs=1)
+    convert(fixtures_dir / "simple_with_8_bits_colors.ply", outfolder=tmp_dir, jobs=1)
     assert Path(tmp_dir, "tileset.json").exists()
     assert Path(tmp_dir, "r.pnts").exists()
 
@@ -441,7 +439,7 @@ def test_convert_ply_with_color(tmp_dir: Path) -> None:
     # 16 bits colors
     # every value should be divided by 256
     convert(
-        DATA_DIRECTORY / "simple_with_16_bits_colors.ply",
+        fixtures_dir / "simple_with_16_bits_colors.ply",
         outfolder=tmp_dir,
         jobs=1,
         overwrite=True,
@@ -482,10 +480,10 @@ def test_convert_ply_with_color(tmp_dir: Path) -> None:
     assert_array_equal(pt1_color, np.array((255, 255, 255), dtype=np.uint8))
 
 
-def test_convert_ply_with_color_scale(tmp_dir: Path) -> None:
+def test_convert_ply_with_color_scale(tmp_dir: Path, fixtures_dir: Path) -> None:
     # 8 bits color
     convert(
-        DATA_DIRECTORY / "simple_with_8_bits_colors.ply",
+        fixtures_dir / "simple_with_8_bits_colors.ply",
         outfolder=tmp_dir,
         jobs=1,
         color_scale=3,
@@ -522,10 +520,12 @@ def test_convert_ply_with_color_scale(tmp_dir: Path) -> None:
     assert_array_equal(pt1_color, np.array((120, 120, 120), dtype=np.uint8))
 
 
-def test_convert_ply_with_wrong_classification(tmp_dir: Path) -> None:
+def test_convert_ply_with_wrong_classification(
+    tmp_dir: Path, fixtures_dir: Path
+) -> None:
     # Buggy feature name, classification is lost.
     convert(
-        DATA_DIRECTORY / "simple.ply",
+        fixtures_dir / "simple.ply",
         outfolder=tmp_dir,
         jobs=1,
         classification=True,
@@ -544,12 +544,14 @@ def test_convert_ply_with_wrong_classification(tmp_dir: Path) -> None:
         )
 
 
-def test_convert_ply_with_good_classification(tmp_dir: Path) -> None:
+def test_convert_ply_with_good_classification(
+    tmp_dir: Path, fixtures_dir: Path
+) -> None:
     EXPECTED_LABELS = np.array([0, 1, 2, -1], dtype=np.uint8)
     # Change the classification property name in the tested .ply file
-    ply_data = plyfile.PlyData.read(DATA_DIRECTORY / "simple.ply")
+    ply_data = plyfile.PlyData.read(fixtures_dir / "simple.ply")
     ply_data = create_plydata_with_renamed_property(ply_data, "label", "classification")
-    modified_ply_filename = DATA_DIRECTORY / "modified.ply"
+    modified_ply_filename = fixtures_dir / "modified.ply"
     ply_data.write(modified_ply_filename)
     # Valid feature name, classification is preserved.
     convert(
@@ -577,10 +579,10 @@ def test_convert_ply_with_good_classification(tmp_dir: Path) -> None:
     modified_ply_filename.unlink()
 
 
-def test_convert_ply_with_intensity(tmp_dir: Path) -> None:
+def test_convert_ply_with_intensity(tmp_dir: Path, fixtures_dir: Path) -> None:
     # Valid feature name, intensity is preserved.
     convert(
-        DATA_DIRECTORY / "simple_with_intensity.ply",
+        fixtures_dir / "simple_with_intensity.ply",
         outfolder=tmp_dir,
         jobs=1,
         intensity=True,
@@ -600,10 +602,12 @@ def test_convert_ply_with_intensity(tmp_dir: Path) -> None:
     )
 
 
-def test_convert_ply_with_classification_and_intensity(tmp_dir: Path) -> None:
+def test_convert_ply_with_classification_and_intensity(
+    tmp_dir: Path, ply_with_extra_fields_filepath: Path
+) -> None:
     # Valid feature name, intensity is preserved.
     convert(
-        DATA_DIRECTORY / "simple_with_classification_and_intensity.ply",
+        ply_with_extra_fields_filepath,
         outfolder=tmp_dir,
         jobs=1,
         intensity=True,
@@ -628,10 +632,12 @@ def test_convert_ply_with_classification_and_intensity(tmp_dir: Path) -> None:
     )
 
 
-def test_convert_ply_with_classification_and_intensity_f4(tmp_dir: Path) -> None:
+def test_convert_ply_with_classification_and_intensity_f4(
+    tmp_dir: Path, ply_with_extra_fields_as_f4_filepath: Path
+) -> None:
     # we don't support arbitrary precision in intensity yet, but the conversion should succeed with warnings
     convert(
-        DATA_DIRECTORY / "simple_with_classification_and_intensity_f4.ply",
+        ply_with_extra_fields_as_f4_filepath,
         outfolder=tmp_dir,
         jobs=1,
         intensity=True,
@@ -639,7 +645,7 @@ def test_convert_ply_with_classification_and_intensity_f4(tmp_dir: Path) -> None
 
     # without intensity
     convert(
-        DATA_DIRECTORY / "simple_with_classification_and_intensity_f4.ply",
+        ply_with_extra_fields_as_f4_filepath,
         outfolder=tmp_dir,
         jobs=1,
         intensity=False,
@@ -661,9 +667,9 @@ def test_convert_ply_with_classification_and_intensity_f4(tmp_dir: Path) -> None
     assert "Intensity" not in tile_content.body.batch_table.header.data
 
 
-def test_convert_mix_las_xyz(tmp_dir: Path) -> None:
+def test_convert_mix_las_xyz(tmp_dir: Path, fixtures_dir: Path) -> None:
     convert(
-        [DATA_DIRECTORY / "simple.xyz", DATA_DIRECTORY / "with_srs_3857.las"],
+        [fixtures_dir / "simple.xyz", fixtures_dir / "with_srs_3857.las"],
         outfolder=tmp_dir,
         crs_out=CRS.from_epsg(4978),
         jobs=1,
@@ -672,11 +678,11 @@ def test_convert_mix_las_xyz(tmp_dir: Path) -> None:
     assert Path(tmp_dir, "r.pnts").exists()
 
     xyz_point_count = 0
-    with open(DATA_DIRECTORY / "simple.xyz") as f:
+    with open(fixtures_dir / "simple.xyz") as f:
         while line := f.readline():
             xyz_point_count += 1 if line != "" else 0
 
-    with laspy.open(DATA_DIRECTORY / "with_srs_3857.las") as f:
+    with laspy.open(fixtures_dir / "with_srs_3857.las") as f:
         las_point_count = f.header.point_count
 
     tileset_path = tmp_dir / "tileset.json"
@@ -705,12 +711,12 @@ def test_convert_mix_las_xyz(tmp_dir: Path) -> None:
     assert box == expecting_box
 
 
-def test_convert_mix_input_crs(tmp_dir: Path) -> None:
+def test_convert_mix_input_crs(tmp_dir: Path, fixtures_dir: Path) -> None:
     with raises(SrsInMixinException):
         convert(
             [
-                DATA_DIRECTORY / "with_srs_3950.las",
-                DATA_DIRECTORY / "with_srs_3857.las",
+                fixtures_dir / "with_srs_3950.las",
+                fixtures_dir / "with_srs_3857.las",
             ],
             outfolder=tmp_dir,
             crs_out=CRS.from_epsg(4978),
@@ -721,8 +727,8 @@ def test_convert_mix_input_crs(tmp_dir: Path) -> None:
     with raises(SrsInMixinException):
         convert(
             [
-                DATA_DIRECTORY / "with_srs_3950.las",
-                DATA_DIRECTORY / "with_srs_3857.las",
+                fixtures_dir / "with_srs_3950.las",
+                fixtures_dir / "with_srs_3857.las",
             ],
             outfolder=tmp_dir,
             crs_in=CRS.from_epsg(3432),
@@ -732,7 +738,7 @@ def test_convert_mix_input_crs(tmp_dir: Path) -> None:
     assert not tmp_dir.exists()
 
     convert(
-        [DATA_DIRECTORY / "with_srs_3950.las", DATA_DIRECTORY / "with_srs_3857.las"],
+        [fixtures_dir / "with_srs_3950.las", fixtures_dir / "with_srs_3857.las"],
         outfolder=tmp_dir,
         crs_in=CRS.from_epsg(3432),
         crs_out=CRS.from_epsg(4978),
@@ -746,16 +752,19 @@ def test_convert_mix_input_crs(tmp_dir: Path) -> None:
     multiprocessing.get_start_method() != "fork",
     reason="'patch' function works only with the multiprocessing 'fork' method (not available on windows).",
 )
-def test_convert_xyz_exception_in_run(tmp_dir: Path) -> None:
-    with patch("py3dtiles.reader.xyz_reader.run") as mock_run, raises(
-        Exception,
-        match="An exception occurred in a worker: builtins.Exception: Exception in run",
+def test_convert_xyz_exception_in_run(tmp_dir: Path, fixtures_dir: Path) -> None:
+    with (
+        patch("py3dtiles.reader.xyz_reader.run") as mock_run,
+        raises(
+            Exception,
+            match="An exception occurred in a worker: builtins.Exception: Exception in run",
+        ),
     ):
         # NOTE: this is intentionnally different from below, we are testing 2 different things
         # Here, we test that a very early fail wont block the run, and that it will terminate correctly
         mock_run.side_effect = Exception("Exception in run")
         convert(
-            DATA_DIRECTORY / "simple.xyz",
+            fixtures_dir / "simple.xyz",
             outfolder=tmp_dir,
             crs_in=CRS.from_epsg(3857),
             crs_out=CRS.from_epsg(4978),
@@ -766,10 +775,13 @@ def test_convert_xyz_exception_in_run(tmp_dir: Path) -> None:
     multiprocessing.get_start_method() != "fork",
     reason="'patch' function works only with the multiprocessing 'fork' method (not available on windows).",
 )
-def test_convert_las_exception_in_run(tmp_dir: Path) -> None:
-    with patch("py3dtiles.reader.las_reader.run") as mock_run, raises(
-        Exception,
-        match="An exception occurred in a worker: builtins.Exception: Exception in run",
+def test_convert_las_exception_in_run(tmp_dir: Path, fixtures_dir: Path) -> None:
+    with (
+        patch("py3dtiles.reader.las_reader.run") as mock_run,
+        raises(
+            Exception,
+            match="An exception occurred in a worker: builtins.Exception: Exception in run",
+        ),
     ):
 
         def side_effect(*args):  # type: ignore
@@ -778,20 +790,22 @@ def test_convert_las_exception_in_run(tmp_dir: Path) -> None:
 
         mock_run.side_effect = side_effect
         convert(
-            DATA_DIRECTORY / "with_srs_3857.las",
+            fixtures_dir / "with_srs_3857.las",
             outfolder=tmp_dir,
             crs_in=CRS.from_epsg(3857),
             crs_out=CRS.from_epsg(4978),
         )
 
 
-def test_convert_export_folder_already_exists(tmp_dir: Path) -> None:
+def test_convert_export_folder_already_exists(
+    tmp_dir: Path, fixtures_dir: Path
+) -> None:
     assert not (tmp_dir / "tileset.json").exists()
     assert len(os.listdir(tmp_dir)) == 0
 
     # folder is empty, ok
     convert(
-        DATA_DIRECTORY / "simple.xyz",
+        fixtures_dir / "simple.xyz",
         outfolder=tmp_dir,
         jobs=1,
     )
@@ -799,7 +813,7 @@ def test_convert_export_folder_already_exists(tmp_dir: Path) -> None:
     shutil.rmtree(tmp_dir)
     # folder will be created
     convert(
-        DATA_DIRECTORY / "simple.xyz",
+        fixtures_dir / "simple.xyz",
         outfolder=tmp_dir,
         jobs=1,
     )
@@ -811,14 +825,14 @@ def test_convert_export_folder_already_exists(tmp_dir: Path) -> None:
         FileExistsError, match=f"Folder '{tmp_dir}' already exists and is not empty."
     ):
         convert(
-            DATA_DIRECTORY / "simple.xyz",
+            fixtures_dir / "simple.xyz",
             outfolder=tmp_dir,
             jobs=1,
         )
 
     # but overwriting works
     convert(
-        DATA_DIRECTORY / "simple.xyz",
+        fixtures_dir / "simple.xyz",
         outfolder=tmp_dir,
         overwrite=True,
         jobs=1,
@@ -834,7 +848,7 @@ def test_convert_export_folder_already_exists(tmp_dir: Path) -> None:
         match=f"'{tmp_dir}' already exists and is not a directory. Not deleting it.",
     ):
         convert(
-            DATA_DIRECTORY / "simple.xyz",
+            fixtures_dir / "simple.xyz",
             outfolder=tmp_dir,
             jobs=1,
         )
@@ -860,7 +874,9 @@ def test_convert_many_point_same_location(tmp_dir: Path) -> None:
     "rgb_bool,classif_bool",
     [(True, True), (False, True), (True, False), (False, False)],
 )
-def test_convert_rgb_classif(rgb_bool: bool, classif_bool: bool, tmp_dir: Path) -> None:
+def test_convert_rgb_classif(
+    rgb_bool: bool, classif_bool: bool, tmp_dir: Path, fixtures_dir: Path
+) -> None:
     expected_raise: Union[nullcontext[None], RaisesContext[ValueError]]
     if not classif_bool:
         expected_raise = raises(
@@ -873,7 +889,7 @@ def test_convert_rgb_classif(rgb_bool: bool, classif_bool: bool, tmp_dir: Path) 
         # https://github.com/pytest-dev/pytest/issues/1830#issuecomment-425653756).
         expected_raise = nullcontext()
 
-    input_filepath = DATA_DIRECTORY / "simple_with_classification.ply"
+    input_filepath = fixtures_dir / "simple_with_classification.ply"
     convert(
         input_filepath, rgb=rgb_bool, classification=classif_bool, outfolder=tmp_dir
     )
@@ -898,9 +914,8 @@ def test_convert_rgb_classif(rgb_bool: bool, classif_bool: bool, tmp_dir: Path) 
             assert len(bt_prop) > 0
 
 
-def test_convert_without_threadpool(tmp_dir: Path) -> None:
-    path = DATA_DIRECTORY / "ripple.las"
-    convert(path, outfolder=tmp_dir, use_process_pool=False)
+def test_convert_without_threadpool(tmp_dir: Path, ripple_filepath: Path) -> None:
+    convert(ripple_filepath, outfolder=tmp_dir, use_process_pool=False)
 
     # basic asserts
     tileset_path = tmp_dir / "tileset.json"
@@ -913,7 +928,7 @@ def test_convert_without_threadpool(tmp_dir: Path) -> None:
 
     assert Path(tmp_dir, "r0.pnts").exists()
 
-    with laspy.open(path) as f:
+    with laspy.open(ripple_filepath) as f:
         las_point_count = f.header.point_count
 
     assert las_point_count == number_of_points_in_tileset(tileset_path)
