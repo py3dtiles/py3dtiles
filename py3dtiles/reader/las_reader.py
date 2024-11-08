@@ -1,5 +1,5 @@
 import math
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Optional
 
@@ -11,10 +11,9 @@ from pyproj import Transformer
 from py3dtiles.typing import MetadataReaderType, OffsetScaleType, PortionItemType
 
 
-def get_metadata(path: Path) -> MetadataReaderType:
+def get_metadata(filename: Path) -> MetadataReaderType:
     pointcloud_file_portions = []
 
-    filename = str(path)
     with laspy.open(filename) as f:
         point_count = f.header.point_count
 
@@ -44,15 +43,13 @@ def run(
     transformer: Optional[Transformer],
     color_scale: Optional[float],
     write_intensity: bool,
-) -> Generator[
+) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
         npt.NDArray[np.uint8],
         npt.NDArray[np.uint8],
         npt.NDArray[np.uint8],
     ],
-    None,
-    None,
 ]:
     """
     Reads points from a las file

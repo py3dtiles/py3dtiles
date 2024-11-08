@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional, TypedDict, Union
 
 import numpy as np
@@ -102,7 +103,7 @@ class HierarchyClassDictType(TypedDict):
 # Tiler types
 
 PortionItemType = tuple[int, ...]
-PortionsType = list[tuple[str, PortionItemType]]
+PortionsType = list[tuple[Path, PortionItemType]]
 
 
 class MetadataReaderType(TypedDict):

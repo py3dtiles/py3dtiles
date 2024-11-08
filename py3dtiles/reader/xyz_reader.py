@@ -1,6 +1,28 @@
+"""
+Reads points from a .xyz or .csv file
+
+Consider XYZIRGB format following FME documentation(*). We do the
+following hypothesis and enhancements:
+
+- A header line defining columns in CSV style may be present, but will be ignored (please open an issue if you have a use case where the header is important)
+- The separator separating the columns is automagically guessed by the
+  reader. This is generally fail safe. It will not harm to use commonly
+  accepted separators like space, tab, colon, semi-colon.
+- The order of columns is fixed. The reader does the following assumptions:
+  - 3 columns mean XYZ
+  - 4 columns mean XYZI
+  - 6 columns mean XYZRGB
+  - 7 columns mean XYZIRGB
+  - 8 columns mean XYZIRGB followed by classification data. Classification data must be integers only.
+  - all columns after the 8th column will be ignored.
+
+NOTE: we assume RGB are 8 bits components.
+
+(*) See: https://docs.safe.com/fme/html/FME_Desktop_Documentation/FME_ReadersWriters/pointcloudxyz/pointcloudxyz.htm
+"""
 import csv
 import math
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Optional
 
@@ -66,7 +88,7 @@ def get_metadata(path: Path) -> MetadataReaderType:
             for i in range(steps)
         ]
 
-        pointcloud_file_portions = [(str(path), p) for p in portions]
+        pointcloud_file_portions = [(path, p) for p in portions]
 
     if aabb is None:
         raise ValueError(f"There is no point in the file {path}")
@@ -81,44 +103,20 @@ def get_metadata(path: Path) -> MetadataReaderType:
 
 
 def run(
-    filename: str,
+    filename: Path,
     offset_scale: OffsetScaleType,
     portion: PortionItemType,
     transformer: Optional[Transformer],
     color_scale: Optional[float],
     write_intensity: bool,
-) -> Generator[
+) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
         npt.NDArray[np.uint8],
         npt.NDArray[np.uint8],
         npt.NDArray[np.uint8],
     ],
-    None,
-    None,
 ]:
-    """
-    Reads points from a .xyz or .csv file
-
-    Consider XYZIRGB format following FME documentation(*). We do the
-    following hypothesis and enhancements:
-
-    - A header line defining columns in CSV style may be present, but will be ignored.
-    - The separator separating the columns is automagically guessed by the
-      reader. This is generally fail safe. It will not harm to use commonly
-      accepted separators like space, tab, colon, semi-colon.
-    - The order of columns is fixed. The reader does the following assumptions:
-      - 3 columns mean XYZ
-      - 4 columns mean XYZI
-      - 6 columns mean XYZRGB
-      - 7 columns mean XYZIRGB
-      - 8 columns mean XYZIRGB followed by classification data. Classification data must be integers only.
-      - all columns after the 8th column will be ignored.
-
-    NOTE: we assume RGB are 8 bits components.
-
-    (*) See: https://docs.safe.com/fme/html/FME_Desktop_Documentation/FME_ReadersWriters/pointcloudxyz/pointcloudxyz.htm
-    """
     with open(filename) as f:
 
         dialect = csv.Sniffer().sniff(f.read(2048))

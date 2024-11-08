@@ -28,7 +28,7 @@ def test_ply_get_metadata(ply_filepath: Path) -> None:
         "point_count",
         "avg_min",
     ]
-    assert ply_metadata["portions"] == [(str(ply_filepath), (0, expected_point_count))]
+    assert ply_metadata["portions"] == [(ply_filepath, (0, expected_point_count))]
     assert np.all(ply_metadata["aabb"][0] == expected_aabb[0])
     assert np.all(ply_metadata["aabb"][1] == expected_aabb[1])
     assert ply_metadata["crs_in"] is None
