@@ -31,7 +31,30 @@ def xyz_to_child_index(xyz, aabb_center):
     cache=True,
     nogil=True,
 )
-def xyz_to_key(xyz, cell_count, aabb_min, inv_aabb_size, shift):
+def xyz_to_key(
+    xyz,
+    cell_count,
+    aabb_min,
+    inv_aabb_size,
+    shift,
+):
+    """
+    Place all the points in xyz into a 3D xyz grid, then encode the coordinates into a single int, that can then be considered as a cell id for this specific grid.
+
+    This grid is a subdivision of the space of cell_count size (one size for each axis), with offset aabb_min, of real inv size inv_aabb_size.
+
+    The encoding is done by binary shifting y and z and summing x, y, z.
+
+    For instance, for a 2-cell subdivision of a 1 by 1 by 1 cube:
+    - the (1, 0, 0) point is in the cell of coordinates (1, 0, 0) and has id 1
+    - (0, 1, 0) -> (0, 1, 0) -> 2 (0 + 2^1 + 0)
+    - (1, 1, 1): -> (1, 1, 1) -> 7 (1 + 2 + 4)
+
+    For a 3-cell grid:
+    - (1, 1, 1) -> (2, 2, 2) -> 42 (2 + 2 * 2^2 + 2 * 2^4) (the shift is 2 because it takes 2 bits to represent 3)
+    - (0.25, 0.75, 1) -> (0, 2, 2) -> 40 (0 + 2 * 2^2 + 2 * 2^4)
+    - (0.5, 0.5, 0.5) -> (1, 1, 1) -> 21 (1 + 1 * 2^2 + 1 * 2^4)
+    """
     a = ((cell_count * inv_aabb_size) * (xyz - aabb_min)).astype(np.int64)
     # this is a clamp
     a = np.minimum(np.maximum(a, 0), cell_count - 1)
