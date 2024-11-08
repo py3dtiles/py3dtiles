@@ -2,7 +2,7 @@
 pkgs.mkShell rec {
   name = "impurePythonEnv";
   buildInputs = [
-    pkgs.python311
+    pkgs.python39
   ];
 
   shellHook = ''
