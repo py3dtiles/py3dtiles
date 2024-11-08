@@ -57,7 +57,7 @@ By default, no specific format dependencies are installed. You should either ins
 
 
 To support laz files you need an external library and a laz backend for
-laspy, see [this link]](https://laspy.readthedocs.io/en/latest/installation.html#pip). Short answer, for laszip, you need to follow these steps:
+laspy, see `this link <https://laspy.readthedocs.io/en/latest/installation.html#pip>`_. Short answer, for laszip, you need to follow these steps:
 
 .. code-block:: shell
 
@@ -73,13 +73,15 @@ If you don't need waveform support, lazrs is also a good option.
 From docker
 ~~~~~~~~~~~~
 
-We currently publish docker images on gitlab registry. Please see [the currently published versions](https://gitlab.com/py3dtiles/py3dtiles/container_registry/4248842).
-```
-docker run --rm registry.gitlab.com/py3dtiles/py3dtiles:<version> --help
-```
+We currently publish docker images on `docker hub <https://hub.docker.com/r/py3dtiles/py3dtiles>`_ and `gitlab registry <https://gitlab.com/py3dtiles/py3dtiles/container_registry>`_.
 
+.. code-block:: shell
+
+    docker run --rm py3dtiles/py3dtiles:<version> --help
+    # or
+    docker run --rm registry.gitlab.com/py3dtiles/py3dtiles:<version> --help
 
 NOTE:
 
-- the `--mount` option is necessary for docker to read your source data and to write the result. The way it is written in this example only allows you to read source files in the current folder or in a subfolder
-- This line `--volume /etc/passwd:/etc/passwd:ro --volume /etc/group:/etc/group:ro --user $(id -u):$(id -g)` is only necessary if your uid is different from 1000.
+- the `--mount` option is necessary for docker to read your source data and to write the result. For instance, you can add `-mount type=bind,source="$(pwd)"/data,target=/app/data/` to your `docker run` command. This allows the docker container to read and write files in `./data`.
+- If your uid is different from 1000, you should add `--volume /etc/passwd:/etc/passwd:ro --volume /etc/group:/etc/group:ro --user $(id -u):$(id -g)` to your `docker run` command
