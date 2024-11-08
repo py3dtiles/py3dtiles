@@ -1,3 +1,5 @@
+from math import ceil, log2
+
 import numpy as np
 from numba import jit  # type: ignore [attr-defined]
 from numba import njit
@@ -27,17 +29,11 @@ def xyz_to_child_index(xyz, aabb_center):
 
 
 @njit(
-    "int32[:](float32[:,:], int32[:], float32[:], float32[:], int32)",
+    "int32[:](float32[:,:], int32[:], float32[:], float32[:])",
     cache=True,
     nogil=True,
 )
-def xyz_to_key(
-    xyz,
-    cell_count,
-    aabb_min,
-    inv_aabb_size,
-    shift,
-):
+def xyz_to_key(xyz, cell_count, aabb_min, inv_aabb_size):
     """
     Place all the points in xyz into a 3D xyz grid, then encode the coordinates into a single int, that can then be considered as a cell id for this specific grid.
 
@@ -55,6 +51,7 @@ def xyz_to_key(
     - (0.25, 0.75, 1) -> (0, 2, 2) -> 40 (0 + 2 * 2^2 + 2 * 2^4)
     - (0.5, 0.5, 0.5) -> (1, 1, 1) -> 21 (1 + 1 * 2^2 + 1 * 2^4)
     """
+    shift = ceil(log2(cell_count[0]))
     a = ((cell_count * inv_aabb_size) * (xyz - aabb_min)).astype(np.int64)
     # this is a clamp
     a = np.minimum(np.maximum(a, 0), cell_count - 1)
