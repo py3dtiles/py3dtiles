@@ -16,7 +16,7 @@ from py3dtiles.typing import (
 )
 
 
-def get_metadata(path: Path, fraction: int = 100) -> MetadataReaderType:
+def get_metadata(path: Path) -> MetadataReaderType:
     """Get metadata in case of a input ply file."""
     ply_point_cloud = PlyData.read(path)
     if "vertex" not in [e.name for e in ply_point_cloud.elements]:
@@ -24,7 +24,7 @@ def get_metadata(path: Path, fraction: int = 100) -> MetadataReaderType:
             "The ply data does not contain any 'vertex' item. Are you sure the file is valid?"
         )
     ply_vertices = ply_point_cloud["vertex"]
-    point_count = ply_vertices.count * fraction // 100
+    point_count = ply_vertices.count
     ply_features = [ply_prop.name for ply_prop in ply_vertices.properties]
     if any(coord not in ply_features for coord in ("x", "y", "z")):
         raise KeyError(
