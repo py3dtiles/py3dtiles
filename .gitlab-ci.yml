@@ -344,6 +344,7 @@ sonarcloud-check:
       - main
     changes:
       - "**/*.py"
+      - sonar-project.properties
 
 # -- DEPLOY JOBS -------------------------------------------------------------------------
 docker-build:
