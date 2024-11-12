@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import struct
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -108,9 +108,7 @@ class Pnts(TileContent):
 
     @staticmethod
     def from_points(
-        positions: npt.NDArray[np.float32 | np.uint16],
-        colors: npt.NDArray[np.uint8 | np.uint16] | None = None,
-        extra_fields: dict[str, npt.NDArray[Any]] | None = None,
+        points: Points,
     ) -> Pnts:
         """
         Create a pnts from data array:
@@ -123,19 +121,12 @@ class Pnts(TileContent):
         :param colors: the colors 1D array
         :param extra_fields: a dict of extra arrays to include in the batch_table. The dict keys are the name of the fields, the values are 1D np arrays containing values for each field.
         """
-        if len(positions) == 0:
-            raise ValueError("The 'positions' array cannot be empty.")
-        if positions.ndim != 1:
-            raise ValueError(
-                f"The 'positions' array should be flatten, got a NDArray with {positions.ndim} dimensions"
-            )
-
-        if len(positions) % 3 != 0:
-            raise ValueError("The 'positions' array elem count is not a multiple of 3")
-
+        positions = points.positions.ravel()
         count = len(positions) // 3
 
-        if colors is not None:
+        colors = None
+        if points.colors is not None:
+            colors = points.colors.ravel()
             if colors.ndim != 1:
                 raise ValueError(
                     f"The 'colors' array should be flatten, got a NDArray with {colors.ndim} dimensions"
@@ -146,7 +137,7 @@ class Pnts(TileContent):
                 )
 
         ft = PntsFeatureTable()
-        color_semantic = get_color_semantic(colors)
+        color_semantic = get_color_semantic(points.colors)
         ft.header = PntsFeatureTableHeader.from_semantic(
             SemanticPoint.POSITION,
             color_semantic,
@@ -156,11 +147,11 @@ class Pnts(TileContent):
         ft.body = PntsFeatureTableBody(positions=positions, color=colors)
 
         bt = BatchTable()
-        if extra_fields:
-            for fieldname, array in extra_fields.items():
+        if points.extra_fields:
+            for fieldname, array in points.extra_fields.items():
                 if array.ndim != 1:
                     raise ValueError(
-                        f"The '{fieldname}' array in 'extra_fields' should be flatten, got a NDArray with {array.ndim} dimensions"
+                        f"The '{fieldname}' array in 'extra_fields' should be flat, got a NDArray with {array.ndim} dimensions"
                     )
 
                 bt.add_property_as_binary(fieldname, array, "SCALAR")

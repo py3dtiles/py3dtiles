@@ -217,9 +217,7 @@ def run(
                 elif field.name == "classification":
                     data = points[:, 7]
                 else:
-                    data = np.zeros((len(points), 1), dtype=field.dtype)
-                extra_fields_data[field.name] = np.array(data, dtype=np.uint8).reshape(
-                    -1, 1
-                )
+                    data = np.zeros(len(points), dtype=field.dtype)
+                extra_fields_data[field.name] = np.array(data, dtype=np.uint8)
 
             yield coords, colors, extra_fields_data

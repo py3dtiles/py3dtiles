@@ -6,7 +6,7 @@ import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.exceptions import TilerException
-from py3dtiles.points import FlatPoints
+from py3dtiles.points import Points
 from py3dtiles.typing import ExtraFieldsDescription
 from py3dtiles.utils import SubdivisionType, aabb_size_to_subdivision_type
 
@@ -52,13 +52,7 @@ def _insert(
 
             for f in cells_extra_fields:
                 arr = extra_fields[f]
-                if f in cells_extra_fields:
-                    cells_extra_fields[f][k] = np.append(
-                        cells_extra_fields[f][k], arr[i]
-                    )
-                else:
-                    cells_extra_fields[f] = []
-                    cells_extra_fields[f][k] = arr[i]
+                cells_extra_fields[f][k] = np.append(cells_extra_fields[f][k], arr[i])
             if cell_count[0] < 8:
                 needs_balance = needs_balance or cells_xyz[k].shape[0] > 200000
         else:
@@ -111,7 +105,7 @@ class Grid:
             if self.cells_rgb is not None:
                 self.cells_rgb.append(np.zeros((0, 3), dtype=np.uint8))
             for f in extra_fields:
-                self.cells_extra_fields[f.name].append(np.zeros((0, 1), dtype=f.dtype))
+                self.cells_extra_fields[f.name].append(np.zeros(0, dtype=f.dtype))
 
     def __getstate__(self) -> dict[str, Any]:
         return {
@@ -230,7 +224,7 @@ class Grid:
                 self.cells_rgb.append(np.zeros((0, 3), dtype=np.uint8))
             for f, arr in self.cells_extra_fields.items():
                 # if we balance, we must have at least one elem right?
-                arr.append(np.zeros((0, 1), dtype=old_cells_extra_fields[f][0].dtype))
+                arr.append(np.zeros(0, dtype=old_cells_extra_fields[f][0].dtype))
 
         for i in range(len(old_cells_xyz)):
             cell_extra = {}
@@ -244,37 +238,37 @@ class Grid:
                 cell_extra,
             )
 
-    def get_points(self) -> FlatPoints | None:
+    def get_points(self) -> Points | None:
         if len(self.cells_xyz) == 0:
             # we haven't inserted anything yet
             return None
-        xyz = np.zeros((self.get_point_count() * 3), self.cells_xyz[0].dtype)
+        xyz = np.zeros((self.get_point_count(), 3), self.cells_xyz[0].dtype)
         rgb = None
         if self.cells_rgb is not None:
-            rgb = np.zeros((self.get_point_count() * 3), self.cells_rgb[0].dtype)
+            rgb = np.zeros((self.get_point_count(), 3), self.cells_rgb[0].dtype)
         extra_fields: dict[str, npt.NDArray[Any]] = {}
         for f in self.cells_extra_fields:
             extra_fields[f] = np.zeros(
-                (self.get_point_count()), self.cells_extra_fields[f][0].dtype
+                self.get_point_count(), self.cells_extra_fields[f][0].dtype
             )
 
         idx = 0
         for i in range(len(self.cells_xyz)):
             cell_xyz = self.cells_xyz[i]
             for j in range(len(cell_xyz)):
-                xyz[3 * idx + 0] = cell_xyz[j][0]
-                xyz[3 * idx + 1] = cell_xyz[j][1]
-                xyz[3 * idx + 2] = cell_xyz[j][2]
+                xyz[idx][0] = cell_xyz[j][0]
+                xyz[idx][1] = cell_xyz[j][1]
+                xyz[idx][2] = cell_xyz[j][2]
                 if self.cells_rgb is not None and rgb is not None:
-                    rgb[3 * idx + 0] = self.cells_rgb[i][j][0]
-                    rgb[3 * idx + 1] = self.cells_rgb[i][j][1]
-                    rgb[3 * idx + 2] = self.cells_rgb[i][j][2]
+                    rgb[idx][0] = self.cells_rgb[i][j][0]
+                    rgb[idx][1] = self.cells_rgb[i][j][1]
+                    rgb[idx][2] = self.cells_rgb[i][j][2]
                 # We only support SCALAR additional fields
                 for f, arr in self.cells_extra_fields.items():
                     extra_fields[f][idx] = arr[i][j]
                 idx += 1
 
-        return FlatPoints(positions=xyz, colors=rgb, extra_fields=extra_fields)
+        return Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
 
     def get_point_count(self) -> int:
         pt = 0

@@ -11,6 +11,7 @@ from py3dtiles.exceptions import (
     InvalidTilesetError,
     TilerException,
 )
+from py3dtiles.points import Points
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content import Pnts
 from py3dtiles.tileset.tile import Tile
@@ -225,7 +226,7 @@ def build_tileset_quadtree(
             union_aabb.add(ab)
 
         pnts = Pnts.from_points(
-            xyz.reshape(-1), colors=rgb.reshape(-1), extra_fields=extra_fields
+            Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
         )
 
         union_aabb.transform(inv_base_transform)

@@ -3,17 +3,16 @@ from __future__ import annotations
 import pickle
 from collections.abc import Generator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import lz4.frame as gzip
-import numpy as np
-import numpy.typing as npt
 
 import py3dtiles
 from py3dtiles.tileset.content import Pnts
 from py3dtiles.utils import node_name_to_path
 
 if TYPE_CHECKING:
+    from py3dtiles.points import Points
     from py3dtiles.tilers.point.node import DummyNode, Node
     from py3dtiles.tilers.point.node.node import DummyNodeDictType
 
@@ -21,9 +20,7 @@ if TYPE_CHECKING:
 def points_to_pnts_file(
     out_folder: Path,
     name: bytes,
-    positions: npt.NDArray[np.float32 | np.uint16],
-    colors: npt.NDArray[np.uint8 | np.uint16] | None = None,
-    extra_fields: dict[str, npt.NDArray[Any]] | None = None,
+    points: Points,
 ) -> tuple[int, Path]:
     """
     Write a pnts file from an uint8 data array containing:
@@ -32,7 +29,7 @@ def points_to_pnts_file(
      - if include_classification, classification as a single np.uint8 value
      - if include_intensity, intensity as a single np.uint8 value
     """
-    pnts = Pnts.from_points(positions, colors, extra_fields)
+    pnts = Pnts.from_points(points)
 
     node_path = node_name_to_path(out_folder, name, ".pnts")
 
@@ -53,13 +50,7 @@ def node_to_pnts(
 
     if points is None:
         return 0
-    point_nb, _ = points_to_pnts_file(
-        out_folder,
-        name,
-        points.positions,
-        colors=points.colors,
-        extra_fields=points.extra_fields,
-    )
+    point_nb, _ = points_to_pnts_file(out_folder, name, points)
     return point_nb
 
 

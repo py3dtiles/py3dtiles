@@ -11,9 +11,9 @@ from py3dtiles.typing import ExtraFieldsDescription
 from py3dtiles.utils import compute_spacing, node_name_to_path
 
 # test point
-xyz = np.array([0.25, 0.25, 0.25], dtype=np.dtype(np.float32))
+xyz = np.array([[0.25, 0.25, 0.25]], dtype=np.dtype(np.float32))
 to_insert = np.array([[0.25, 0.25, 0.25]], dtype=np.dtype(np.float32))
-xyz2 = np.array([0.6, 0.6, 0.6], dtype=np.dtype(np.float32))
+xyz2 = np.array([[0.6, 0.6, 0.6]], dtype=np.dtype(np.float32))
 rgb = np.array([[1, 2, 3]], dtype=np.dtype(np.uint8))
 classification = np.array([[4]], dtype=np.dtype(np.uint8))
 intensity = np.array([[5]], dtype=np.dtype(np.uint8))
@@ -148,7 +148,7 @@ def test_grid_getpoints(grid: Grid, node: Node) -> None:
     assert points is not None
     assert_array_equal(points.positions, xyz)
     assert points.colors is not None
-    assert_array_equal(points.colors, [1, 2, 3])
+    assert_array_equal(points.colors, [[1, 2, 3]])
     assert_array_equal(points.extra_fields["classification"], [4])
     assert_array_equal(points.extra_fields["intensity"], [5])
 
@@ -181,7 +181,7 @@ def test_grid_get_point_count_without_rgb(
     )
     points = grid_position_only.get_points()
     assert points is not None
-    assert len(points.positions) == 3
+    assert points.positions.shape == (1, 3)
     assert points.colors is None
     assert points.extra_fields == {}
     grid_position_only.insert(
@@ -193,7 +193,7 @@ def test_grid_get_point_count_without_rgb(
     )
     points = grid_position_only.get_points()
     assert points is not None
-    assert len(points.positions) == 3
+    assert points.positions.shape == (1, 3)
 
 
 def test_grid_get_point_count_with_rgb(grid: Grid, node: Node) -> None:
@@ -206,10 +206,10 @@ def test_grid_get_point_count_with_rgb(grid: Grid, node: Node) -> None:
     )
     points = grid.get_points()
     assert points is not None
-    assert len(points.positions) == 3
-    assert len(points.extra_fields["classification"]) == 1
+    assert points.positions.shape == (1, 3)
+    assert points.extra_fields["classification"].shape == (1,)
     assert points.colors is not None
-    assert len(points.colors) == 3
+    assert points.colors.shape == (1, 3)
     grid.insert(
         node.aabb[0],
         node.inv_aabb_size,
@@ -219,7 +219,7 @@ def test_grid_get_point_count_with_rgb(grid: Grid, node: Node) -> None:
     )
     points = grid.get_points()
     assert points is not None
-    assert len(points.positions) == 3
+    assert points.positions.shape == (1, 3)
 
 
 def test_is_point_far_enough() -> None:
@@ -231,12 +231,13 @@ def test_is_point_far_enough() -> None:
         ],
         dtype=np.dtype(np.float32),
     )
-    assert not is_point_far_enough(points, xyz, 0.25**2)
-    assert is_point_far_enough(points, xyz2, 0.25**2)
+    assert not is_point_far_enough(points, xyz.ravel(), 0.25**2)
+    assert is_point_far_enough(points, xyz2.ravel(), 0.25**2)
 
 
 def test_is_point_far_enough_perf(benchmark: BenchmarkFixture) -> None:
-    benchmark(is_point_far_enough, sample_points, xyz, 0.25**2)
+    flat_xyz = xyz.ravel()
+    benchmark(is_point_far_enough, sample_points, flat_xyz, 0.25**2)
 
 
 def test_short_name_to_path() -> None:

@@ -11,6 +11,10 @@ class Points:
     This class represents an arbitrary amount of points.
 
     Each properties contains one elem per *vertices*. Ex: positions is an array of coordinates triplet.
+
+    Ex: [[1, 2, 3], [3, 4, 5]]
+
+    `extra_fields` should be a dict. The property name is the field name, the values is a flat array of values
     """
 
     positions: npt.NDArray[Union[np.float32, np.uint16]]
@@ -19,18 +23,25 @@ class Points:
     # etc...
     extra_fields: dict[str, npt.NDArray[Any]]
 
+    def __init__(
+        self,
+        positions: npt.NDArray[Union[np.float32, np.uint16]],
+        colors: Optional[npt.NDArray[Union[np.uint8, np.uint16]]] = None,
+        extra_fields: Optional[dict[str, npt.NDArray[Any]]] = None,
+    ):
+        if positions.ndim != 2:
+            raise ValueError("Positions parameter should have 2 dimensions")
+        if positions.shape[1] != 3:
+            raise ValueError("Positions should be an array of coordinates triplet")
+        self.positions = positions
 
-@dataclass
-class FlatPoints:
-    """
-    This class represents an arbitrary amount of points.
+        if colors is None:
+            self.colors = None
+        else:
+            if colors.ndim != 2:
+                raise ValueError("colors parameter should have 2 dimensions")
+            if colors.shape[1] != 3:
+                raise ValueError("colors should be an array of coordinates triplet")
+            self.colors = colors
 
-    Each properties is a flat array containing every value.
-
-    Positions and rgb have an implicit stride of 3, while extra_fields contains scalar values in each dict value. At the moment, we only support scalar values for extra fields.
-    """
-
-    # implicit stride of 3
-    positions: npt.NDArray[Union[np.float32, np.uint16]]
-    colors: Optional[npt.NDArray[Union[np.uint8, np.uint16]]]
-    extra_fields: dict[str, npt.NDArray[Any]]
+        self.extra_fields = extra_fields or {}

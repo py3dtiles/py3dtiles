@@ -123,14 +123,12 @@ def run(
             extra_fields_data = {}
             for extra_field in extra_fields:
                 if extra_field.name in f.header.point_format.dimension_names:
-                    extra_fields_data[extra_field.name] = (
-                        points[extra_field.name]
-                        .astype(extra_field.dtype)
-                        .reshape(-1, 1)
-                    )
+                    extra_fields_data[extra_field.name] = points[
+                        extra_field.name
+                    ].astype(extra_field.dtype)
                 else:
                     extra_fields_data[extra_field.name] = np.zeros(
-                        (len(points), 1), dtype=extra_field.dtype
+                        len(points), dtype=extra_field.dtype
                     )
 
             yield coords, colors, extra_fields_data

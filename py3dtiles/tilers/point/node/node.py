@@ -12,7 +12,7 @@ import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.exceptions import TilerException
-from py3dtiles.points import FlatPoints, Points
+from py3dtiles.points import Points
 from py3dtiles.tilers.point.pnts import MIN_POINT_SIZE
 from py3dtiles.tilers.point.pnts.pnts_writer import points_to_pnts_file
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
@@ -75,7 +75,7 @@ class DummyNode:
             self.children = None
             self.points = _bytes["points"]
 
-    def get_points(self) -> FlatPoints | None:
+    def get_points(self) -> Points | None:
         if self.children:
             return self.grid.get_points()
         else:
@@ -83,22 +83,24 @@ class DummyNode:
             extra_fieldnames = self.points[0].extra_fields.keys()
             if len(points) == 0:
                 return None
-            xyz = np.concatenate(tuple([pt.positions for pt in points])).ravel()
+            xyz = np.concatenate(tuple([pt.positions for pt in points]))
 
-            if points[0].colors is not None:
-                rgb: npt.NDArray[np.uint8] | None = np.concatenate(
-                    tuple([pt.colors for pt in points])  # type: ignore [arg-type] # Assume all the points[n].colors are not None
-                ).ravel()
+            if points[0].colors is None:
+                # assume we don't have color
+                rgb: npt.NDArray[np.uint8] | None = None
             else:
-                rgb = None
+                # is not none only to make mypy happy
+                rgb = np.concatenate(
+                    tuple([pt.colors for pt in points if pt.colors is not None])
+                )
 
             extra_fields = {}
             for f in extra_fieldnames:
                 extra_fields[f] = np.concatenate(
                     tuple([pt.extra_fields[f] for pt in points])
-                ).ravel()
+                )
 
-            return FlatPoints(positions=xyz, colors=rgb, extra_fields=extra_fields)
+            return Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
 
 
 class Node:
@@ -316,18 +318,18 @@ class Node:
                     )
             return count
 
-    def get_points(self) -> FlatPoints | None:
+    def get_points(self) -> Points | None:
         if self.children is None:
             points = self.points
             if len(points) == 0:
                 return None
-            xyz = np.concatenate(tuple([pt.positions for pt in points])).ravel()
+            xyz = np.concatenate(tuple([pt.positions for pt in points]))
 
             if points[0].colors is not None:
                 # the "or []" is just to make mypy happy. Normally it shouldn't be None here
                 rgb: npt.NDArray[np.uint8 | np.uint16] | None = np.concatenate(
                     tuple([pt.colors or [] for pt in points])
-                ).ravel()
+                )
             else:
                 rgb = None
 
@@ -335,9 +337,9 @@ class Node:
             for f in self.extra_fields:
                 extra_fields[f.name] = np.concatenate(
                     tuple([pt.extra_fields[f.name] for pt in points])
-                ).ravel()
+                )
 
-            return FlatPoints(positions=xyz, colors=rgb, extra_fields=extra_fields)
+            return Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
         else:
             return self.grid.get_points()
 
@@ -391,7 +393,7 @@ class Node:
         pnts_path = node_name_to_path(folder, self.name, ".pnts")
         tile_content = read_binary_tile_content(pnts_path)
         fth = tile_content.body.feature_table.header
-        xyz = tile_content.body.feature_table.body.position
+        xyz = tile_content.body.feature_table.body.position.reshape((-1, 3))
 
         # check if this node should be merged in the parent.
         prune = False  # prune only if the node is a leaf
@@ -402,13 +404,15 @@ class Node:
             parent_tile = read_binary_tile_content(parent_pnts_path)
             parent_fth = parent_tile.body.feature_table.header
 
-            parent_xyz = parent_tile.body.feature_table.body.position
+            parent_xyz = parent_tile.body.feature_table.body.position.reshape(
+                (parent_fth.points_length, 3)
+            )
 
             if (
                 parent_fth.colors != SemanticPoint.NONE
                 and parent_tile.body.feature_table.body.color is not None
             ):
-                parent_rgb = parent_tile.body.feature_table.body.color
+                parent_rgb = parent_tile.body.feature_table.body.color.reshape((-1, 3))
             else:
                 parent_rgb = None
 
@@ -418,9 +422,8 @@ class Node:
                     field
                 ] = parent_tile.body.batch_table.get_binary_property(field)
 
-            parent_xyz_float = parent_xyz.reshape((parent_fth.points_length, 3))
             # update aabb based on real values
-            parent_bounding_volume = BoundingVolumeBox.from_points(parent_xyz_float)
+            parent_bounding_volume = BoundingVolumeBox.from_points(parent_xyz)
 
             parent_xyz = np.concatenate((parent_xyz, xyz))
 
@@ -430,7 +433,10 @@ class Node:
                         "If the parent has color data, the children must also have color data."
                     )
                 parent_rgb = np.concatenate(
-                    (parent_rgb, tile_content.body.feature_table.body.color)
+                    (
+                        parent_rgb,
+                        tile_content.body.feature_table.body.color.reshape((-1, 3)),
+                    )
                 )
 
             for field in tile_content.body.batch_table.header.data:
@@ -442,7 +448,7 @@ class Node:
                 )
 
             # update aabb
-            xyz_float = xyz.view(np.float32).reshape((fth.points_length, 3))
+            xyz_float = xyz.view(np.float32)
             new_bounding_volume_box = BoundingVolumeBox.from_points(xyz_float)
 
             parent_bounding_volume.add(new_bounding_volume_box)
@@ -451,9 +457,11 @@ class Node:
             points_to_pnts_file(
                 folder,
                 parent_node.name,
-                parent_xyz,
-                colors=parent_rgb,
-                extra_fields=parent_extra_fields,
+                Points(
+                    positions=parent_xyz,
+                    colors=parent_rgb,
+                    extra_fields=parent_extra_fields,
+                ),
             )
             pnts_path.unlink()
             prune = True
@@ -461,7 +469,7 @@ class Node:
         content_uri = None
         if not prune:
             content_uri = pnts_path.relative_to(folder)
-            xyz_float = xyz.view(np.float32).reshape((fth.points_length, 3))
+            xyz_float = xyz.view(np.float32)
 
             # update aabb based on real values
             bounding_box = BoundingVolumeBox.from_points(xyz_float)

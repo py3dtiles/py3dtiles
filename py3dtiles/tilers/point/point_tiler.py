@@ -549,9 +549,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
                 extra_fields: dict[str, npt.NDArray[Any]] = {}
                 for item in tile_content.body.batch_table.header.data.keys():
-                    arr = tile_content.body.batch_table.get_binary_property(
-                        item
-                    ).reshape(-1, 1)
+                    arr = tile_content.body.batch_table.get_binary_property(item)
                     extra_fields[item] = arr
 
                 root_node.grid.insert(
