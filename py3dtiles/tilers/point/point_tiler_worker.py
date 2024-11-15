@@ -3,16 +3,22 @@ import pickle
 import struct
 import time
 from pathlib import PurePath
+from typing import TYPE_CHECKING
 
+import lz4.frame as gzip
 import zmq
 
 from py3dtiles.tilers.base_tiler import TilerWorker
+from py3dtiles.tilers.point.node import DummyNode
 from py3dtiles.utils import READER_MAP
 
 from .node import NodeCatalog, NodeProcess
 from .pnts import pnts_writer
 from .point_message_type import PointManagerMessage, PointWorkerMessageType
 from .point_shared_metadata import PointSharedMetadata
+
+if TYPE_CHECKING:
+    from py3dtiles.tilers.point.node.node import DummyNodeDictType
 
 
 class PointTilerWorker(TilerWorker[PointSharedMetadata]):
@@ -67,11 +73,16 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
     def execute_write_pnts(
         self, skt: zmq.Socket[bytes], content: bytes, node_name: bytes
     ) -> None:
-        pnts_writer_gen = pnts_writer.run(
-            content,
-            self.shared_metadata.out_folder,
-        )
-        for total in pnts_writer_gen:
+        # we can safely write the .pnts file
+        if len(content) > 0:
+            root = pickle.loads(gzip.decompress(content))
+            total = 0
+            for name in root:
+                node_data: DummyNodeDictType = pickle.loads(root[name])
+                node = DummyNode(node_data)
+                total += pnts_writer.node_to_pnts(
+                    name, node, self.shared_metadata.out_folder
+                )
             skt.send_multipart(
                 [
                     PointWorkerMessageType.PNTS_WRITTEN.value,

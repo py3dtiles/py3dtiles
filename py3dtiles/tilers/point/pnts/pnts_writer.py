@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-import pickle
-from collections.abc import Generator
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import lz4.frame as gzip
-
-import py3dtiles
 from py3dtiles.tileset.content import Pnts
 from py3dtiles.utils import node_name_to_path
 
 if TYPE_CHECKING:
     from py3dtiles.points import Points
     from py3dtiles.tilers.point.node import DummyNode, Node
-    from py3dtiles.tilers.point.node.node import DummyNodeDictType
 
 
 def points_to_pnts_file(
@@ -52,18 +46,3 @@ def node_to_pnts(
         return 0
     point_nb, _ = points_to_pnts_file(out_folder, name, points)
     return point_nb
-
-
-def run(
-    data: bytes,
-    folder: Path,
-) -> Generator[int, None, None]:
-    # we can safely write the .pnts file
-    if len(data) > 0:
-        root = pickle.loads(gzip.decompress(data))
-        total = 0
-        for name in root:
-            node_data: DummyNodeDictType = pickle.loads(root[name])
-            node = py3dtiles.tilers.point.node.DummyNode(node_data)
-            total += node_to_pnts(name, node, folder)
-        yield total

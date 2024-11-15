@@ -39,21 +39,6 @@ if TYPE_CHECKING:
     _T = TypeVar("_T", bound=npt.NBitBase)
 
 
-def create_child_node_from_parent(
-    name: bytes,
-    parent_aabb: npt.NDArray[np.floating[_T]],
-    parent_spacing: float,
-    include_rgb: bool,
-    extra_fields: list[ExtraFieldsDescription],
-) -> Node:
-    from py3dtiles.tilers.point.node import Node
-
-    spacing = parent_spacing * 0.5
-    aabb = split_aabb(parent_aabb, int(name[-1])) if len(name) > 0 else parent_aabb
-    # let's build a new Node
-    return Node(name, aabb.astype(np.float64), spacing, include_rgb, extra_fields)
-
-
 def node_to_tileset(
     args: tuple[Node, Path, npt.NDArray[np.float32], Node | None, int]
 ) -> Tile | None:
@@ -145,6 +130,19 @@ class Node:
         self.grid = Grid(self.spacing, self.include_rgb, self.extra_fields)
         self.points: list[Points] = []
         self.dirty = False
+
+    @staticmethod
+    def create_child_node_from_parent(
+        name: bytes,
+        parent_aabb: npt.NDArray[np.floating[_T]],
+        parent_spacing: float,
+        include_rgb: bool,
+        extra_fields: list[ExtraFieldsDescription],
+    ) -> Node:
+        spacing = parent_spacing * 0.5
+        aabb = split_aabb(parent_aabb, int(name[-1])) if len(name) > 0 else parent_aabb
+        # let's build a new Node
+        return Node(name, aabb.astype(np.float64), spacing, include_rgb, extra_fields)
 
     def save_to_bytes(self) -> bytes:
         sub_pickle: dict[str, Any] = {}
@@ -360,7 +358,7 @@ class Node:
             tuple[Node, Path, npt.NDArray[np.float32], Node, int]
         ] = []
         for child_name in self.get_child_names():
-            child_node = create_child_node_from_parent(
+            child_node = Node.create_child_node_from_parent(
                 child_name, self.aabb, self.spacing, self.include_rgb, self.extra_fields
             )
             child_pnts_path = node_name_to_path(folder, child_name, ".pnts")

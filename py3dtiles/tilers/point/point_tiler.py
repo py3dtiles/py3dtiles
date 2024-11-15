@@ -32,7 +32,6 @@ from .matrix_manipulation import (
     make_translation_matrix,
 )
 from .node import Node, SharedNodeStore
-from .node.node import create_child_node_from_parent
 from .pnts import MIN_POINT_SIZE, pnts_writer
 from .point_message_type import PointManagerMessage, PointWorkerMessageType
 from .point_shared_metadata import PointSharedMetadata
@@ -569,7 +568,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             pool_executor = concurrent.futures.ProcessPoolExecutor()
         else:
             pool_executor = None
-        root_tile = create_child_node_from_parent(
+        root_tile = Node.create_child_node_from_parent(
             b"",
             self.root_aabb,
             self.root_spacing,
