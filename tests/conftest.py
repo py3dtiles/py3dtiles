@@ -22,8 +22,6 @@ from py3dtiles.utils import compute_spacing
 
 from .fixtures.mock_extension import MockExtension
 
-DATA_DIRECTORY = Path(__file__).parent / "fixtures"
-
 
 @fixture()
 def tmp_dir() -> Iterator[Path]:
@@ -37,23 +35,23 @@ def tmp_dir() -> Iterator[Path]:
             tmp_dir.unlink()
 
 
-@fixture
-def tmp_dir_with_content(tmp_dir: Path) -> Iterator[Path]:
-    tileset_folder = tmp_dir / "simple_xyz"
-    convert(DATA_DIRECTORY / "simple.xyz", outfolder=tileset_folder, overwrite=True)
-    yield tileset_folder
-
-
 @fixture()
 def fixtures_dir() -> Path:
     return (Path(__file__).parent / "fixtures").absolute()
 
 
 @fixture
-def tileset_path_1(tmp_dir: Path) -> Iterator[Path]:
+def tmp_dir_with_content(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
+    tileset_folder = tmp_dir / "simple_xyz"
+    convert(fixtures_dir / "simple.xyz", outfolder=tileset_folder, overwrite=True)
+    yield tileset_folder
+
+
+@fixture
+def tileset_path_1(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
     tileset_folder = tmp_dir / "1"
     convert(
-        DATA_DIRECTORY / "with_srs_3857.las",
+        fixtures_dir / "with_srs_3857.las",
         crs_out=CRS.from_epsg(3950),
         outfolder=tileset_folder,
         extra_fields=["intensity", "raw_classification"],
@@ -69,10 +67,10 @@ def tileset_1(tileset_path_1: Path) -> TileSet:
 
 
 @fixture
-def tileset_path_2(tmp_dir: Path) -> Iterator[Path]:
+def tileset_path_2(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
     tileset_folder = tmp_dir / "2"
     convert(
-        DATA_DIRECTORY / "with_srs_3950.las",
+        fixtures_dir / "with_srs_3950.las",
         outfolder=tileset_folder,
         extra_fields=["intensity", "raw_classification"],
     )
@@ -87,52 +85,52 @@ def tileset_2(tileset_path_2: Path) -> TileSet:
 
 
 @fixture
-def ply_filepath() -> Path:
-    return DATA_DIRECTORY / "simple.ply"
+def ply_filepath(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "simple.ply"
 
 
 @fixture
-def buggy_ply_filepath() -> Path:
-    return DATA_DIRECTORY / "buggy.ply"
+def buggy_ply_filepath(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "buggy.ply"
 
 
 @fixture
-def ply_with_extra_fields_filepath() -> Path:
-    return DATA_DIRECTORY / "simple_with_classification_and_intensity.ply"
+def ply_with_extra_fields_filepath(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "simple_with_classification_and_intensity.ply"
 
 
 @fixture
-def ply_with_extra_fields_as_f4_filepath() -> Path:
-    return DATA_DIRECTORY / "simple_with_classification_and_intensity_f4.ply"
+def ply_with_extra_fields_as_f4_filepath(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "simple_with_classification_and_intensity_f4.ply"
 
 
 @fixture
-def ply_with_intensity_filepath() -> Path:
-    return DATA_DIRECTORY / "simple_with_intensity.ply"
+def ply_with_intensity_filepath(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "simple_with_intensity.ply"
 
 
 @fixture
-def ply_with_classification_filepath() -> Path:
-    return DATA_DIRECTORY / "simple_with_classification.ply"
+def ply_with_classification_filepath(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "simple_with_classification.ply"
 
 
 @fixture
-def northing_easting_ordering_2326_xyz() -> Path:
+def northing_easting_ordering_2326_xyz(fixtures_dir: Path) -> Path:
     # "correct" ordering, the one mandated by the definition
     # NOTE: this is the victoria peak in Hong Kong
-    return DATA_DIRECTORY / "northing_easting_ordering_2326.xyz"
+    return fixtures_dir / "northing_easting_ordering_2326.xyz"
 
 
 @fixture
-def easting_northing_ordering_2326_xyz() -> Path:
+def easting_northing_ordering_2326_xyz(fixtures_dir: Path) -> Path:
     # traditional gis ordering: easting northing
     # NOTE: this is the victoria peak in Hong Kong
-    return DATA_DIRECTORY / "easting_northing_ordering_2326.xyz"
+    return fixtures_dir / "easting_northing_ordering_2326.xyz"
 
 
 @fixture
-def ripple_filepath() -> Path:
-    return DATA_DIRECTORY / "ripple.las"
+def ripple_filepath(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "ripple.las"
 
 
 @fixture(params=["wrongname", "vertex"])
@@ -213,8 +211,10 @@ def tileset() -> TileSet:
 
 
 @fixture
-def tileset_on_disk_with_sub_tileset_path(tmp_dir: Path) -> Iterator[Path]:
-    convert(DATA_DIRECTORY / "simple.xyz", outfolder=tmp_dir, overwrite=True)
+def tileset_on_disk_with_sub_tileset_path(
+    tmp_dir: Path, fixtures_dir: Path
+) -> Iterator[Path]:
+    convert(fixtures_dir / "simple.xyz", outfolder=tmp_dir, overwrite=True)
 
     sub_tileset_path = tmp_dir / "tileset.json"
     main_tileset_path = tmp_dir / "upper_tileset.json"
@@ -232,8 +232,8 @@ def tileset_on_disk_with_sub_tileset_path(tmp_dir: Path) -> Iterator[Path]:
 
 
 @fixture
-def batch_table_hierarchy_reference_file() -> Path:
-    return DATA_DIRECTORY / "batch_table_hierarchy_reference_sample.json"
+def batch_table_hierarchy_reference_file(fixtures_dir: Path) -> Path:
+    return fixtures_dir / "batch_table_hierarchy_reference_sample.json"
 
 
 @fixture
@@ -300,8 +300,8 @@ def batch_table_hierarchy_with_instances() -> BatchTableHierarchy:
 
 
 @fixture
-def clockwise_star() -> PolygonType:
-    with open(DATA_DIRECTORY / "star_clockwise.geojson") as f:
+def clockwise_star(fixtures_dir: Path) -> PolygonType:
+    with open(fixtures_dir / "star_clockwise.geojson") as f:
         star_geo = json.load(f)
         coords: PolygonType = star_geo["features"][0]["geometry"]["coordinates"]
         # triangulate expects the coordinates to be numpy array
@@ -314,8 +314,8 @@ def clockwise_star() -> PolygonType:
 
 
 @fixture
-def counterclockwise_star() -> PolygonType:
-    with open(DATA_DIRECTORY / "star_counterclockwise.geojson") as f:
+def counterclockwise_star(fixtures_dir: Path) -> PolygonType:
+    with open(fixtures_dir / "star_counterclockwise.geojson") as f:
         star_geo = json.load(f)
         coords: PolygonType = star_geo["features"][0]["geometry"]["coordinates"]
         # triangulate expects the coordinates to be numpy array
@@ -328,8 +328,8 @@ def counterclockwise_star() -> PolygonType:
 
 
 @fixture
-def counterclockwise_zx_star() -> PolygonType:
-    with open(DATA_DIRECTORY / "star_zx_counter_clockwise.geojson") as f:
+def counterclockwise_zx_star(fixtures_dir: Path) -> PolygonType:
+    with open(fixtures_dir / "star_zx_counter_clockwise.geojson") as f:
         star_geo = json.load(f)
         coords: PolygonType = star_geo["features"][0]["geometry"]["coordinates"]
         # triangulate expects the coordinates to be numpy array
@@ -342,8 +342,8 @@ def counterclockwise_zx_star() -> PolygonType:
 
 
 @fixture
-def big_poly() -> PolygonType:
-    with open(DATA_DIRECTORY / "big_polygon_counter_clockwise.geojson") as f:
+def big_poly(fixtures_dir: Path) -> PolygonType:
+    with open(fixtures_dir / "big_polygon_counter_clockwise.geojson") as f:
         big_poly = json.load(f)
         coords: PolygonType = big_poly["features"][0]["geometry"]["coordinates"]
         # triangulate expects the coordinates to be numpy array

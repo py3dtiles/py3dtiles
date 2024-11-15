@@ -11,14 +11,14 @@ from py3dtiles.typing import ExtraFieldsDescription
 from py3dtiles.utils import compute_spacing, node_name_to_path
 
 # test point
-xyz = np.array([[0.25, 0.25, 0.25]], dtype=np.dtype(np.float32))
-to_insert = np.array([[0.25, 0.25, 0.25]], dtype=np.dtype(np.float32))
-xyz2 = np.array([[0.6, 0.6, 0.6]], dtype=np.dtype(np.float32))
-rgb = np.array([[1, 2, 3]], dtype=np.dtype(np.uint8))
-classification = np.array([[4]], dtype=np.dtype(np.uint8))
-intensity = np.array([[5]], dtype=np.dtype(np.uint8))
+xyz = np.array([[0.25, 0.25, 0.25]], dtype=np.float32)
+to_insert = np.array([[0.25, 0.25, 0.25]], dtype=np.float32)
+xyz2 = np.array([[0.6, 0.6, 0.6]], dtype=np.float32)
+rgb = np.array([[1, 2, 3]], dtype=np.uint8)
+classification = np.array([[4]], dtype=np.uint8)
+intensity = np.array([[5]], dtype=np.uint8)
 sample_points = np.array(
-    [[x / 30, x / 30, x / 30] for x in range(30)], dtype=np.dtype(np.float32)
+    [[x / 30, x / 30, x / 30] for x in range(30)], dtype=np.float32
 )
 
 

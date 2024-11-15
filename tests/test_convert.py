@@ -531,6 +531,38 @@ def test_convert_ply_with_wrong_classification(
         jobs=1,
         extra_fields=["classification"],
     )
+    assert Path(tmp_dir, "tileset.json").exists()
+    assert Path(tmp_dir, "r.pnts").exists()
+
+    for py3dt_file in tmp_dir.iterdir():
+        if py3dt_file.suffix != ".pnts":
+            continue
+        tile_content = Pnts.from_file(py3dt_file)
+        # no other file, so no classification
+        assert "classification" not in tile_content.body.batch_table.header.data
+
+    convert(
+        [fixtures_dir / "simple.ply", fixtures_dir / "simple_with_classification.ply"],
+        outfolder=tmp_dir,
+        jobs=1,
+        overwrite=True,
+        extra_fields=["classification"],
+    )
+    assert Path(tmp_dir, "tileset.json").exists()
+    assert Path(tmp_dir, "r.pnts").exists()
+    classification: list[int] = []
+    for py3dt_file in tmp_dir.iterdir():
+        if py3dt_file.suffix != ".pnts":
+            continue
+        tile_content = Pnts.from_file(py3dt_file)
+        classification.extend(
+            tile_content.body.batch_table.get_binary_property("classification")
+        )
+    # the file simple.ply has no classification (will contribute the 0)
+    # the file simple_with_classification.ply have 1s and 2s as classifications
+    assert np.array_equal(
+        np.unique(classification), np.array([0, 1, 2], dtype=np.uint8)
+    )
 
 
 def test_convert_ply_with_good_classification(

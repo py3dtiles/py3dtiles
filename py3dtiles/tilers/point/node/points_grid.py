@@ -50,17 +50,17 @@ def _insert(
                     raise ValueError("rgb cannot be None if cells_rgb is None")
                 cells_rgb[k] = np.concatenate((cells_rgb[k], rgb[i].reshape(1, 3)))
 
-            for f in cells_extra_fields:
-                arr = extra_fields[f]
-                cells_extra_fields[f][k] = np.append(cells_extra_fields[f][k], arr[i])
+            for field in cells_extra_fields:
+                arr = extra_fields[field]
+                cells_extra_fields[field][k] = np.append(
+                    cells_extra_fields[field][k], arr[i]
+                )
             if cell_count[0] < 8:
                 needs_balance = needs_balance or cells_xyz[k].shape[0] > 200000
         else:
             notinserted[i] = True
 
-    extra_fields_not_inserted = {}
-    for f, arr in extra_fields.items():
-        extra_fields_not_inserted[f] = arr[notinserted]
+    extra_fields_not_inserted = {f: arr[notinserted] for f, arr in extra_fields.items()}
 
     return (
         xyz[notinserted],
@@ -97,9 +97,9 @@ class Grid:
         self.cells_rgb: list[npt.NDArray[np.uint8 | np.uint16]] | None = None
         if include_rgb:
             self.cells_rgb = []
-        self.cells_extra_fields: dict[str, list[npt.NDArray[Any]]] = {}
-        for f in extra_fields:
-            self.cells_extra_fields[f.name] = []
+        self.cells_extra_fields: dict[str, list[npt.NDArray[Any]]] = {
+            f.name: [] for f in extra_fields
+        }
         for _ in range(self.max_key_value):
             self.cells_xyz.append(np.zeros((0, 3), dtype=np.float32))
             if self.cells_rgb is not None:
@@ -256,13 +256,9 @@ class Grid:
         for i in range(len(self.cells_xyz)):
             cell_xyz = self.cells_xyz[i]
             for j in range(len(cell_xyz)):
-                xyz[idx][0] = cell_xyz[j][0]
-                xyz[idx][1] = cell_xyz[j][1]
-                xyz[idx][2] = cell_xyz[j][2]
+                xyz[idx] = cell_xyz[j]
                 if self.cells_rgb is not None and rgb is not None:
-                    rgb[idx][0] = self.cells_rgb[i][j][0]
-                    rgb[idx][1] = self.cells_rgb[i][j][1]
-                    rgb[idx][2] = self.cells_rgb[i][j][2]
+                    rgb[idx] = self.cells_rgb[i][j]
                 # We only support SCALAR additional fields
                 for f, arr in self.cells_extra_fields.items():
                     extra_fields[f][idx] = arr[i][j]

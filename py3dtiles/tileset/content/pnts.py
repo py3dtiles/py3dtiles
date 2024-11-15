@@ -147,14 +147,13 @@ class Pnts(TileContent):
         ft.body = PntsFeatureTableBody(positions=positions, color=colors)
 
         bt = BatchTable()
-        if points.extra_fields:
-            for fieldname, array in points.extra_fields.items():
-                if array.ndim != 1:
-                    raise ValueError(
-                        f"The '{fieldname}' array in 'extra_fields' should be flat, got a NDArray with {array.ndim} dimensions"
-                    )
+        for fieldname, array in points.extra_fields.items():
+            if array.ndim != 1:
+                raise ValueError(
+                    f"The '{fieldname}' array in 'extra_fields' should be flat, got a NDArray with {array.ndim} dimensions"
+                )
 
-                bt.add_property_as_binary(fieldname, array, "SCALAR")
+            bt.add_property_as_binary(fieldname, array, "SCALAR")
 
         body = PntsBody()
         body.feature_table = ft

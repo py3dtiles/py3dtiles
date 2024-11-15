@@ -44,4 +44,4 @@ class Points:
                 raise ValueError("colors should be an array of coordinates triplet")
             self.colors = colors
 
-        self.extra_fields = extra_fields or {}
+        self.extra_fields = {} if extra_fields is None else extra_fields

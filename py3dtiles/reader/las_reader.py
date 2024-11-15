@@ -36,9 +36,11 @@ def get_metadata(filename: Path) -> MetadataReaderType:
 
         # extra fields
         extra_fields = []
-        for fname, t in f.header.point_format.dtype().fields.items():
+        for fname, the_type in f.header.point_format.dtype().fields.items():
             if fname not in ("X", "Y", "Z", "red", "green", "blue"):
-                extra_fields.append(ExtraFieldsDescription(name=fname, dtype=t[0]))
+                extra_fields.append(
+                    ExtraFieldsDescription(name=fname, dtype=the_type[0])
+                )
 
     return {
         "portions": pointcloud_file_portions,

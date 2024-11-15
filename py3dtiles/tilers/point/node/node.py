@@ -80,7 +80,6 @@ class DummyNode:
             return self.grid.get_points()
         else:
             points = self.points
-            extra_fieldnames = self.points[0].extra_fields.keys()
             if len(points) == 0:
                 return None
             xyz = np.concatenate(tuple([pt.positions for pt in points]))
@@ -95,7 +94,7 @@ class DummyNode:
                 )
 
             extra_fields = {}
-            for f in extra_fieldnames:
+            for f in self.points[0].extra_fields.keys():
                 extra_fields[f] = np.concatenate(
                     tuple([pt.extra_fields[f] for pt in points])
                 )
@@ -320,15 +319,14 @@ class Node:
 
     def get_points(self) -> Points | None:
         if self.children is None:
-            points = self.points
-            if len(points) == 0:
+            if len(self.points) == 0:
                 return None
-            xyz = np.concatenate(tuple([pt.positions for pt in points]))
+            xyz = np.concatenate(tuple([pt.positions for pt in self.points]))
 
-            if points[0].colors is not None:
+            if self.points[0].colors is not None:
                 # the "or []" is just to make mypy happy. Normally it shouldn't be None here
                 rgb: npt.NDArray[np.uint8 | np.uint16] | None = np.concatenate(
-                    tuple([pt.colors or [] for pt in points])
+                    tuple([pt.colors or [] for pt in self.points])
                 )
             else:
                 rgb = None
@@ -336,7 +334,7 @@ class Node:
             extra_fields = {}
             for f in self.extra_fields:
                 extra_fields[f.name] = np.concatenate(
-                    tuple([pt.extra_fields[f.name] for pt in points])
+                    tuple([pt.extra_fields[f.name] for pt in self.points])
                 )
 
             return Points(positions=xyz, colors=rgb, extra_fields=extra_fields)

@@ -576,7 +576,7 @@ def _main(args: argparse.Namespace) -> None:
             pyproj_always_xy=args.pyproj_always_xy,
             benchmark=args.benchmark,
             rgb=not args.no_rgb,
-            extra_fields=args.extra_fields or [],
+            extra_fields=[] if args.extra_fields is None else args.extra_fields,
             color_scale=args.color_scale,
             use_process_pool=not args.disable_processpool,
             verbose=args.verbose,

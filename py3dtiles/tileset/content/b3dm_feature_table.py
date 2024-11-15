@@ -108,10 +108,10 @@ class B3dmFeatureTable(FeatureTable[B3dmFeatureTableHeader, B3dmFeatureTableBody
         array: npt.NDArray[ComponentNumpyType],
         property_type: PropertyLiteralType,
     ) -> None:
-        component_type = DTYPE_TO_COMPONENT_TYPE_MAPPING[array.dtype]
+        component_type = DTYPE_TO_COMPONENT_TYPE_MAPPING.get(array.dtype)
         if component_type is None:
             raise ValueError(
-                f"Cannot find a component_type corresponding to the dtype ${array.dtype}"
+                f"Cannot find a componentType corresponding to the dtype ${array.dtype}"
             )
 
         self.header.data[property_name] = {

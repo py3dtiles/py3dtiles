@@ -100,7 +100,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         self.files = [Path(file) for file in files]
 
         self.rgb = rgb
-        self.extra_fields_to_include = extra_fields or []
+        self.extra_fields_to_include = [] if extra_fields is None else extra_fields
         self.color_scale = color_scale
 
         self.crs_in = crs_in
@@ -199,8 +199,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 if f in extra_fields_by_name:
                     # calculate best size
                     if f in extra_fields_dict:
-                        # already inserted?
-                        file_info.extra_fields
+                        # find common dtype able to store all the different format we might have for this field
                         extra_fields_dict[f].dtype = np.promote_types(
                             extra_fields_dict[f].dtype, extra_fields_by_name[f].dtype
                         )
@@ -209,7 +208,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
                 else:
                     print(
-                        f"Warning: the file ${file} does not have the field ${f}, will default to 0"
+                        f"Warning: the file {file} does not have the field {f}, will default to 0 or omitted if no other files have this field."
                     )
 
             pointcloud_file_portions += file_info["portions"]

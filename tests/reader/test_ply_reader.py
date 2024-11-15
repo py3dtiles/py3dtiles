@@ -15,8 +15,6 @@ from pytest import raises
 from py3dtiles.reader import ply_reader
 from py3dtiles.typing import ExtraFieldsDescription
 
-DATA_DIRECTORY = Path(__file__).parent / "../fixtures"
-
 
 def test_ply_get_metadata(ply_filepath: Path) -> None:
     ply_metadata = ply_reader.get_metadata(path=ply_filepath)

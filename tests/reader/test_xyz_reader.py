@@ -6,12 +6,10 @@ from numpy.testing import assert_array_equal
 from py3dtiles.reader.xyz_reader import get_metadata, run
 from py3dtiles.typing import ExtraFieldsDescription
 
-DATA_DIRECTORY = Path(__file__).parent.parent / "fixtures"
-
 
 class TestGetMetadata:
-    def test_get_metadata_simple(self) -> None:
-        metadata = get_metadata(DATA_DIRECTORY / "simple.xyz")
+    def test_get_metadata_simple(self, fixtures_dir: Path) -> None:
+        metadata = get_metadata(fixtures_dir / "simple.xyz")
         assert str(metadata["portions"][0][0]).endswith("tests/fixtures/simple.xyz")
         assert metadata["portions"][0][1] == (0, 3, 0)
         assert metadata["point_count"] == 3
@@ -19,8 +17,8 @@ class TestGetMetadata:
         assert not metadata["has_color"]
         assert metadata["extra_fields"] == []
 
-    def test_get_metadata_simple_with_irgb(self) -> None:
-        metadata = get_metadata(DATA_DIRECTORY / "simple_with_irgb.xyz")
+    def test_get_metadata_simple_with_irgb(self, fixtures_dir: Path) -> None:
+        metadata = get_metadata(fixtures_dir / "simple_with_irgb.xyz")
         assert str(metadata["portions"][0][0]).endswith(
             "tests/fixtures/simple_with_irgb.xyz"
         )
@@ -32,9 +30,11 @@ class TestGetMetadata:
         assert metadata["point_count"] == 3
         assert metadata["crs_in"] is None
 
-    def test_get_metadata_simple_with_irgb_classification(self) -> None:
+    def test_get_metadata_simple_with_irgb_classification(
+        self, fixtures_dir: Path
+    ) -> None:
         metadata = get_metadata(
-            DATA_DIRECTORY / "simple_with_irgb_and_classification.csv"
+            fixtures_dir / "simple_with_irgb_and_classification.csv"
         )
         assert str(metadata["portions"][0][0]).endswith(
             "tests/fixtures/simple_with_irgb_and_classification.csv"
