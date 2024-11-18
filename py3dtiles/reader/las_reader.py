@@ -120,7 +120,7 @@ def run(
                 # pnts are 8 bits (by default) by component, hence we divide by 256
                 colors = (colors / 256).astype(np.uint8)
             elif with_rgb:
-                colors = np.zeros(coords.shape)
+                colors = np.zeros(coords.shape, dtype=np.uint8)
 
             extra_fields_data = {}
             for extra_field in extra_fields:

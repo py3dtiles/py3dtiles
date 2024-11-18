@@ -182,6 +182,23 @@ class TestRun:
         assert rgb is None
         assert "foo" not in extra_fields
 
+    def test_run_file_without_rgb(self, fixtures_dir: Path) -> None:
+        offset_scale = (np.array([0, 0, 0]), np.array([1, 1, 1]), None, None)
+        portion = (0, 3)
+        (pos, rgb, extra_fields) = next(
+            run(
+                str(fixtures_dir / Path("without_rgb.las")),
+                offset_scale,
+                portion,
+                None,
+                None,
+                True,
+                [],
+            )
+        )
+        assert_array_equal(rgb, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+        assert rgb.dtype.type == np.uint8
+
     def test_run_with_rgb_and_extrafields(self, fixtures_dir: Path) -> None:
         offset_scale = (np.array([0, 0, 0]), np.array([1, 1, 1]), None, None)
         portion = (0, 3)
@@ -217,5 +234,6 @@ class TestRun:
         )
         assert rgb is not None
         assert_array_equal(rgb, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+        assert rgb.dtype.type == np.uint8
         assert "foo" in extra_fields
         assert_array_equal(extra_fields["foo"], [0, 0, 0])
