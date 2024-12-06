@@ -1,6 +1,8 @@
 from pathlib import Path
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from pytest_benchmark.fixture import BenchmarkFixture
 
@@ -108,8 +110,8 @@ def test_grid_insert_many_points() -> None:
         compute_spacing(bbox),
         True,
         [
-            ExtraFieldsDescription(name="classification", dtype=np.dtype(np.uint8)),
-            ExtraFieldsDescription(name="intensity", dtype=np.dtype(np.uint8)),
+            ExtraFieldsDescription(name="classification", dtype=np.dtype(np.uint16)),
+            ExtraFieldsDescription(name="intensity", dtype=np.dtype(np.float32)),
         ],
     )
     for i in range(half_max):
@@ -125,12 +127,16 @@ def test_grid_insert_many_points() -> None:
         intensity = np.array(
             [val1 - 10000.2, val2 - 10000.2], dtype=np.dtype(np.float32)
         )
+        extra_fields: dict[str, npt.NDArray[Any]] = {
+            "classification": classification,
+            "intensity": intensity,
+        }
         node.grid.insert(
             node.aabb[0],
             node.inv_aabb_size,
             xyz,
             rgb,
-            {"classification": classification, "intensity": intensity},
+            extra_fields,
         )
     # TODO make more assertions
     # TODO test balance
@@ -177,7 +183,7 @@ def test_grid_get_point_count_without_rgb(
         node_position_only.inv_aabb_size,
         to_insert,
         rgb,
-        {"classification": classification, "intensity": intensity},
+        {},
     )
     points = grid_position_only.get_points()
     assert points is not None
@@ -189,7 +195,7 @@ def test_grid_get_point_count_without_rgb(
         node_position_only.inv_aabb_size,
         to_insert,
         None,
-        {"classification": classification, "intensity": intensity},
+        {},
     )
     points = grid_position_only.get_points()
     assert points is not None

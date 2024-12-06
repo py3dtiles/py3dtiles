@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Union
 
 import numpy as np
 import numpy.typing as npt
+from numba import njit
 
 from py3dtiles.exceptions import TilerException
 from py3dtiles.points import Points
@@ -12,30 +13,42 @@ from py3dtiles.utils import SubdivisionType, aabb_size_to_subdivision_type
 
 from .distance import is_point_far_enough, xyz_to_key
 
-T = TypeVar("T", bound=np.generic)
+T = TypeVar(
+    "T",
+    bound=Union[
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.float16,
+        np.float32,
+        np.float64,
+        np.float128,
+    ],
+)
 
 
-# @njit(fastmath=True, cache=True)  # type: ignore [misc]
+@njit(fastmath=True, cache=True)  # type: ignore [misc]
 def _insert(
+    keys: npt.NDArray[np.int32],
     cells_xyz: list[npt.NDArray[np.float32 | np.uint16]],
     cells_rgb: list[npt.NDArray[np.uint8 | np.uint16]] | None,
-    cells_extra_fields: dict[str, list[npt.NDArray[Any]]],
-    aabmin: npt.NDArray[np.float32],
-    inv_aabb_size: npt.NDArray[np.float32],
     cell_count: npt.NDArray[np.int32],
     xyz: npt.NDArray[np.float32 | np.uint16],
     rgb: npt.NDArray[np.uint8 | np.uint16] | None,
-    extra_fields: dict[str, npt.NDArray[Any]],
     spacing: float,
-    shift: int,
 ) -> tuple[
     npt.NDArray[np.float32],
     npt.NDArray[np.uint8] | None,
-    dict[str, npt.NDArray[Any]],
+    npt.NDArray[np.bool_],
+    npt.NDArray[np.bool_],
     bool,
 ]:
-    keys = xyz_to_key(xyz, cell_count, aabmin, inv_aabb_size, shift)
-
+    inserted = np.full(len(xyz), True)
     notinserted = np.full(len(xyz), False)
     needs_balance = False
 
@@ -50,24 +63,34 @@ def _insert(
                     raise ValueError("rgb cannot be None if cells_rgb is None")
                 cells_rgb[k] = np.concatenate((cells_rgb[k], rgb[i].reshape(1, 3)))
 
-            for field in cells_extra_fields:
-                arr = extra_fields[field]
-                cells_extra_fields[field][k] = np.append(
-                    cells_extra_fields[field][k], arr[i]
-                )
             if cell_count[0] < 8:
                 needs_balance = needs_balance or cells_xyz[k].shape[0] > 200000
         else:
+            inserted[i] = False
             notinserted[i] = True
-
-    extra_fields_not_inserted = {f: arr[notinserted] for f, arr in extra_fields.items()}
 
     return (
         xyz[notinserted],
         None if rgb is None else rgb[notinserted],
-        extra_fields_not_inserted,
+        inserted,
+        notinserted,
         needs_balance,
     )
+
+
+@njit(fastmath=True, cache=True)  # type: ignore [misc]
+def _insert_extra_fields(
+    keys: npt.NDArray[np.int32],
+    inserted: npt.NDArray[np.bool_],
+    notinserted: npt.NDArray[np.bool_],
+    cells_extra_field: list[npt.NDArray[T]],
+    extra_field: npt.NDArray[T],
+) -> npt.NDArray[T]:
+    for i in range(len(keys)):
+        k = keys[i]
+        if inserted[i]:
+            cells_extra_field[k] = np.append(cells_extra_field[k], extra_field[i])
+    return extra_field[notinserted]  # type: ignore [no-any-return] # for some reason, mypy doesn't understand that
 
 
 class Grid:
@@ -136,25 +159,69 @@ class Grid:
         inv_aabb_size: npt.NDArray[np.float32],
         xyz: npt.NDArray[np.float32 | np.uint16],
         rgb: npt.NDArray[np.uint8 | np.uint16] | None,
-        extra_fields: dict[str, npt.NDArray[Any]],
+        extra_fields: dict[str, npt.NDArray[T]],
     ) -> tuple[
         npt.NDArray[np.float32],
         npt.NDArray[np.uint8] | None,
-        dict[str, npt.NDArray[Any]],
+        dict[
+            str,
+            (
+                npt.NDArray[np.int8]
+                | npt.NDArray[np.int16]
+                | npt.NDArray[np.int32]
+                | npt.NDArray[np.int64]
+                | npt.NDArray[np.uint8]
+                | npt.NDArray[np.uint16]
+                | npt.NDArray[np.uint32]
+                | npt.NDArray[np.uint64]
+                | npt.NDArray[np.float16]
+                | npt.NDArray[np.float32]
+                | npt.NDArray[np.float64]
+                | npt.NDArray[np.float128]
+            ),
+        ],
         bool,
     ]:
-        return _insert(
-            self.cells_xyz,
-            self.cells_rgb,
-            self.cells_extra_fields,
+        # We have to separate the insertion of xyz + rgb from the insertion of extra fields because numba isn't able
+        # to take such a dict as argument
+        # it implies quite a lot of coupling between this method, _insert and _insert_extra_fields unfortunately
+        keys = xyz_to_key(
+            xyz,
+            self.cell_count,
             aabmin,
             inv_aabb_size,
+            int(self.cell_count[0] - 1).bit_length(),
+        )
+
+        (
+            not_inserted_xyz,
+            not_inserted_rgb,
+            inserted_indices,
+            not_inserted_indices,
+            needs_balance,
+        ) = _insert(
+            keys,
+            self.cells_xyz,
+            self.cells_rgb,
             self.cell_count,
             xyz,
             rgb,
-            extra_fields,
             self.spacing,
-            int(self.cell_count[0] - 1).bit_length(),
+        )
+        not_inserted_extra_fields = {}
+        for f in extra_fields:
+            not_inserted_extra_fields[f] = _insert_extra_fields(
+                keys,
+                inserted_indices,
+                not_inserted_indices,
+                self.cells_extra_fields[f],
+                extra_fields[f],
+            )
+        return (
+            not_inserted_xyz,
+            not_inserted_rgb,
+            not_inserted_extra_fields,
+            needs_balance,
         )
 
     def init_cells(

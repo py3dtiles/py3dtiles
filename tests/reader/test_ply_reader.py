@@ -133,6 +133,7 @@ class TestRun:
                 [],
             )
         )
+        assert rgb is not None
         assert_array_equal(rgb, [[0, 0, 0], [0, 0, 0], [0, 0, 0]])
         assert rgb.dtype.type == np.uint8
 
