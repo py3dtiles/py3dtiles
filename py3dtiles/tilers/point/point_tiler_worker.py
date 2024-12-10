@@ -37,7 +37,7 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
     def execute_read_file(self, skt: zmq.Socket[bytes], content: list[bytes]) -> None:
         parameters = pickle.loads(content[0])
 
-        extension = PurePath(parameters["filename"]).suffix
+        extension = PurePath(parameters["filename"]).suffix.lower()
         if extension in READER_MAP:
             reader = READER_MAP[extension]
         else:

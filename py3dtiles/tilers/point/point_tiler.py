@@ -176,7 +176,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         # read all input files headers and determine the aabb/spacing
         extra_fields_dict: dict[str, ExtraFieldsDescription] = {}
         for file in self.files:
-            extension = file.suffix
+            extension = file.suffix.lower()
             if extension in READER_MAP:
                 reader = READER_MAP[extension]
             else:
