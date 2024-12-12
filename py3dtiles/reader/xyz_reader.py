@@ -71,7 +71,7 @@ def get_colors(
         return None
 
 
-def get_metadata(path: Path) -> MetadataReaderType:
+def get_metadata(path: Path, color_scale: Optional[float] = None) -> MetadataReaderType:
     aabb = None
     point_count = 0
     seek_values = []
