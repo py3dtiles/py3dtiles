@@ -94,6 +94,10 @@ Your changes must be covered by tests as much as possible. We target a 80% cover
 
 The CI runs the tests on each supported version of python. Currently, part of the tests are written with the pytest framework and another part with the unittest framework. All new tests must be written with pytest and gradually, the tests written with unittest will be migrated to pytest.
 
+### Benchmarks
+
+It's possible to benchmark some tests with pytest-benchmark. Some baselines are committed in `.benchmarks`. To create a benchmark : `pytest --benchmark-save=<name>`. To compare, you can use `pytest --benchmark-compare-fail=mean:5% --benchmark-compare` for instance.
+
 ### Checking the validity of generated 3D tiles
 
 This step could be done only with the CI. With the [3d-tiles-validator](https://github.com/CesiumGS/3d-tiles-validator) tool, the job converts 2 point clouds, merges them and checks if the tilesets and tile contents are valid.
