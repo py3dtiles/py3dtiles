@@ -207,3 +207,8 @@ def test_merge_with_pnts_content_with_file_tilesets(
     assert isinstance(merged_pnts, Pnts)
 
     assert merged_pnts.body.feature_table.nb_points() == 790
+    assert len(merged_pnts.body.batch_table.get_binary_property("intensity")) == 790
+    assert (
+        len(merged_pnts.body.batch_table.get_binary_property("raw_classification"))
+        == 790
+    )

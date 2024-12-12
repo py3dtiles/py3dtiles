@@ -1,0 +1,9 @@
+[
+    {
+        "filename": "./tests/fixtures/without_srs.las"
+    },
+    {
+        "filename": "./tests/fixtures/without_rgb.las",
+        "dataformat_id": 0
+    }
+]

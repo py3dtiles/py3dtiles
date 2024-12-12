@@ -8,11 +8,12 @@ import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.tilers.point.node.node import Node
+from py3dtiles.typing import ExtraFieldsDescription
 from py3dtiles.utils import split_aabb
 
 
 class NodeCatalog:
-    """NodeCatalog is a store of Node objects.py3dtiles
+    """NodeCatalog is a store of Node objects.
 
     Using a NodeCatalog allows to only store a children names
     in nodes, instead of storing a full recursive structure.
@@ -24,11 +25,15 @@ class NodeCatalog:
         name: bytes,
         root_aabb: npt.NDArray[np.float64],
         root_spacing: float,
+        include_rgb: bool,
+        extra_fields: list[ExtraFieldsDescription],
     ) -> None:
         self.nodes: dict[bytes, Node] = {}
         self.root_aabb = root_aabb
         self.root_spacing = root_spacing
         self.node_bytes: dict[bytes, bytes] = {}
+        self.include_rgb: bool = include_rgb
+        self.extra_fields: list[ExtraFieldsDescription] = extra_fields
         self._load_from_store(name, nodes)
 
     def get_node(self, name: bytes) -> Node:
@@ -38,7 +43,7 @@ class NodeCatalog:
             aabb = self.root_aabb
             for i in name:
                 aabb = split_aabb(aabb, int(i))
-            node = Node(name, aabb, spacing)
+            node = Node(name, aabb, spacing, self.include_rgb, self.extra_fields)
             self.nodes[name] = node
         else:
             node = self.nodes[name]
@@ -64,7 +69,7 @@ class NodeCatalog:
                 aabb = self.root_aabb
                 for i in n:
                     aabb = split_aabb(aabb, int(i))
-                node = Node(n, aabb, spacing)
+                node = Node(n, aabb, spacing, self.include_rgb, self.extra_fields)
                 node.load_from_bytes(out[n])
                 self.node_bytes[n] = out[n]
                 self.nodes[n] = node
@@ -73,7 +78,7 @@ class NodeCatalog:
             aabb = self.root_aabb
             for i in name:
                 aabb = split_aabb(aabb, int(i))
-            node = Node(name, aabb, spacing)
+            node = Node(name, aabb, spacing, self.include_rgb, self.extra_fields)
             self.nodes[name] = node
 
         return self.nodes[name]

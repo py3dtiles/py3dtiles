@@ -18,11 +18,11 @@ from py3dtiles.exceptions import (
 from py3dtiles.tilers.base_tiler import Tiler
 from py3dtiles.tileset.content import read_binary_tile_content
 from py3dtiles.tileset.tileset import TileSet
+from py3dtiles.typing import ExtraFieldsDescription
 from py3dtiles.utils import (
     READER_MAP,
     compute_spacing,
     make_aabb_valid,
-    node_from_name,
     node_name_to_path,
 )
 
@@ -77,7 +77,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
     root_spacing: float
     node_store: SharedNodeStore
     state: PointState
-    transformer: Optional[Transformer]
+    extra_fields_to_include: list[str]
 
     def __init__(
         self,
@@ -87,11 +87,10 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         force_crs_in: bool,
         pyproj_always_xy: bool,
         rgb: bool,
-        classification: bool,
-        intensity: bool,
         color_scale: Optional[float],
         cache_size: int,
         verbosity: int,
+        extra_fields: Optional[list[str]] = None,
     ):
         self.out_folder = out_folder
 
@@ -100,8 +99,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         self.files = [Path(file) for file in files]
 
         self.rgb = rgb
-        self.classification = classification
-        self.intensity = intensity
+        self.extra_fields_to_include = [] if extra_fields is None else extra_fields
         self.color_scale = color_scale
 
         self.crs_in = crs_in
@@ -160,8 +158,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             self.out_folder,
             self.rgb,
             self.color_scale,
-            self.classification,
-            self.intensity,
+            self.files_info["extra_fields"],
             self.verbosity,
         )
 
@@ -177,6 +174,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         avg_min = np.array([0.0, 0.0, 0.0])
 
         # read all input files headers and determine the aabb/spacing
+        extra_fields_dict: dict[str, ExtraFieldsDescription] = {}
         for file in self.files:
             extension = file.suffix
             if extension in READER_MAP:
@@ -188,6 +186,29 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 )
 
             file_info = reader.get_metadata(file)
+            extra_fields_by_name = {obj.name: obj for obj in file_info["extra_fields"]}
+
+            if self.rgb and not file_info["has_color"]:
+                print(
+                    f"Warning: file ${file} does not have rgb, will default to (0, 0, 0)"
+                )
+
+            # check if we have all the asked dimensions
+            for f in self.extra_fields_to_include:
+                if f in extra_fields_by_name:
+                    # calculate best size
+                    if f in extra_fields_dict:
+                        # find common dtype able to store all the different format we might have for this field
+                        extra_fields_dict[f].dtype = np.promote_types(
+                            extra_fields_dict[f].dtype, extra_fields_by_name[f].dtype
+                        )
+                    else:
+                        extra_fields_dict[f] = extra_fields_by_name[f]
+
+                else:
+                    print(
+                        f"Warning: the file {file} does not have the field {f}, will default to 0 or omitted if no other files have this field."
+                    )
 
             pointcloud_file_portions += file_info["portions"]
             if aabb is None:
@@ -221,6 +242,8 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             "crs_in": crs_in,
             "point_count": total_point_count,
             "avg_min": avg_min,
+            # note: we loop to "unwrap" the dict_values objects, which are not pickable
+            "extra_fields": list(extra_fields_dict.values()),
         }
 
     def get_transformer(
@@ -480,7 +503,13 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         transform = np.dot(make_translation_matrix(self.avg_min), transform)
 
         # Create the root tile by sampling (or taking all points?) of child nodes
-        root_node = Node(b"", self.root_aabb, self.root_spacing * 2)
+        root_node = Node(
+            b"",
+            self.root_aabb,
+            self.root_spacing * 2,
+            self.shared_metadata.write_rgb,
+            self.shared_metadata.extra_fields_to_include,
+        )
         root_node.children = []
         inv_aabb_size = (
             1.0
@@ -515,51 +544,37 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                     )  # the astype is used for typing
                 else:
                     rgb = np.zeros(xyz.shape, dtype=np.uint8)
-                if self.classification:
-                    classification = (
-                        tile_content.body.batch_table.get_binary_property(
-                            "Classification"
-                        )
-                        .astype(np.uint8)
-                        .reshape(-1, 1)
-                    )
-                else:
-                    classification = np.zeros((fth.points_length, 1), dtype=np.uint8)
 
-                if self.intensity:
-                    intensity = (
-                        (tile_content.body.batch_table.get_binary_property("Intensity"))
-                        .astype(np.uint8)
-                        .reshape(-1, 1)
-                    )
-                else:
-                    intensity = np.zeros((fth.points_length, 1), dtype=np.uint8)
+                extra_fields: dict[str, npt.NDArray[Any]] = {}
+                for item in tile_content.body.batch_table.header.data.keys():
+                    arr = tile_content.body.batch_table.get_binary_property(item)
+                    extra_fields[item] = arr
 
                 root_node.grid.insert(
                     self.root_aabb[0].astype(np.float32),
                     inv_aabb_size,
                     xyz.copy(),
                     rgb,
-                    classification,
-                    intensity,
+                    extra_fields,
                 )
 
         pnts_writer.node_to_pnts(
             b"",
             root_node,
             self.out_folder,
-            self.rgb,
-            self.classification,
-            self.intensity,
         )
 
         if use_process_pool:
             pool_executor = concurrent.futures.ProcessPoolExecutor()
         else:
             pool_executor = None
-        root_tile = node_from_name(b"", self.root_aabb, self.root_spacing).to_tileset(
-            self.out_folder, self.root_scale, None, 0, pool_executor
-        )
+        root_tile = Node.create_child_node_from_parent(
+            b"",
+            self.root_aabb,
+            self.root_spacing,
+            self.shared_metadata.write_rgb,
+            self.shared_metadata.extra_fields_to_include,
+        ).to_tileset(self.out_folder, self.root_scale, None, 0, pool_executor)
         if pool_executor is not None:
             pool_executor.shutdown()
 

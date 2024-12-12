@@ -297,13 +297,18 @@ class PntsFeatureTableHeader(FeatureTableHeader):
 
 
 class PntsFeatureTableBody(FeatureTableBody):
-    def __init__(self) -> None:
-        self.position: npt.NDArray[np.float32 | np.uint16] = np.array(
-            [], dtype=np.float32
+    def __init__(
+        self,
+        positions: None | (npt.NDArray[np.float32 | np.uint16]) = None,
+        color: npt.NDArray[np.uint8 | np.uint16] | None = None,
+        normal: npt.NDArray[np.float32 | np.uint8] | None = None,
+    ) -> None:
+        self.position = (
+            positions if positions is not None else np.array([], dtype=np.float32)
         )
 
-        self.color: npt.NDArray[np.uint8 | np.uint16] | None = None
-        self.normal: npt.NDArray[np.float32 | np.uint8] | None = None
+        self.color = color
+        self.normal = normal
 
     @classmethod
     def from_array(

@@ -3,6 +3,23 @@ import numpy
 from plyfile import PlyData, PlyElement
 
 # Code used to create the ply files in this folder
+# without colors
+vertex = numpy.array(
+    [
+        (0, 0, 0),
+        (0, 1, 1),
+        (1, 0, 1),
+        (1, 1, 0),
+    ],
+    dtype=[
+        ("x", "f4"),
+        ("y", "f4"),
+        ("z", "f4"),
+    ],
+)
+el = PlyElement.describe(vertex, "vertex")
+PlyData([el]).write("simple_without_colors.ply")
+
 # with 8bits colors
 vertex = numpy.array(
     [
@@ -88,10 +105,10 @@ PlyData([el]).write("simple_with_intensity.ply")
 # with classification AND intensity
 vertex = numpy.array(
     [
-        (0, 0, 0, 0, 128, 0, 1, 80),
-        (0, 1, 1, 256, 0, 0, 1, 90),
-        (1, 0, 1, 0, 0, 1024, 2, 15),
-        (1, 1, 0, 65535, 65535, 65535, 2, 129),
+        (0, 0, 0, 0, 128, 0, 1, -80),
+        (0, 1, 1, 256, 0, 0, 1, 90.2),
+        (1, 0, 1, 0, 0, 1024, 2, 15.3),
+        (1, 1, 0, 65535, 65535, 65535, 2, 129129.19),
     ],
     dtype=[
         ("x", "f4"),
@@ -101,7 +118,7 @@ vertex = numpy.array(
         ("green", "u2"),
         ("blue", "u2"),
         ("classification", "u1"),
-        ("intensity", "u1"),
+        ("intensity", "f8"),
     ],
 )
 el = PlyElement.describe(vertex, "vertex")

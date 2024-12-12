@@ -6,26 +6,16 @@ from typing import TYPE_CHECKING, Any, Literal, Union
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.exceptions import Invalid3dtilesError
 from py3dtiles.tileset.content.feature_table import (
     FeatureTable,
     FeatureTableBody,
     FeatureTableHeader,
 )
 
+from .constants import COMPONENT_TYPE_NUMPY_MAPPING, DTYPE_TO_COMPONENT_TYPE_MAPPING
+
 if TYPE_CHECKING:
     from .tile_content import TileContentHeader
-
-COMPONENT_TYPE_NUMPY_MAPPING = {
-    "BYTE": np.int8,
-    "UNSIGNED_BYTE": np.uint8,
-    "SHORT": np.int16,
-    "UNSIGNED_SHORT": np.uint16,
-    "INT": np.int32,
-    "UNSIGNED_INT": np.uint32,
-    "FLOAT": np.float32,
-    "DOUBLE": np.float64,
-}
 
 TYPE_LENGTH_MAPPING = {
     "SCALAR": 1,
@@ -33,7 +23,6 @@ TYPE_LENGTH_MAPPING = {
     "VEC3": 3,
     "VEC4": 4,
 }
-
 
 ComponentLiteralType = Literal[
     "BYTE",
@@ -117,14 +106,12 @@ class B3dmFeatureTable(FeatureTable[B3dmFeatureTableHeader, B3dmFeatureTableBody
         self,
         property_name: str,
         array: npt.NDArray[ComponentNumpyType],
-        component_type: ComponentLiteralType,
         property_type: PropertyLiteralType,
     ) -> None:
-        if array.dtype != COMPONENT_TYPE_NUMPY_MAPPING[component_type]:
-            raise Invalid3dtilesError(
-                "The dtype of array should be the same as component_type,"
-                f"the dtype of the array is {array.dtype} and"
-                f"the dytpe of {component_type} is {COMPONENT_TYPE_NUMPY_MAPPING[component_type]}"
+        component_type = DTYPE_TO_COMPONENT_TYPE_MAPPING.get(array.dtype)
+        if component_type is None:
+            raise ValueError(
+                f"Cannot find a componentType corresponding to the dtype ${array.dtype}"
             )
 
         self.header.data[property_name] = {

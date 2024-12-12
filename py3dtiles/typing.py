@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional, TypedDict, Union
 
@@ -106,12 +107,20 @@ PortionItemType = tuple[int, ...]
 PortionsType = list[tuple[Path, PortionItemType]]
 
 
+@dataclass
+class ExtraFieldsDescription:
+    name: str
+    dtype: np.dtype[Any]
+
+
 class MetadataReaderType(TypedDict):
     portions: PortionsType
     aabb: npt.NDArray[np.float64]
     crs_in: CRS | None
     point_count: int
     avg_min: npt.NDArray[np.float64]
+    has_color: bool
+    extra_fields: list[ExtraFieldsDescription]
 
 
 OffsetScaleType = tuple[

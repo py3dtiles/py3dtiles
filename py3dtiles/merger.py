@@ -11,6 +11,7 @@ from py3dtiles.exceptions import (
     InvalidTilesetError,
     TilerException,
 )
+from py3dtiles.points import Points
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content import Pnts
 from py3dtiles.tileset.tile import Tile
@@ -150,6 +151,7 @@ def build_tileset_quadtree(
         # take half points from our children
         xyz = np.zeros((0, 3), dtype=np.float32)
         rgb = np.zeros((0, 3), dtype=np.uint8)
+        extra_fields: dict[str, npt.NDArray[Any]] = {}
 
         max_point_count = 50000
         point_count = 0
@@ -181,9 +183,34 @@ def build_tileset_quadtree(
                 )
 
             local_transform = root_tile.transform @ inv_base_transform
-            _xyz, _rgb = root_tile_content.body.get_points(local_transform)
+            points = root_tile_content.body.get_points(local_transform)
+            _xyz = points.positions
+            _rgb = points.colors
+            _extra_fields = points.extra_fields
 
             select = np.random.choice(_xyz.shape[0], int(_xyz.shape[0] * ratio))
+
+            # deal with new fields found in the current tileset
+            # note: we have to do this *before* inserting the new positions,
+            # so that we can fill with 0 with the correct length more easily
+            # if the previous iterations did not contain this field
+
+            # deal with the fields found in previous pnts first
+            for field, arr in extra_fields.items():
+                if field in _extra_fields:
+                    extra_fields[field] = np.concatenate(
+                        (arr, _extra_fields[field][select])
+                    )
+            # fields new in this pnts
+            for field, arr in _extra_fields.items():
+                if field not in extra_fields:
+                    extra_fields[field] = np.concatenate(
+                        (
+                            np.zeros(len(xyz), dtype=_extra_fields[field].dtype),
+                            arr[select],
+                        )
+                    )
+
             xyz = np.concatenate((xyz, _xyz[select]))
             if _rgb is not None:
                 rgb = np.concatenate((rgb, _rgb[select]))
@@ -199,10 +226,7 @@ def build_tileset_quadtree(
             union_aabb.add(ab)
 
         pnts = Pnts.from_points(
-            np.concatenate((xyz.view(np.uint8).ravel(), rgb.ravel())),
-            rgb.shape[0] > 0,
-            False,  # TODO: Handle classification in the merging process
-            False,  # TODO: Handle intensity in the merging process
+            Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
         )
 
         union_aabb.transform(inv_base_transform)

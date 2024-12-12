@@ -244,8 +244,7 @@ def convert(
     pyproj_always_xy: bool = False,
     benchmark: Optional[str] = None,
     rgb: bool = True,
-    classification: bool = True,
-    intensity: bool = True,
+    extra_fields: Optional[list[str]] = None,
     color_scale: Optional[float] = None,
     use_process_pool: bool = True,
     verbose: int = False,
@@ -264,8 +263,7 @@ def convert(
     :param pyproj_always_xy: When converting from a CRS to another, pass the `always_xy` flag to pyproj. This is useful if your data is in a CRS whose definition specifies an axis order other than easting/northing, but your data still have the easting component in the first field (often named X or longitude). See https://pyproj4.github.io/pyproj/stable/gotchas.html#axis-order-changes-in-proj-6 for more information.
     :param benchmark: Print summary at the end of the process
     :param rgb: Export rgb attributes.
-    :param classification: Export classification attribute.
-    :param intensity: Export intensity attributes. This support is currently limited to unsigned 8 bits integer for ply files, and to integers for xyz files.
+    :param extra_fields: Extra fields names to include in this conversion. These field names should be present in each input files. Currently vlrs and evlrs are not supported for las files.
     :param color_scale: Scale the color with the specified amount. Useful to lighten or darken black pointclouds with only intensity.
 
     :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
@@ -284,8 +282,7 @@ def convert(
         pyproj_always_xy=pyproj_always_xy,
         benchmark=benchmark,
         rgb=rgb,
-        classification=classification,
-        intensity=intensity,
+        extra_fields=extra_fields,
         color_scale=color_scale,
         use_process_pool=use_process_pool,
         verbose=verbose,
@@ -307,8 +304,7 @@ class _Convert:
         pyproj_always_xy: bool = False,
         benchmark: Optional[str] = None,
         rgb: bool = True,
-        classification: bool = True,
-        intensity: bool = True,
+        extra_fields: Optional[list[str]] = None,
         color_scale: Optional[float] = None,
         use_process_pool: bool = True,
         verbose: int = False,
@@ -325,14 +321,16 @@ class _Convert:
         :param pyproj_always_xy: When converting from a CRS to another, pass the `always_xy` flag to pyproj. This is useful if your data is in a CRS whose definition specifies an axis order other than easting/northing, but your data still have the easting component in the first field (often named X or longitude). See https://pyproj4.github.io/pyproj/stable/gotchas.html#axis-order-changes-in-proj-6 for more information.
         :param benchmark: Print summary at the end of the process
         :param rgb: Export rgb attributes.
-        :param classification: Export classification attribute.
-        :param intensity: Export intensity attribute.
+        :param extra_fields: Export these extra fields.
         :param color_scale: Scale the color with the specified amount. Useful to lighten or darken black pointclouds with only intensity.
 
         :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
         :raises SrsInMixinException: if the input files have different CRS
 
         """
+        if extra_fields is None:
+            extra_fields = []
+
         # create folder
         self.out_folder = Path(outfolder)
         mkdir_or_raise(self.out_folder, overwrite=overwrite)
@@ -345,11 +343,10 @@ class _Convert:
                 force_crs_in,
                 pyproj_always_xy,
                 rgb,
-                classification,
-                intensity,
                 color_scale,
                 cache_size,
                 verbose,
+                extra_fields=extra_fields,
             )
         ]
 
@@ -541,12 +538,9 @@ def _init_parser(
         "--no-rgb", help="Don't export rgb attributes", action="store_true"
     )
     parser.add_argument(
-        "--classification", help="Export classification attributes", action="store_true"
-    )
-    parser.add_argument(
-        "--intensity",
-        help="Export intensity attributes. This support is currently limited to unsigned 8 bits integer for ply files, and to integers for xyz files.",
-        action="store_true",
+        "--extra-fields",
+        help="Extra field names present in source data to include in resulting tileset. All input files *must* have this fields, with the same data type.",
+        action="append",
     )
     parser.add_argument("--color_scale", help="Force color scale", type=float)
     parser.add_argument(
@@ -582,8 +576,7 @@ def _main(args: argparse.Namespace) -> None:
             pyproj_always_xy=args.pyproj_always_xy,
             benchmark=args.benchmark,
             rgb=not args.no_rgb,
-            classification=args.classification,
-            intensity=args.intensity,
+            extra_fields=[] if args.extra_fields is None else args.extra_fields,
             color_scale=args.color_scale,
             use_process_pool=not args.disable_processpool,
             verbose=args.verbose,
