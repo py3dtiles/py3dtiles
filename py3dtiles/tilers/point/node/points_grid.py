@@ -47,7 +47,7 @@ def _insert(
     npt.NDArray[np.bool_],
     npt.NDArray[np.bool_],
     bool,
-]:
+]:  # pragma: no cover
     inserted = np.full(len(xyz), True)
     notinserted = np.full(len(xyz), False)
     needs_balance = False
@@ -85,7 +85,7 @@ def _insert_extra_fields(
     notinserted: npt.NDArray[np.bool_],
     cells_extra_field: list[npt.NDArray[T]],
     extra_field: npt.NDArray[T],
-) -> npt.NDArray[T]:
+) -> npt.NDArray[T]:  # pragma: no cover
     for i in range(len(keys)):
         k = keys[i]
         if inserted[i]:

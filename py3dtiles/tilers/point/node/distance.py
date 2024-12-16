@@ -8,7 +8,7 @@ from numba import njit
 @njit(
     "boolean(float32[:,:], float32[:], float32)", fastmath=True, nogil=True, cache=True
 )
-def is_point_far_enough(points, tested_point, squared_min_distance):
+def is_point_far_enough(points, tested_point, squared_min_distance):  # pragma: no cover
     nbp = points.shape[0]
     farenough = True
     for i in range(nbp - 1, -1, -1):
@@ -23,7 +23,7 @@ def is_point_far_enough(points, tested_point, squared_min_distance):
 
 
 @jit(cache=True, nogil=True, nopython=True)
-def xyz_to_child_index(xyz, aabb_center):
+def xyz_to_child_index(xyz, aabb_center):  # pragma: no cover
     test = np.greater_equal(xyz - aabb_center, 0).astype(np.int8)
     return np.sum(np.left_shift(test, np.array([2, 1, 0])), axis=1)
 
@@ -33,7 +33,7 @@ def xyz_to_child_index(xyz, aabb_center):
     cache=True,
     nogil=True,
 )
-def xyz_to_key(xyz, cell_count, aabb_min, inv_aabb_size):
+def xyz_to_key(xyz, cell_count, aabb_min, inv_aabb_size):  # pragma: no cover
     """
     Place all the points in xyz into a 3D xyz grid, then encode the coordinates into a single int, that can then be considered as a cell id for this specific grid.
 
