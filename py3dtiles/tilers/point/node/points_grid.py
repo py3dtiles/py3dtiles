@@ -27,7 +27,7 @@ T = TypeVar(
         np.float16,
         np.float32,
         np.float64,
-        np.float128,
+        np.longdouble,
     ],
 )
 
@@ -177,7 +177,7 @@ class Grid:
                 | npt.NDArray[np.float16]
                 | npt.NDArray[np.float32]
                 | npt.NDArray[np.float64]
-                | npt.NDArray[np.float128]
+                | npt.NDArray[np.longdouble]
             ),
         ],
         bool,
