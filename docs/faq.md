@@ -35,3 +35,14 @@ Please also see [the FAQ part of pyproj about axis order](https://pyproj4.github
 ### I've checked everything, but my data is still at the wrong position
 
 Please [open an issue](https://gitlab.com/py3dtiles/py3dtiles/-/issues), including what you checked and the results so far.
+
+## When converting a las/laz files, the resulting tiles are completely black
+
+Please check the RGB components of your file (with `pdal info <file>` for instance). If the Red, Green and Blue value are all between 0 and 255, you need to either:
+
+- use the parameter `color_scale` when calling `convert` or the flag `--color_scale=256` when using `py3dtiles convert` from the cli, possibly after checking the whole file with pdal or laspy for instance (this can be costly)
+- fix your las or ask the producer to fix it.
+
+To make a long story short: the las spec mandates that color components are 2 bytes each. This means values should be between 0 and 65535. For instance, the red color should be (65535, 0, 0), not (255, 0, 0). However quite a few las are built using a range from 0 to 255 (probably because tools implementors misunderstood the spec somewhere and use only 8 bits color components).
+
+Before v6, we attempted to detect if the file was correctly saved, but of course, it wasn't 100% effective and we had some false positive, and even trouble if several files were given in the command-line. So since py3dtiles v6, we made the choice to consider that las are correct by default (so R,G,B values from 0 to 65535), with the possibility to fix this via the `color_scale` parameter.

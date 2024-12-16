@@ -185,7 +185,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                     f"the available extensions are: {READER_MAP.keys()}"
                 )
 
-            file_info = reader.get_metadata(file)
+            file_info = reader.get_metadata(file, self.color_scale)
             extra_fields_by_name = {obj.name: obj for obj in file_info["extra_fields"]}
 
             if self.rgb and not file_info["has_color"]:

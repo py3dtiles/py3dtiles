@@ -16,7 +16,9 @@ from py3dtiles.typing import (
 )
 
 
-def get_metadata(filename: Path) -> MetadataReaderType:
+def get_metadata(
+    filename: Path, color_scale: Optional[float] = None
+) -> MetadataReaderType:
     pointcloud_file_portions = []
 
     with laspy.open(filename) as f:
@@ -40,6 +42,25 @@ def get_metadata(filename: Path) -> MetadataReaderType:
             if fname not in ("X", "Y", "Z", "red", "green", "blue"):
                 extra_fields.append(
                     ExtraFieldsDescription(name=fname, dtype=the_type[0])
+                )
+
+        # check the file for common errors
+        if color_scale is None and has_color:
+            points = next(f.chunk_iterator(10_000))
+            # we test that the max is > 0 because if all RGB values are 0,
+            # we cannot conclude anything about whether or not we have 8 or 16 bit colors
+            # the only false positive we would have is if we hit a part of a file that is mostly black
+            if (
+                0 < np.max(points["red"]) < 256
+                and 0 < np.max(points["blue"] < 256)
+                and 0 < np.max(points["green"] < 256)
+            ):
+                print(
+                    f"""\
+WARNING: the color information in the file {filename} seems to be between 0 and 256  instead of 0 and 65535. You might \
+need to set color_scale to 256 if the resulting 3dtiles appears black. See \
+https://py3dtiles.org/main/faq.html#when-converting-a-las-laz-files-the-resulting-tiles-are-completely-black \
+for more information."""
                 )
 
     return {

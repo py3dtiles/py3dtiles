@@ -17,7 +17,7 @@ from py3dtiles.typing import (
 )
 
 
-def get_metadata(path: Path) -> MetadataReaderType:
+def get_metadata(path: Path, color_scale: Optional[float] = None) -> MetadataReaderType:
     """Get metadata in case of a input ply file."""
     ply_point_cloud = PlyData.read(path)
     if "vertex" not in [e.name for e in ply_point_cloud.elements]:
