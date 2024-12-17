@@ -4,6 +4,8 @@ The documentation is generated with sphinx.
 
 ## How to generate the doc?
 
+### ApiDoc
+
 First install dependencies in a python3 virtualenv:
 
 ```
@@ -26,4 +28,16 @@ To generate the doc as gitlab does it:
 
 ```
 sphinx-multiversion . <outfolder>
+```
+
+### Full website
+
+A `Makefile` is used to generate the full site web:
+
+```sh
+make apidoc # will generate the apidoc, executes `sphinx-multiversion`
+make static-site # will generate just the part that is not touched by sphinx
+make site # generates the whole site, apidoc and static pages
+make serve # convenience function over python3 -m http.server to serve the generated pages
+
 ```

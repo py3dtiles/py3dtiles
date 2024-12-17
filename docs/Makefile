@@ -6,14 +6,19 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
+current_version = $(shell git tag --list | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | tail -n1)
 
-# Put it first so that "make" without argument is like "make help".
-help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+apidoc:
+	sphinx-multiversion "$(SOURCEDIR)" "$(BUILDDIR)"
 
-.PHONY: help Makefile
+static-site:
+	mkdir -p "$(BUILDDIR)"
+	cp -rv "$(SOURCEDIR)/index.html" "$(BUILDDIR)/index.html"
+	cp -rv "$(SOURCEDIR)/../graphics" "$(BUILDDIR)/graphics"
+	# NOTE the grep must reflect the smv_tag_whitelist and smv_released_pattern in docs/conf.py
+	sed -i "s/VERSION/$(current_version)/g" "$(BUILDDIR)/index.html"
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+site: apidoc static-site
+
+serve:
+	python3 -m http.server --directory "$(BUILDDIR)"
