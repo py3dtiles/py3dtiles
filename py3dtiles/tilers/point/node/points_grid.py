@@ -47,7 +47,7 @@ def _insert(
     npt.NDArray[np.bool_],
     npt.NDArray[np.bool_],
     bool,
-]:
+]:  # pragma: no cover
     inserted = np.full(len(xyz), True)
     notinserted = np.full(len(xyz), False)
     needs_balance = False
@@ -85,7 +85,7 @@ def _insert_extra_fields(
     notinserted: npt.NDArray[np.bool_],
     cells_extra_field: list[npt.NDArray[T]],
     extra_field: npt.NDArray[T],
-) -> npt.NDArray[T]:
+) -> npt.NDArray[T]:  # pragma: no cover
     for i in range(len(keys)):
         k = keys[i]
         if inserted[i]:
@@ -185,13 +185,7 @@ class Grid:
         # We have to separate the insertion of xyz + rgb from the insertion of extra fields because numba isn't able
         # to take such a dict as argument
         # it implies quite a lot of coupling between this method, _insert and _insert_extra_fields unfortunately
-        keys = xyz_to_key(
-            xyz,
-            self.cell_count,
-            aabmin,
-            inv_aabb_size,
-            int(self.cell_count[0] - 1).bit_length(),
-        )
+        keys = xyz_to_key(xyz, self.cell_count, aabmin, inv_aabb_size)
 
         (
             not_inserted_xyz,
@@ -232,8 +226,7 @@ class Grid:
         rgb: npt.NDArray[np.uint8 | np.uint16] | None,
         extra_fields: dict[str, npt.NDArray[Any]],
     ) -> None:
-        shift = int(self.cell_count[0] - 1).bit_length()
-        keys = xyz_to_key(xyz, self.cell_count, aabmin, inv_aabb_size, shift)
+        keys = xyz_to_key(xyz, self.cell_count, aabmin, inv_aabb_size)
         # allocate this one once and for all
         for k in np.unique(keys):
             idx = np.where(keys - k == 0)
