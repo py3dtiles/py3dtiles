@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import numpy as np
@@ -10,7 +11,9 @@ from py3dtiles.typing import ExtraFieldsDescription
 class TestGetMetadata:
     def test_get_metadata_simple(self, fixtures_dir: Path) -> None:
         metadata = get_metadata(fixtures_dir / "simple.xyz")
-        assert str(metadata["portions"][0][0]).endswith("tests/fixtures/simple.xyz")
+        assert str(metadata["portions"][0][0]).endswith(
+            str(Path("tests/fixtures/simple.xyz"))
+        )
         assert metadata["portions"][0][1] == (0, 3, 0)
         assert metadata["point_count"] == 3
         assert metadata["crs_in"] is None
@@ -20,7 +23,7 @@ class TestGetMetadata:
     def test_get_metadata_simple_with_irgb(self, fixtures_dir: Path) -> None:
         metadata = get_metadata(fixtures_dir / "simple_with_irgb.xyz")
         assert str(metadata["portions"][0][0]).endswith(
-            "tests/fixtures/simple_with_irgb.xyz"
+            str(Path("tests/fixtures/simple_with_irgb.xyz"))
         )
         assert metadata["portions"][0][1] == (0, 3, 0)
         assert metadata["has_color"]
@@ -37,9 +40,12 @@ class TestGetMetadata:
             fixtures_dir / "simple_with_irgb_and_classification.csv"
         )
         assert str(metadata["portions"][0][0]).endswith(
-            "tests/fixtures/simple_with_irgb_and_classification.csv"
+            str(Path("tests/fixtures/simple_with_irgb_and_classification.csv"))
         )
-        assert metadata["portions"][0][1] == (0, 3, 20)
+        offset = (
+            21 if os.name == "nt" else 20
+        )  # windows automatically convert \n to \r\n
+        assert metadata["portions"][0][1] == (0, 3, offset)
         assert metadata["has_color"]
         assert metadata["extra_fields"] == [
             ExtraFieldsDescription(name="intensity", dtype=np.dtype(np.float32)),
