@@ -14,7 +14,7 @@ apidoc:
 static-site:
 	mkdir -p "$(BUILDDIR)"
 	cp -rv "$(SOURCEDIR)/index.html" "$(BUILDDIR)/index.html"
-	cp -rv "$(SOURCEDIR)/../graphics" "$(BUILDDIR)/graphics"
+	cp -rv "$(SOURCEDIR)/../graphics/" "$(BUILDDIR)/"
 	# NOTE the grep must reflect the smv_tag_whitelist and smv_released_pattern in docs/conf.py
 	sed -i "s/VERSION/$(current_version)/g" "$(BUILDDIR)/index.html"
 
