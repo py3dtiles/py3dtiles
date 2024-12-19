@@ -44,9 +44,6 @@
       .infos {
         margin-bottom: 30px;
       }
-      .card-infos {
-        min-height: 220px;
-      }
       .samples {
         max-height: 200px;
         max-width: 200px;
@@ -95,8 +92,9 @@
 
         <h2 class="subtitle is-2">Features</h2>
 
+        <!-- 1st card -->
         <div class="grid is-col-min-15">
-          <div class="cell">
+          <div class="cell is-full">
             <div class="card">
               <div class="card-content">
                 <div class="media">
@@ -126,6 +124,7 @@
                     Py3dtiles icludes a command line tool to quickly get
                     informations about 3dtiles files or convert datasets.
                   </p>
+                  <br/>
                   <pre><code>py3dtiles convert --out="3dtiles" pointcloud.las</code></pre>
                 </div>
               </div>
@@ -136,7 +135,9 @@
               </footer>
             </div>
           </div>
-
+        </div>
+        <!-- 2nd card -->
+        <div class="grid is-col-min-15">
           <div class="cell">
             <div class="card">
               <div class="card-content">
@@ -166,6 +167,7 @@
                     Py3dtiles includes a rich API to read, write and manipulates
                     3dtiles datasets
                   </p>
+                  <br/>
                   <pre><code class="language-python">
 import json
 from pathlib import Path
@@ -186,7 +188,9 @@ with tileset_path.open() as f:
               </footer>
             </div>
           </div>
-
+        </div>
+        <!-- 3rd card -->
+        <div class="grid is-col-min-15">
           <div class="cell">
             <div class="card">
               <div class="card-content">
@@ -225,27 +229,21 @@ with tileset_path.open() as f:
 
         <h2 class="subtitle is-2">Showcases</h2>
 
-        <div class="columns">
-          <div class="column">
-            <figure class="image is-align-self-center">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
               <a href="https://giro3d.org/latest/examples/3dtiles_building.html"
-                ><img class="is-rounded samples" src="/graphics/sample01.png"
+                ><img class="is-rounded samples" src="./graphics/sample01.png"
               /></a>
-            </figure>
           </div>
-          <div class="column">
-            <figure class="image">
+          <div class="column has-text-centered">
               <a href="https://giro3d.org/latest/examples/lidar_hd.html"
                 ><img class="is-rounded samples" src="./graphics/sample02.png"
               /></a>
-            </figure>
           </div>
-          <div class="column">
-            <figure class="image">
+          <div class="column has-text-centered">
               <a href="https://giro3d.org/latest/examples/pointcloud.html"
                 ><img class="is-rounded samples" src="./graphics/sample03.png"
               /></a>
-            </figure>
           </div>
         </div>
 
