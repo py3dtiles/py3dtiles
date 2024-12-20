@@ -8,10 +8,13 @@ SOURCEDIR     = .
 BUILDDIR      = _build
 current_version = $(shell git tag --list | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | tail -n1)
 
-apidoc:
+"$(BUILDDIR)":
+	mkdir -p "$(BUILDDIR)"
+
+apidoc: $(BUILDDIR)/version_switcher.json
 	sphinx-multiversion "$(SOURCEDIR)" "$(BUILDDIR)"
 
-static-site:
+static-site: "$(BUILDDIR)"
 	mkdir -p "$(BUILDDIR)"
 	cp -rv "$(SOURCEDIR)/index.html" "$(BUILDDIR)/index.html"
 	cp -rv "$(SOURCEDIR)/../graphics/" "$(BUILDDIR)/"
@@ -22,3 +25,9 @@ site: apidoc static-site
 
 serve:
 	python3 -m http.server --directory "$(BUILDDIR)"
+
+$(BUILDDIR)/version_switcher.json: "$(BUILDDIR)"
+	python ./versions_switcher_builder.py "$(BUILDDIR)"
+
+clean:
+	rm -rf $(BUILDDIR)
