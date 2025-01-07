@@ -68,7 +68,7 @@ laspy, see `this link <https://laspy.readthedocs.io/en/latest/installation.html#
   $ pip install laspy[laszip]
 
 
-If you don't need waveform support, lazrs is also a good option.
+If you don't need waveform support, [laz-rs](https://github.com/laz-rs/laz-rs) is also a good option.
 
 From docker
 ~~~~~~~~~~~~
