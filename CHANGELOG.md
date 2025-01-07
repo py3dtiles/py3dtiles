@@ -115,7 +115,7 @@ As a result, we have made it so that py3dtiles is less tied to Oslandia and more
 Big change in the way we deal with dependencies. With more and more file format supports added, the dependency tree is becoming bigger and bigger. To avoid cluttering client environments with dependencies for formats they don't need, we are now using the `extras_require` section for some formats. Here is the list of file formats and the command to use to get the corresponding dependencies:
 
 - postgresql support: `pip install py3dtiles[postgres]`
-- las/laz support: `pip install py3dtiles[las]` (note: laz support is still conditioned by the presence of laszip or lasrs, see installation documentation)
+- las/laz support: `pip install py3dtiles[las]` (note: laz support is still conditioned by the presence of laszip or [laz-rs](https://crates.io/crates/laz), see installation documentation)
 - ply support: `pip install py3dtiles[ply]`
 
 The `.[all]` sections allows to get all these dependencies. The docker image contains everything.
