@@ -37,12 +37,27 @@
     <script>window.addEventListener('load', () => hljs.highlightAll());</script>
 
     <style>
+      :root {
+        --py3dtiles-blue: #3f7bad;
+        --py3dtiles-light-blue: #d7e5f0;
+        --py3dtiles-orange: #ff6500;
+        /* from darker to lighter */
+        --py3dtiles-grey1: #fafafa;
+        --py3dtiles-grey2: #f2f2f2;
+        --color-primary: var(--py3dtiles-blue);
+        --color-secondary: var(--py3dtiles-orange);
+
+        --bulma-pre-background: var(--py3dtiles-grey2);
+      }
+      code {
+        background-color: var(--bulma-pre-background);
+      }
       body {
         background: url(graphics/background.png) left 70px no-repeat;
         background-attachment: fixed;
       }
       a {
-        color: #3f7bad;
+        color: var(--color-primary);
       }
       .navbar-item img,
       .navbar-item svg {
@@ -52,10 +67,10 @@
         text-align: right;
       }
       .navbar-burger  {
-        color: #3f7bad;
+        color: var(--color-primary);
       }
       figure svg {
-        fill: #3f7bad;
+        fill: var(--color-primary);
       }
       .infos {
         margin-bottom: 30px;
@@ -304,7 +319,7 @@ with tileset_path.open() as f:
 
         <div class="columns is-centered">
           <div class="column has-text-centered is-2">
-            <a class="button is-link" style="background: #3f7bad" href=""
+            <a class="button is-link" style="background: var(--color-primary)" href=""
               >Get started now!</a
             >
           </div>
