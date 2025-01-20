@@ -373,11 +373,7 @@ pages:
     - pip install .[doc]
     # sphinx-multiversion needs to have all the branches
     - git fetch
-    - sphinx-multiversion docs public
-    - cp -rv docs/index_redirect.html public/index.html
-    # NOTE the grep must reflect the smv_tag_whitelist and smv_released_pattern in docs/conf.py
-    - current_version="$(git tag --list | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | tail -n1)"
-    - sed -i "s/VERSION/$current_version/g" public/index.html
+    - make -C docs BUILDDDIR="../public" site
   artifacts:
     paths:
       - public
