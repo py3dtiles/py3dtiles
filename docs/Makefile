@@ -25,7 +25,7 @@ static-site: "$(BUILDDIR)"
 site: apidoc static-site
 
 serve:
-	python3 -m http.server --directory "$(BUILDDIR)"
+	python3 -m http.server --bind 127.0.0.1 --directory "$(BUILDDIR)"
 
 $(BUILDDIR)/version_switcher.json: "$(BUILDDIR)"
 	python ./versions_switcher_builder.py "$(BUILDDIR)"
