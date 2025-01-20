@@ -1,0 +1,15 @@
+html[data-theme="light"], html[data-theme="dark"] {
+  /* TODO factorize that with the declaration in index.html */
+  --py3dtiles-blue: #3f7bad
+  --py3dtiles-orange: #ff6500;
+  --pst-color-primary: var(--py3dtiles-blue);
+  --pst-color-secondary: var(--py3dtiles-orange);
+  --pst-color-inline-code: var(--pst-color-primary);
+
+  --pst-font-size-h1: 1.75rem;
+  --pst-font-size-h2: 1.65rem;
+  --pst-font-size-h3: 1.55rem;
+  --pst-font-size-h4: 1.45rem;
+  --pst-font-size-h5: 1.35rem;
+  --pst-font-size-h6: 1.25rem;
+}
