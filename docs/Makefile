@@ -16,8 +16,9 @@ apidoc: $(BUILDDIR)/version_switcher.json
 
 static-site: "$(BUILDDIR)"
 	mkdir -p "$(BUILDDIR)"
-	cp -rv "$(SOURCEDIR)/index.html" "$(BUILDDIR)/index.html"
-	cp -rv "$(SOURCEDIR)/../graphics/" "$(BUILDDIR)/"
+	cp -rv "../site/index.html" "$(BUILDDIR)/"
+	cp -rv "../site/css" "$(BUILDDIR)/"
+	cp -rv "../graphics/" "$(BUILDDIR)/"
 	# NOTE the grep must reflect the smv_tag_whitelist and smv_released_pattern in docs/conf.py
 	sed -i "s/VERSION/$(current_version)/g" "$(BUILDDIR)/index.html"
 

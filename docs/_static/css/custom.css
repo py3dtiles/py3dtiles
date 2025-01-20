@@ -1,7 +1,4 @@
 html[data-theme="light"], html[data-theme="dark"] {
-  /* TODO factorize that with the declaration in index.html */
-  --py3dtiles-blue: #3f7bad
-  --py3dtiles-orange: #ff6500;
   --pst-color-primary: var(--py3dtiles-blue);
   --pst-color-secondary: var(--py3dtiles-orange);
   --pst-color-inline-code: var(--pst-color-primary);
