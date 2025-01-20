@@ -36,7 +36,6 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
-    # "sphinx_rtd_theme",
     "sphinx_multiversion",
     "sphinxcontrib.apidoc",
     "py3dtiles_sphinx_ext",

@@ -10,3 +10,42 @@ html[data-theme="light"], html[data-theme="dark"] {
   --pst-font-size-h5: 1.35rem;
   --pst-font-size-h6: 1.25rem;
 }
+
+.bd-main .bd-content .bd-article-container {
+  max-width: 100%;  /* default is 60em */
+}
+
+.bd-page-width {
+	max-width: 100%;
+}
+
+dl:not(.docutils)>dt,
+dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.citation):not(.glossary):not(.simple)>dt {
+  display:table;
+  display: flex;
+  flex-wrap: wrap;
+  white-space: pre;
+  align-items: center;
+  margin:6px 0;
+  font-size:90%;
+  line-height:normal;
+  background: var(--py3dtiles-light-blue);
+  border-top:3px solid var(--py3dtiles-blue);
+  padding:6px;
+  /* position:relative */
+}
+
+/* This is the [source] link in API doc */
+dl>dt>a:has(.viewcode-link) {
+  flex-grow:1;
+  text-align: right;
+}
+
+dl:not(.docutils) dl:not(.option-list):not(.field-list):not(.footnote):not(.citation):not(.glossary):not(.simple)>dt,
+dl[class]:not(.option-list):not(.field-list):not(.footnote):not(.citation):not(.glossary):not(.simple) dl:not(.option-list):not(.field-list):not(.footnote):not(.citation):not(.glossary):not(.simple)>dt {
+  margin-bottom:6px;
+  border:none;
+  border-left:3px solid #ccc;
+  background:#f0f0f0;
+  color:#555;
+}
