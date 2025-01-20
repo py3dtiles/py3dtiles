@@ -15,7 +15,7 @@ sys.path.append(os.path.abspath("./extensions"))
 # -- Project information -----------------------------------------------------
 project = "py3dtiles"
 copyright = "2023, the py3dtiles contributors"  # noqa: A001
-author = "Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine, Antoine Facchini"
+author = "Antoine Facchini, Augustin Trancart, Paul Blottiere, Éric Lemoine, Frédéric Bonifas, Vincent Jaillot, Jean-Marie Kerloch, Jérémy Gaillard, Julien Cabieces, Lorenzo Marnat, Ludovic Delauné, Marco Duiker, Michael Holthausen, Nicolas Saul, Pierre-Eric Pelloux-Prayer, Raphaël Delhome, romainthal, Sébastien Guimmara, Sylvain Beorchia, Sylvain Meylan, Taro Matsuzawa aka. btm, Tom Roussel, Vincent Picavet"
 
 # -- General configuration ---------------------------------------------------
 
