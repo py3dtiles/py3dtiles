@@ -198,7 +198,7 @@ class Tile(RootProperty[TileDictType]):
         assert coords.shape[1] == 3
         new_coords = np.zeros(coords.shape, dtype=coords.dtype)
 
-        for (i, coord) in enumerate(coords):
+        for i, coord in enumerate(coords):
             new_coords[i] = self.transform_coord(coord)
         return new_coords
 

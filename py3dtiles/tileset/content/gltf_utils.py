@@ -147,7 +147,11 @@ def gltf_component_from_primitive(
     for attribute in attributes_array:
         if attribute is None:
             continue
-        (array_blob, accessor, buffer_view,) = prepare_gltf_component(
+        (
+            array_blob,
+            accessor,
+            buffer_view,
+        ) = prepare_gltf_component(
             attribute_counter,
             attribute.array,
             byte_offset + len(gltf_binary_blob),

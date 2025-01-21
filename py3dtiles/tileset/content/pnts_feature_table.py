@@ -186,12 +186,12 @@ class PntsFeatureTableHeader(FeatureTableHeader):
         position_semantic: Literal[
             SemanticPoint.POSITION, SemanticPoint.POSITION_QUANTIZED
         ],
-        color_semantic: Literal[
-            SemanticPoint.RGB, SemanticPoint.RGBA, SemanticPoint.RGB565
-        ]
-        | None,
-        normal_semantic: Literal[SemanticPoint.NORMAL, SemanticPoint.NORMAL_OCT16P]
-        | None,
+        color_semantic: (
+            Literal[SemanticPoint.RGB, SemanticPoint.RGBA, SemanticPoint.RGB565] | None
+        ),
+        normal_semantic: (
+            Literal[SemanticPoint.NORMAL, SemanticPoint.NORMAL_OCT16P] | None
+        ),
         nb_points: int,
         quantized_volume_offset: npt.NDArray[np.float32] | None = None,
         quantized_volume_scale: npt.NDArray[np.float32] | None = None,
@@ -291,7 +291,7 @@ class PntsFeatureTableHeader(FeatureTableHeader):
             fth.normal_offset = jsond["NORMAL_OCT16P"]["byteOffset"]
 
         # RTC (Relative To Center)
-        fth.rtc = jsond.get("RTC_CENTER", None)
+        fth.rtc = jsond.get("RTC_CENTER")
 
         return fth
 
@@ -466,9 +466,7 @@ class PntsFeatureTable(FeatureTable[PntsFeatureTableHeader, PntsFeatureTableBody
 
         return feature_table
 
-    def get_feature_at(
-        self, index: int
-    ) -> tuple[
+    def get_feature_at(self, index: int) -> tuple[
         npt.NDArray[np.float32 | np.uint16],
         npt.NDArray[np.uint8 | np.uint16] | None,
         npt.NDArray[np.float32 | np.uint8] | None,

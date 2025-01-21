@@ -8,7 +8,7 @@ def generate_js_file(app: Sphinx, pagename: str, templatename: str, context, doc
     # JavaScript template
     js = f"""
     // JavaScript generated from template
-    DOCUMENTATION_OPTIONS.theme_switcher_version_match = "{ current_version }"
+    DOCUMENTATION_OPTIONS.theme_switcher_version_match = "{current_version}"
     """
     app.add_js_file(None, body=js)
 

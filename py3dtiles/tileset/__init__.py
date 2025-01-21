@@ -3,6 +3,7 @@ This module contains supporting classes and functions to manipulate 3DTiles data
 
 Use this module if you plan on directly reading, manipulating and writing tilesets, tiles and tile contents.
 """
+
 from .bounding_volume import BoundingVolume
 from .bounding_volume_box import BoundingVolumeBox
 from .root_property import RootProperty

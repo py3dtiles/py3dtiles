@@ -16,8 +16,7 @@ ComponentNumpyType = Union[
 
 class FeatureTableHeader:
     @abstractmethod
-    def to_array(self) -> npt.NDArray[np.uint8]:
-        ...
+    def to_array(self) -> npt.NDArray[np.uint8]: ...
 
 
 class FeatureTableBody:
@@ -25,8 +24,7 @@ class FeatureTableBody:
         self.data: list[npt.NDArray[ComponentNumpyType]] = []
 
     @abstractmethod
-    def to_array(self) -> npt.NDArray[np.uint8]:
-        ...
+    def to_array(self) -> npt.NDArray[np.uint8]: ...
 
     @property
     def nbytes(self) -> int:
@@ -48,12 +46,10 @@ class FeatureTable(Generic[_FeatureTableHeaderT, _FeatureTableBodyT]):
     body: _FeatureTableBodyT
 
     @abstractmethod
-    def to_array(self) -> npt.NDArray[np.uint8]:
-        ...
+    def to_array(self) -> npt.NDArray[np.uint8]: ...
 
     @staticmethod
     @abstractmethod
     def from_array(
         tile_header: TileContentHeader, array: npt.NDArray[np.uint8]
-    ) -> FeatureTable[Any, Any]:
-        ...
+    ) -> FeatureTable[Any, Any]: ...
