@@ -4,10 +4,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>py3dtiles</title>
-    <link rel="icon" type="image/png" href="./graphics/favicons/favicon-96x96.png" sizes="96x96" />
-    <link rel="icon" type="image/svg+xml" href="./graphics/favicons/favicon.svg" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="./graphics/favicons/favicon-96x96.png"
+      sizes="96x96"
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="./graphics/favicons/favicon.svg"
+    />
     <link rel="shortcut icon" href="./graphics/favicons/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="./graphics/favicons/apple-touch-icon.png" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="./graphics/favicons/apple-touch-icon.png"
+    />
     <link rel="manifest" href="./graphics/favicons/site.webmanifest" />
     <link
       rel="stylesheet"
@@ -34,7 +47,9 @@
       defer
       src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"
     ></script>
-    <script>window.addEventListener('load', () => hljs.highlightAll());</script>
+    <script>
+      window.addEventListener("load", () => hljs.highlightAll());
+    </script>
 
     <style>
       :root {
@@ -66,7 +81,7 @@
       .navbar-item {
         text-align: right;
       }
-      .navbar-burger  {
+      .navbar-burger {
         color: var(--color-primary);
       }
       figure svg {
@@ -81,30 +96,29 @@
       }
     </style>
     <script>
-      document.addEventListener('DOMContentLoaded', () => {
-
+      document.addEventListener("DOMContentLoaded", () => {
         // Get all "navbar-burger" elements
-        const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+        const $navbarBurgers = Array.prototype.slice.call(
+          document.querySelectorAll(".navbar-burger"),
+          0,
+        );
 
         // Add a click event on each of them
-        $navbarBurgers.forEach( el => {
-          el.addEventListener('click', () => {
-
+        $navbarBurgers.forEach((el) => {
+          el.addEventListener("click", () => {
             // Get the target from the "data-target" attribute
             const target = el.dataset.target;
             const $target = document.getElementById(target);
 
             // Toggle the "is-active" class on both the "navbar-burger" and the "navbar-menu"
-            el.classList.toggle('is-active');
-            $target.classList.toggle('is-active');
-
+            el.classList.toggle("is-active");
+            $target.classList.toggle("is-active");
           });
         });
       });
     </script>
   </head>
   <body>
-
     <nav class="navbar" role="navigation" aria-label="main navigation">
       <div class="navbar-brand">
         <a class="navbar-item" href="">
@@ -179,7 +193,7 @@
                     Py3dtiles icludes a command line tool to quickly get
                     informations about 3dtiles files or convert datasets.
                   </p>
-                  <br/>
+                  <br />
                   <pre><code>py3dtiles convert --out="3dtiles" pointcloud.las</code></pre>
                 </div>
               </div>
@@ -222,7 +236,7 @@
                     Py3dtiles includes a rich API to read, write and manipulates
                     3dtiles datasets
                   </p>
-                  <br/>
+                  <br />
                   <pre><code class="language-python">import json
 from pathlib import Path
 
@@ -285,19 +299,19 @@ with tileset_path.open() as f:
 
         <div class="columns is-centered">
           <div class="column has-text-centered">
-              <a href="https://giro3d.org/latest/examples/3dtiles_building.html"
-                ><img class="is-rounded samples" src="./graphics/sample01.png"
-              /></a>
+            <a href="https://giro3d.org/latest/examples/3dtiles_building.html"
+              ><img class="is-rounded samples" src="./graphics/sample01.png"
+            /></a>
           </div>
           <div class="column has-text-centered">
-              <a href="https://giro3d.org/latest/examples/lidar_hd.html"
-                ><img class="is-rounded samples" src="./graphics/sample02.png"
-              /></a>
+            <a href="https://giro3d.org/latest/examples/lidar_hd.html"
+              ><img class="is-rounded samples" src="./graphics/sample02.png"
+            /></a>
           </div>
           <div class="column has-text-centered">
-              <a href="https://giro3d.org/latest/examples/pointcloud.html"
-                ><img class="is-rounded samples" src="./graphics/sample03.png"
-              /></a>
+            <a href="https://giro3d.org/latest/examples/pointcloud.html"
+              ><img class="is-rounded samples" src="./graphics/sample03.png"
+            /></a>
           </div>
         </div>
 
@@ -350,7 +364,10 @@ with tileset_path.open() as f:
 
         <div class="columns is-centered">
           <div class="column has-text-centered is-2">
-            <a class="button is-link" style="background: var(--color-primary)" href=""
+            <a
+              class="button is-link"
+              style="background: var(--color-primary)"
+              href=""
               >Get started now!</a
             >
           </div>
@@ -360,9 +377,7 @@ with tileset_path.open() as f:
 
     <footer class="footer">
       <div class="content has-text-centered">
-        <p>
-          © 2023-2024 py3dtiles
-        </p>
+        <p>© 2023-2024 py3dtiles</p>
       </div>
     </footer>
   </body>
