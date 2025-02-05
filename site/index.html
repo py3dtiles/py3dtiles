@@ -1,0 +1,419 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>py3dtiles</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="./graphics/favicons/favicon-96x96.png"
+      sizes="96x96"
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="./graphics/favicons/favicon.svg"
+    />
+    <link rel="shortcut icon" href="./graphics/favicons/favicon.ico" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="./graphics/favicons/apple-touch-icon.png"
+    />
+    <link rel="manifest" href="./graphics/favicons/site.webmanifest" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css"
+    />
+    <script
+      defer
+      src="https://use.fontawesome.com/releases/v6.7.0/js/all.js"
+    ></script>
+    <!-- TODO integrate that in the repo? -->
+    <script
+      defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"
+    ></script>
+    <script
+      defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/shell.min.js"
+    ></script>
+    <script
+      defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"
+    ></script>
+    <script>
+      window.addEventListener("load", () => hljs.highlightAll());
+    </script>
+
+    <style>
+      :root {
+        --py3dtiles-blue: #3f7bad;
+        --py3dtiles-light-blue: #d7e5f0;
+        --py3dtiles-orange: #ff6500;
+        /* from darker to lighter */
+        --py3dtiles-grey1: #fafafa;
+        --py3dtiles-grey2: #f2f2f2;
+        --color-primary: var(--py3dtiles-blue);
+        --color-secondary: var(--py3dtiles-orange);
+
+        --bulma-pre-background: var(--py3dtiles-grey2);
+      }
+      code {
+        background-color: var(--bulma-pre-background);
+      }
+      body {
+        background: url(graphics/background.png) left 70px no-repeat;
+        background-attachment: fixed;
+      }
+      a {
+        color: var(--color-primary);
+      }
+      .navbar-item img,
+      .navbar-item svg {
+        max-height: 50px;
+      }
+      .navbar-item {
+        text-align: right;
+      }
+      .navbar-burger {
+        color: var(--color-primary);
+      }
+      figure svg {
+        color: var(--color-primary);
+        fill: var(--color-primary);
+      }
+      .infos {
+        margin-bottom: 30px;
+      }
+      .samples {
+        max-height: 200px;
+        max-width: 200px;
+      }
+    </style>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        // Get all "navbar-burger" elements
+        const $navbarBurgers = Array.prototype.slice.call(
+          document.querySelectorAll(".navbar-burger"),
+          0,
+        );
+
+        // Add a click event on each of them
+        $navbarBurgers.forEach((el) => {
+          el.addEventListener("click", () => {
+            // Get the target from the "data-target" attribute
+            const target = el.dataset.target;
+            const $target = document.getElementById(target);
+
+            // Toggle the "is-active" class on both the "navbar-burger" and the "navbar-menu"
+            el.classList.toggle("is-active");
+            $target.classList.toggle("is-active");
+          });
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <nav class="navbar" role="navigation" aria-label="main navigation">
+      <div class="navbar-brand">
+        <a class="navbar-item" href="">
+          <img src="./graphics/logo.svg" alt="py3dtiles" />
+        </a>
+
+        <a
+          role="button"
+          class="navbar-burger"
+          aria-label="menu"
+          aria-expanded="false"
+          data-target="mainMenu"
+        >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+      </div>
+
+      <div id="mainMenu" class="navbar-menu">
+        <div class="navbar-start">
+          <a class="navbar-item" href="/VERSION"> Docs </a>
+          <a class="navbar-item" href="https://gitlab.com/py3dtiles/py3dtiles">
+            Source code
+          </a>
+          <a class="navbar-item" href="mailto:infos@oslandia.com"> Contact </a>
+        </div>
+      </div>
+    </nav>
+
+    <section class="section">
+      <div class="container">
+        <h2 class="subtitle is-2">py3dtiles</h2>
+        <p class="infos">
+          Py3dtiles is a python library and command-line tool designed for
+          generating and managing 3D Tiles datasets, the OGC standard for
+          streaming massive 3D geospatial content.
+        </p>
+
+        <h2 class="subtitle is-2">Features</h2>
+
+        <div class="grid is-col-min-15">
+          <div class="cell">
+            <div class="card">
+              <div class="card-content">
+                <div class="media">
+                  <div class="media-left">
+                    <figure class="image is-32x32">
+                      <i class="fa-solid fa-book-open-reader fa-2x"></i>
+                    </figure>
+                  </div>
+                  <div class="media-content">
+                    <p class="title is-4">Read</p>
+                    <p class="subtitle is-6">from various sources</p>
+                  </div>
+                </div>
+
+                <p class="card-infos">
+                  pointclouds (las, laz, xyz, csv, ply…), geometries (wkb, ifc…)
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid is-col-min-15">
+          <div class="cell">
+            <div class="card">
+              <div class="card-content">
+                <div class="media">
+                  <div class="media-left">
+                    <figure class="image is-32x32">
+                      <i class="fa-solid fa-pencil fa-2x"></i>
+                    </figure>
+                  </div>
+                  <div class="media-content">
+                    <p class="title is-4">Write</p>
+                    <p class="subtitle is-6">your tileset and tiles</p>
+                  </div>
+                </div>
+
+                <p class="card-infos">
+                  tileset.json, b3dm, pnts...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid is-col-min-15">
+          <div class="cell">
+            <div class="card">
+              <div class="card-content">
+                <div class="media">
+                  <div class="media-left">
+                    <figure class="image is-32x32">
+                      <i class="fa-solid fa-rotate fa-2x"></i>
+                    </figure>
+                  </div>
+                  <div class="media-content">
+                    <p class="title is-4">Manipulate</p>
+                    <p class="subtitle is-6">everything!</p>
+                  </div>
+                </div>
+
+                <p class="card-infos">
+                  includes classes and methods to easily edit your tilesets and your tiles.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid is-col-min-15">
+          <div class="cell is-full">
+            <div class="card">
+              <div class="card-content">
+                <div class="media">
+                  <div class="media-left">
+                    <figure class="image is-32x32">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 384 512"
+                      >
+                        <!--!Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
+                        <path
+                          d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80L0 432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"
+                        />
+                      </svg>
+                    </figure>
+                  </div>
+                  <div class="media-content">
+                    <p class="title is-4">CLI</p>
+                    <p class="subtitle is-6">
+                      Get started quickly with our command-line tool
+                    </p>
+                  </div>
+                </div>
+
+                <div class="card-infos">
+                  <p>
+                    Py3dtiles icludes a command line tool to quickly get
+                    informations about 3dtiles files or convert datasets.
+                  </p>
+                  <br />
+                  <pre><code>py3dtiles convert --out="3dtiles" pointcloud.las</code></pre>
+                </div>
+              </div>
+              <footer class="card-footer">
+                <p class="card-footer-item">
+                  <span>Read <a href="/VERSION/cli.html">more</a></span>
+                </p>
+              </footer>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid is-col-min-15">
+          <div class="cell">
+            <div class="card">
+              <div class="card-content">
+                <div class="media">
+                  <div class="media-left">
+                    <figure class="image is-48x48">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 640 512"
+                      >
+                        <!--!Font Awesome Free 6.7.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
+                        <path
+                          d="M0 336c0 79.5 64.5 144 144 144l368 0c70.7 0 128-57.3 128-128c0-61.9-44-113.6-102.4-125.4c4.1-10.7 6.4-22.4 6.4-34.6c0-53-43-96-96-96c-19.7 0-38.1 6-53.3 16.2C367 64.2 315.3 32 256 32C167.6 32 96 103.6 96 192c0 2.7 .1 5.4 .2 8.1C40.2 219.8 0 273.2 0 336z"
+                        />
+                      </svg>
+                    </figure>
+                  </div>
+                  <div class="media-content">
+                    <p class="title is-4">API</p>
+                    <p class="subtitle is-6">
+                      Integrate py3dtiles directly in your python app
+                    </p>
+                  </div>
+                </div>
+                <div class="card-infos">
+                  <p>
+                    Py3dtiles includes a rich API to read, write and manipulates
+                    3dtiles datasets
+                  </p>
+                  <br />
+                  <pre><code class="language-python">import json
+from pathlib import Path
+
+from py3dtiles.tileset import TileSet
+
+
+tileset_path = Path("tests/fixtures/tiles/tileset.json")
+with tileset_path.open() as f:
+    tileset = TileSet.from_dict(json.load(f))
+                </code></pre>
+                </div>
+              </div>
+              <footer class="card-footer">
+                <p class="card-footer-item">
+                  <span>Read <a href="/VERSION/api.html">more</a></span>
+                </p>
+              </footer>
+            </div>
+          </div>
+        </div>
+
+        <div class="columns is-centered">
+          <div class="column has-text-centered is-2">
+            <a
+              class="button is-link"
+              style="background: var(--color-primary)"
+              href="/VERSION/install.html"
+              >Get started now!</a
+            >
+          </div>
+        </div>
+
+        <h2 class="subtitle is-2">Showcases</h2>
+
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <a href="https://giro3d.org/latest/examples/3dtiles_building.html"
+              ><img class="is-rounded samples" src="./graphics/sample01.png"
+            /></a>
+          </div>
+          <div class="column has-text-centered">
+            <a href="https://giro3d.org/latest/examples/lidar_hd.html"
+              ><img class="is-rounded samples" src="./graphics/sample02.png"
+            /></a>
+          </div>
+          <div class="column has-text-centered">
+            <a href="https://giro3d.org/latest/examples/pointcloud.html"
+              ><img class="is-rounded samples" src="./graphics/sample03.png"
+            /></a>
+          </div>
+        </div>
+
+        <div class="container">
+          <p class="infos">
+            Py3dtiles aims at being a swiss knife for converting and editing
+            tilesets. It can read and create tilesets and tilesets content. For
+            file conversion, it currently supports various pointclouds format
+            (las, xyz, ply...), wkb and ifc files.
+            <br />
+            It can be extended to add your own pointcloud reader or geometry
+            tiler. Lib usage allows it to be integrated into a larger
+            application or into data pipelines.
+          </p>
+        </div>
+
+        <h2 class="subtitle is-2">Sponsors</h2>
+        <div class="grid">
+          <div
+            class="cell is-flex is-justify-content-center is-align-items-center"
+          >
+            <a href="https://oslandia.com"
+              ><img src="./graphics/sponsors/oslandia.png" alt="Oslandia"
+            /></a>
+          </div>
+          <div
+            class="cell is-flex is-justify-content-center is-align-items-center"
+          >
+            <a href="https://liris.cnrs.fr/"
+              ><img src="./graphics/sponsors/liris.png" alt="Liris"
+            /></a>
+          </div>
+          <div
+            class="cell is-flex is-justify-content-center is-align-items-center"
+          >
+            <a href="https://www.auvergnerhonealpes.fr/"
+              ><img
+                src="./graphics/sponsors/aura.svg"
+                alt="région Auvergne-Rhone-Alpes"
+            /></a>
+          </div>
+          <div
+            class="cell is-flex is-justify-content-center is-align-items-center"
+          >
+            <a href="https://www.minalogic.com/"
+              ><img src="./graphics/sponsors/minalogic.png" alt="Minalogic"
+            /></a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="content has-text-centered">
+        <p>© 2023-2024 py3dtiles</p>
+      </div>
+    </footer>
+  </body>
+</html>

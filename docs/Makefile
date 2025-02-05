@@ -6,14 +6,29 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
+current_version = $(shell git tag --list | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | tail -n1)
 
-# Put it first so that "make" without argument is like "make help".
-help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+"$(BUILDDIR)":
+	mkdir -p "$(BUILDDIR)"
 
-.PHONY: help Makefile
+apidoc: $(BUILDDIR)/version_switcher.json
+	sphinx-multiversion "$(SOURCEDIR)" "$(BUILDDIR)"
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-%: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+static-site: "$(BUILDDIR)"
+	mkdir -p "$(BUILDDIR)"
+	cp -rv "../site/index.html" "$(BUILDDIR)/"
+	cp -rv "../site/css" "$(BUILDDIR)/"
+	cp -rv "../graphics/" "$(BUILDDIR)/"
+	# NOTE the grep must reflect the smv_tag_whitelist and smv_released_pattern in docs/conf.py
+	sed -i "s/VERSION/$(current_version)/g" "$(BUILDDIR)/index.html"
+
+site: apidoc static-site
+
+serve:
+	python3 -m http.server --bind 127.0.0.1 --directory "$(BUILDDIR)"
+
+$(BUILDDIR)/version_switcher.json: "$(BUILDDIR)"
+	python ./versions_switcher_builder.py "$(BUILDDIR)"
+
+clean:
+	rm -rf $(BUILDDIR)

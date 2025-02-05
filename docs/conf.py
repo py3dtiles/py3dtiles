@@ -1,3 +1,6 @@
+import os
+import sys
+
 # Configuration file for the Sphinx documentation builder.
 #
 # This file does only contain a selection of the most common options. For a
@@ -6,16 +9,13 @@
 
 # -- Path setup --------------------------------------------------------------
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
+# Add the extensions directory to the Python path
+sys.path.append(os.path.abspath("./extensions"))
 
 # -- Project information -----------------------------------------------------
-
 project = "py3dtiles"
 copyright = "2023, the py3dtiles contributors"  # noqa: A001
-author = "Augustin Trancart, Paul Blottière, Jérémy Gaillard, Ludovic Delauné, Nicolas Saul, Pierre-Éric Pelloux-Prayer, Raphaël Delhome, Vincent Jaillot, Éric Lemoine, Antoine Facchini"
+author = "Antoine Facchini, Augustin Trancart, Paul Blottiere, Éric Lemoine, Frédéric Bonifas, Vincent Jaillot, Jean-Marie Kerloch, Jérémy Gaillard, Julien Cabieces, Lorenzo Marnat, Ludovic Delauné, Marco Duiker, Michael Holthausen, Nicolas Saul, Pierre-Eric Pelloux-Prayer, Raphaël Delhome, romainthal, Sébastien Guimmara, Sylvain Beorchia, Sylvain Meylan, Taro Matsuzawa aka. btm, Tom Roussel, Vincent Picavet"
 
 # -- General configuration ---------------------------------------------------
 
@@ -36,9 +36,9 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
-    "sphinx_rtd_theme",
     "sphinx_multiversion",
     "sphinxcontrib.apidoc",
+    "py3dtiles_sphinx_ext",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,23 +69,62 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = None
 
 
+# -- Options for sphinx-multiversion
+
+# Whitelist pattern for tags (set to None to ignore all tags)
+# KEEP THAT IN SYNC with released_pattern in ./versions_switcher_builder.py
+smv_tag_whitelist = r"^v(\d+\.)?(\d+\.)?(\*|\d+)$"
+
+# Whitelist pattern for branches (set to None to ignore all branches)
+smv_branch_whitelist = r"^main$"
+
+# Whitelist pattern for remotes (set to None to use local branches only)
+# set to upstream because we add this remote for gitlab, see .gitlab-ci.yml
+smv_remote_whitelist = r"^upstream|origin$"
+
+# Pattern for released versions
+# KEEP THAT IN SYNC with released_pattern in ./versions_switcher_builder.py
+smv_released_pattern = r"^tags/^v(\d+\.)?(\d+\.)?(\*|\d+)$"
+
+# Format for versioned output directories inside the build directory
+smv_outputdir_format = "{ref.name}"
+
+# Determines whether remote or local git branches/tags are preferred if their output dirs conflict
+smv_prefer_remote_refs = True
+
+
 # -- Options for HTML output -------------------------------------------------
+
+html_logo = "../graphics/logo.svg"
+html_favicon = "../graphics/favicons/favicon.ico"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "pydata_sphinx_theme"
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
-html_theme_options = {"display_version": True}
+# version switcher
+# TODO size of the dropdown list (width) to avoid the jumping effect
+html_theme_options = {
+    "logo": {
+        "link": "/",
+    },
+    "switcher": {
+        "json_url": "/version_switcher.json",
+        "version_match": "dummy",  # will be replaced in the html template by our extension
+    },
+    "navbar_start": ["navbar-logo", "version-switcher"],
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+html_css_files = [
+    "css/common.css",
+    "css/custom.css",
+]
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -103,29 +142,6 @@ apidoc_separate_modules = True
 apidoc_module_first = True
 apidoc_toc_file = False
 apidoc_extra_args = ["-d 3"]
-
-# -- Options for sphinx-multiversion
-
-# Whitelist pattern for tags (set to None to ignore all tags)
-# KEEP THAT IN SYNC with the current_version calculation in the "pages" job in .gitlab-ci.yml
-smv_tag_whitelist = r"^v(\d+\.)?(\d+\.)?(\*|\d+)$"
-
-# Whitelist pattern for branches (set to None to ignore all branches)
-smv_branch_whitelist = r"^main$"
-
-# Whitelist pattern for remotes (set to None to use local branches only)
-# set to upstream because we add this remote for gitlab, see .gitlab-ci.yml
-smv_remote_whitelist = r"^upstream|origin$"
-
-# Pattern for released versions
-# KEEP THAT IN SYNC with the current_version calculation in the "pages" job in .gitlab-ci.yml
-smv_released_pattern = r"^tags/^v(\d+\.)?(\d+\.)?(\*|\d+)$"
-
-# Format for versioned output directories inside the build directory
-smv_outputdir_format = "{ref.name}"
-
-# Determines whether remote or local git branches/tags are preferred if their output dirs conflict
-smv_prefer_remote_refs = True
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
