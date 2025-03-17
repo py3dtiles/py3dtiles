@@ -14,7 +14,7 @@ variables:
 
 .pre-commit-check:
   image:
-    name: python:3.10
+    name: python:3.9
   variables:
     PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
   cache:
@@ -35,6 +35,8 @@ variables:
 # -- LINT JOBS --------------------------------------------------------------------------
 flake8:
   extends: .pre-commit-check
+  image:
+    name: python:3.9
   stage: 🐍 lint
   script:
     - pre-commit run --show-diff-on-failure --all-files flake8
@@ -124,7 +126,7 @@ typing-check:
 lint-commit:
   stage: 🐍 lint
   image:
-    name: python:3.10
+    name: python:3.9
   cache:
     - paths:
       - ${PIP_CACHE_DIR}
@@ -283,7 +285,7 @@ windows-test:
 test-api-doc-examples:
   stage: 🤞 test
   image:
-    name: python:3.10-slim
+    name: python:3.9-slim
   cache:
     - paths:
       - ${PIP_CACHE_DIR}
@@ -301,7 +303,7 @@ test-api-doc-examples:
 test-cli:
   stage: 🤞 test
   image:
-    name: python:3.10-slim
+    name: python:3.9-slim
   cache:
     - paths:
       - ${PIP_CACHE_DIR}
@@ -386,7 +388,7 @@ docker-build:
 
 pages:
   stage: 🚀 deploy
-  image: python:3.10
+  image: python:3.9
   script:
     - pip install .[doc]
     # sphinx-multiversion needs to have all the branches
@@ -405,7 +407,7 @@ pages:
 # see https://docs.pypi.org/trusted-publishers/
 publish-to-pypi:
   stage: 🚀 deploy
-  image: python:3.10
+  image: python:3.9
   id_tokens:
     PYPI_ID_TOKEN:
       # Use "pypi" if uploading to PyPI directly
