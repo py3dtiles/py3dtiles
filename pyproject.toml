@@ -161,3 +161,7 @@ module = [
 ]
 
 ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"
+known_first_party = "py3dtiles"
