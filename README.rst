@@ -106,7 +106,7 @@ API basic example
     ...     print(f"The tile {tile.content_uri} has a content of {type(tile_content)} type")
     ...     print(f"with this bounding volume: {tile.bounding_volume.to_dict()}")
     The tile r.pnts has a content of <class 'py3dtiles.tileset.content.pnts.Pnts'> type
-    with this bounding volume: {'box': [0.390625, 0.3125, 0.0, 0.390625, 0.0, 0.0, 0.0, 0.3125, 0.0, 0.0, 0.0, 0.0]}
+    with this bounding volume: {'box': [np.float64(0.390625), np.float64(0.3125), np.float64(0.0), np.float64(0.390625), np.float64(0.0), np.float64(0.0), np.float64(0.0), np.float64(0.3125), np.float64(0.0), np.float64(0.0), np.float64(0.0), np.float64(0.0)]}
     The tile r1.pnts has a...
 
 Result example

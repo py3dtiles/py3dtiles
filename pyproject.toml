@@ -28,7 +28,7 @@ dependencies = [
     "earcut==1.1.5",
     "lz4",
     "numba>=0.59",
-    "numpy>=1.24.0,<2.0.0",
+    "numpy>=1.24.0,<2.1.0",
     "psutil",
     "pyproj",
     "pyzmq",

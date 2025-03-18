@@ -154,7 +154,7 @@ There are 3 types of bounding volume:
     >>>
     >>> bounding_box = BoundingVolumeBox.from_list([*center, *x_half_axis, *y_half_axis, *z_half_axis])
     >>> bounding_box.to_dict()
-    {'box': [0.0, 0.0, 0.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 1.0, 0.0, 0.0]}
+    {'box': [np.float64(0.0), np.float64(0.0), np.float64(0.0), np.float64(3.0), np.float64(3.0), np.float64(3.0), np.float64(3.0), np.float64(3.0), np.float64(3.0), np.float64(1.0), np.float64(0.0), np.float64(0.0)]}
     >>>
     >>> points = np.array((
     ... (1, 0, 0),
@@ -164,7 +164,7 @@ There are 3 types of bounding volume:
     ... ))
     >>> bounding_box.set_from_points(points)
     >>> bounding_box.to_dict()
-    {'box': [1.5, 0.5, -0.5, 2.5, 0.0, 0.0, 0.0, 5.5, 0.0, 0.0, 0.0, 8.5]}
+    {'box': [np.float64(1.5), np.float64(0.5), np.float64(-0.5), np.float64(2.5), np.float64(0.0), np.float64(0.0), np.float64(0.0), np.float64(5.5), np.float64(0.0), np.float64(0.0), np.float64(0.0), np.float64(8.5)]}
 
 Extension management
 ~~~~~~~~~~~~~~~~~~~~
