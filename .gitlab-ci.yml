@@ -41,6 +41,9 @@ flake8:
   only:
     changes:
       - "**/*.py"
+      - pyproject.toml
+      - setup.cfg
+      - .pre-commit-config.yaml
 
 isort:
   extends: .pre-commit-check
@@ -50,6 +53,8 @@ isort:
   only:
     changes:
       - "**/*.py"
+      - pyproject.toml
+      - .pre-commit-config.yaml
 
 black:
   extends: .pre-commit-check
@@ -59,6 +64,8 @@ black:
   only:
     changes:
       - "**/*.py"
+      - pyproject.toml
+      - .pre-commit-config.yaml
 
 autoflake:
   extends: .pre-commit-check
@@ -67,6 +74,8 @@ autoflake:
   only:
     changes:
       - "**/*.py"
+      - pyproject.toml
+      - .pre-commit-config.yaml
 
 pyupgrade:
   extends: .pre-commit-check
@@ -75,6 +84,8 @@ pyupgrade:
   only:
     changes:
       - "**/*.py"
+      - pyproject.toml
+      - .pre-commit-config.yaml
 
 pre-commit-built-in:
   extends: .pre-commit-check
@@ -107,6 +118,8 @@ typing-check:
       - main
     changes:
       - "**/*.py"
+      - pyproject.toml
+      - .pre-commit-config.yaml
 
 lint-commit:
   stage: 🐍 lint
@@ -122,6 +135,8 @@ lint-commit:
   only:
     refs:
       - merge_requests
+      - pyproject.toml
+      - .pre-commit-config.yaml
 
 # -- TEST JOBS --------------------------------------------------------------------------
 test:
@@ -156,6 +171,7 @@ test:
       - main
     changes:
       - "**/*.py"
+      - pyproject.toml
   parallel:
     matrix:
       - PYTHON_VERSION: ['3.9', '3.10', '3.11', '3.12']
@@ -262,6 +278,7 @@ windows-test:
       - main
     changes:
       - "**/*.py"
+      - pyproject.toml
 
 test-api-doc-examples:
   stage: 🤞 test
