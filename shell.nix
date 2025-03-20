@@ -1,8 +1,8 @@
-{ pkgs ? import <nixpkgs> { } }:
+{ pkgs ? import <nixpkgs> { }, python }:
 pkgs.mkShell rec {
-  name = "impurePythonEnv";
+  name = "py3dtiles: python ${python.version}";
   buildInputs = [
-    pkgs.python39
+    python
   ];
 
   shellHook = ''
@@ -12,15 +12,17 @@ pkgs.mkShell rec {
     # Let's allow compiling stuff
     export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath (with pkgs; [ zlib stdenv.cc.cc ])}":LD_LIBRARY_PATH;
 
-    if ! [ -d .venv ]; then
-      python -m venv .venv
+    export VENVPATH=.venv${python.version}
+
+    if ! [ -d $VENVPATH ]; then
+      python -m venv $VENVPATH
     fi
 
-    source .venv/bin/activate
+    source $VENVPATH/bin/activate
 
     export TMPDIR=/tmp/pipcache
 
-    if [ ! -x .venv/bin/py3dtiles ] > /dev/null 2>&1; then
+    if [ ! -x $VENVPATH/bin/py3dtiles ] > /dev/null 2>&1; then
       python -m pip install --cache-dir=$TMPDIR --upgrade pip
       python -m pip install --cache-dir="$TMPDIR" -e .\[postgres,las,ply,dev,doc,pack\]
       # keep this line after so that ipython deps doesn't conflict with other deps
