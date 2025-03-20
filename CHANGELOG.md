@@ -2,7 +2,62 @@
 
 All notable changes to this project will be documented in this file.
 
-## v9.0.0 (2024-10-10)
+## v10.0.0 (2025-05-06)
+
+### BREAKING CHANGES
+
+#### Generic way to deal with extra fields for point conversion
+
+We now deal with extra fields in a generic way, so that users can include the fields they want, not only classification and intensity. Additionally, we don't include intensity and classification by default any more.
+
+Here's how to migrate:
+
+```diff
+- convert(file, outfolder=folder)
++ convert(file, outfolder=folder, extra_fields=["intensity", "classification"])
+```
+For cli invocations, please use multiple `--extra-fields` arguments.
+
+#### Api change for B3dm creation
+
+The api to create b3dm from primitives has changed:
+
+- `B3dm.from_primitives` has been replaced by `B3dm.from_meshes`. It
+  takes a list of `GltfMesh`
+- `GltfPrimitive` has been separated between `GltfMesh` and
+  `GltfPrimitive` to be more flexible, while keeping the ease of use
+  that has motivated their creation
+- in turn, the API of `gltf_utils` has also changed to adapt these
+  modifications
+
+#### Other breaking changes
+
+- `TileContent.to_hex_str` has been removed
+
+### Feat
+
+- support several materials by geometry for b3dm and gltf
+- add support for python 3.13
+- **las_reader**: warn if the files seems to use half of the RGB range
+- support files with uppercase file extensions
+- support arbitrary fields when converting pointclouds
+- support converting files with and without color together
+- support for numpy 2.0
+
+### Fix
+
+- **wkb_utils**: change implicit overflow into an explicit overflow
+- **pyproject.toml**: remove useless cython dependencies
+- **windows**: use longdouble instead of float128, not supported on windows
+- **points_grid**: compile _insert (and _insert_extra_fields) again
+- **reader**: make sure we generate fake colors in uint8
+- **reader**: remove last occurrences of the unused fraction parameter
+
+### Documentation
+
+We now have a new landing page in the website and a new theme :-)
+
+## v9.0.0 (2024-10-18)
 
 ### BREAKING CHANGES
 
