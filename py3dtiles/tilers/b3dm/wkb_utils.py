@@ -28,7 +28,7 @@ class TriangleSoup:
     def triangle_indices(self) -> npt.NDArray[np.uint8]:
         """Express the triangles as triplets of vertex indices."""
         flattened_triangles = np.concatenate(self.triangles[0])
-        indices = np.full(flattened_triangles.shape[0], dtype=np.uint8, fill_value=-1)
+        indices = np.full(flattened_triangles.shape[0], dtype=np.uint8, fill_value=255)
         for vertex_idx in range(self.vertices.shape[0]):
             indices[
                 np.all(flattened_triangles == self.vertices[vertex_idx], axis=1)
