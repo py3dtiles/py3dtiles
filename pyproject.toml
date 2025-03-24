@@ -95,6 +95,9 @@ addopts = """
 """
 
 testpaths = "tests doc"
+markers = [
+    "doctest: mark tests related to docstrings (select with '-m \"doctest\"')",
+]
 
 [tool.coverage.run]
 branch = true
