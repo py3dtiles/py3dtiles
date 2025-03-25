@@ -30,9 +30,6 @@ In both case, update the following files:
 - [pyproject.toml](pyproject.toml)
   - modify `requires-python`
   - add or remove the python version in `classifiers` list
-- [Dockerfile](docker%2FDockerfile)
-  - check if the version of python is still supported by py3dtiles
-  - if the python version in the Dockerfile is changed, regenerate [requirements.txt](requirements.txt). Be careful not to add unnecessary packages
 - [sonar-project.properties](sonar-project.properties)
   - edit the `sonar.python.version` variable
 
@@ -41,7 +38,13 @@ For dropped python version:
 - [.pre-commit-config.yaml](.pre-commit-config.yaml): increase the python version in the `args` value for the hook `pyupgrade` and the hook `black`
 - [.gitlab-ci.yml](.gitlab-ci.yml):
     - remove the old version in the python version matrix for the `test` job
-    - change the python version for the mypy job
+    - change the python version for the mypy job (always the oldest supported)
+    - change the python version for the windows job (always the oldest supported)
+- [Dockerfile](docker%2FDockerfile)
+  - check if the version of python is still supported by py3dtiles and change it if needed (always use the oldest supported)
+  - if the python version in the Dockerfile is changed, regenerate [requirements.txt](requirements.txt). Be careful not to add unnecessary packages
+
+NOTE: as of 11-2024, the windows and Docker jobs don't yet use the oldest supported version, but they will eventually.
 
 For newly supported python version:
 

@@ -18,17 +18,19 @@ classifiers=[
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 dynamic = ["version"]
 
-requires-python = ">=3.9,<3.13"
+requires-python = ">=3.9,<3.14"
 
 dependencies = [
     "earcut==1.1.5",
     "lz4",
-    "numba>=0.59",
-    "numpy>=1.24.0,<2.1.0",
+    # NOTE: 0.61 is the first supporting python 3.13 and it also drops support for python 3.9
+    "numba>=0.59,<=0.61",
+    "numpy>=1.24.0,<2.2.0",
     "psutil",
     "pyproj",
     "pyzmq",

@@ -174,7 +174,7 @@ test:
       - pyproject.toml
   parallel:
     matrix:
-      - PYTHON_VERSION: ['3.9', '3.10', '3.11', '3.12']
+      - PYTHON_VERSION: ['3.9', '3.10', '3.11', '3.12', '3.13']
 
 test-docker-build:
   stage: 🤞 test
@@ -344,6 +344,7 @@ sonarcloud-check:
       - main
     changes:
       - "**/*.py"
+      - sonar-project.properties
 
 # -- DEPLOY JOBS -------------------------------------------------------------------------
 docker-build:
