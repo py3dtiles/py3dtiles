@@ -70,7 +70,7 @@ class SharedNodeStore:
 
         :param name: the name of the node
         """
-        metadata = self.metadata.get(name, None)
+        metadata = self.metadata.get(name)
         data = b""
         if metadata is not None:
             tmp_data = self.data[metadata[1]]
@@ -125,7 +125,7 @@ class SharedNodeStore:
         """
         compressed_data = gzip.compress(data)
 
-        metadata = self.metadata.get(name, None)
+        metadata = self.metadata.get(name)
         if metadata is None:
             metadata = (time.time(), len(self.data))
             self.data.append(compressed_data)

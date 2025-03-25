@@ -47,8 +47,7 @@ class TileContent(ABC):
 
     @staticmethod
     @abstractmethod
-    def from_array(array: npt.NDArray[np.uint8]) -> TileContent:
-        ...
+    def from_array(array: npt.NDArray[np.uint8]) -> TileContent: ...
 
 
 class TileContentHeader(ABC):
@@ -77,12 +76,10 @@ class TileContentHeader(ABC):
 
     @staticmethod
     @abstractmethod
-    def from_array(array: npt.NDArray[np.uint8]) -> TileContentHeader:
-        ...
+    def from_array(array: npt.NDArray[np.uint8]) -> TileContentHeader: ...
 
     @abstractmethod
-    def to_array(self) -> npt.NDArray[np.uint8]:
-        ...
+    def to_array(self) -> npt.NDArray[np.uint8]: ...
 
 
 class TileContentBody(ABC):
@@ -90,9 +87,7 @@ class TileContentBody(ABC):
     feature_table: FeatureTable[Any, Any]
 
     @abstractmethod
-    def __str__(self) -> str:
-        ...
+    def __str__(self) -> str: ...
 
     @abstractmethod
-    def to_array(self) -> npt.NDArray[np.uint8]:
-        ...
+    def to_array(self) -> npt.NDArray[np.uint8]: ...

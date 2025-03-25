@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
 
 def node_to_tileset(
-    args: tuple[Node, Path, npt.NDArray[np.float32], Node | None, int]
+    args: tuple[Node, Path, npt.NDArray[np.float32], Node | None, int],
 ) -> Tile | None:
     return args[0].to_tileset(args[1], args[2], args[3], args[4], None)
 
@@ -339,7 +339,7 @@ class Node:
         else:
             return self.grid.get_points()
 
-    def get_child_names(self) -> Generator[bytes, None, None]:
+    def get_child_names(self) -> Generator[bytes]:
         for number_child in range(8):
             yield f"{self.name.decode('ascii')}{number_child}".encode("ascii")
 
@@ -414,9 +414,9 @@ class Node:
 
             parent_extra_fields = {}
             for field in parent_tile.body.batch_table.header.data:
-                parent_extra_fields[
-                    field
-                ] = parent_tile.body.batch_table.get_binary_property(field)
+                parent_extra_fields[field] = (
+                    parent_tile.body.batch_table.get_binary_property(field)
+                )
 
             # update aabb based on real values
             parent_bounding_volume = BoundingVolumeBox.from_points(parent_xyz)

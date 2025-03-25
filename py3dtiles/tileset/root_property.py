@@ -26,12 +26,10 @@ class RootProperty(ABC, Generic[_JsonDictT]):
 
     @classmethod
     @abstractmethod
-    def from_dict(cls, data_dict: _JsonDictT) -> Self:
-        ...
+    def from_dict(cls, data_dict: _JsonDictT) -> Self: ...
 
     @abstractmethod
-    def to_dict(self) -> _JsonDictT:
-        ...
+    def to_dict(self) -> _JsonDictT: ...
 
     def add_root_properties_to_dict(self, dict_data: _JsonDictT) -> _JsonDictT:
         # we cannot merge root_property_data without mypy issues

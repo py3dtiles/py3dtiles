@@ -20,6 +20,7 @@ NOTE: we assume RGB are 8 bits components.
 
 (*) See: https://docs.safe.com/fme/html/FME_Desktop_Documentation/FME_ReadersWriters/pointcloudxyz/pointcloudxyz.htm
 """
+
 import csv
 import math
 from collections.abc import Iterator
