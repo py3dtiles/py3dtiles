@@ -1,39 +1,70 @@
 import doctest
-import glob
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Callable, Optional
 
-if __name__ == "__main__":
-    try:
-        num_of_attempted = 0
-        num_of_failed = 0
-        # With doctest.ELLIPSIS, an ellipsis marker (...) in the expected output can match any substring in the actual output.
-        # Useful to match strings like "<py3dtiles.tileset.content.pnts.PntsHeader object at 0x7f73f5530d90>"
-        print("TESTING ./docs/api.rst")
-        test_result = doctest.testfile("../docs/api.rst", optionflags=doctest.ELLIPSIS)
-        num_of_failed += test_result.failed
-        num_of_attempted += test_result.attempted
-        print("TESTING ./README.rst")
-        test_result = doctest.testfile("../README.rst", optionflags=doctest.ELLIPSIS)
-        num_of_failed += test_result.failed
-        num_of_attempted += test_result.attempted
+import pytest
 
-        # test python files
-        for pyfile in glob.glob("./py3dtiles/**/**.py", recursive=True):
-            print("TESTING", pyfile)
-            test_result = doctest.testfile(
-                pyfile, module_relative=False, optionflags=doctest.ELLIPSIS
-            )
-            num_of_failed += test_result.failed
-            num_of_attempted += test_result.attempted
 
-    finally:
-        # Remove files created by the tested files.
-        Path("./mymodel.b3dm").unlink(missing_ok=True)
-        Path("./mypoints.pnts").unlink(missing_ok=True)
-        shutil.rmtree("./3dtiles_output", ignore_errors=True)
-        shutil.rmtree("./my3dtiles", ignore_errors=True)
-        shutil.rmtree("./my3dtiles2", ignore_errors=True)
+def clean_test_artifacts() -> None:
+    """Remove the output files and folders produced by API doc code examples."""
+    # Remove files created by the tested files.
+    Path("./mymodel.b3dm").unlink(missing_ok=True)
+    Path("./mypoints.pnts").unlink(missing_ok=True)
+    shutil.rmtree("./3dtiles_output", ignore_errors=True)
+    shutil.rmtree("./my3dtiles", ignore_errors=True)
+    shutil.rmtree("./my3dtiles2", ignore_errors=True)
 
-    print(f"Summary: {num_of_attempted} tests attempted, {num_of_failed} tests failed")
-    exit(num_of_failed != 0)
+
+@pytest.fixture()
+def cleanup_rst_files() -> Iterator[None]:
+    yield
+    clean_test_artifacts()
+
+
+def identify_module(filepath: Path) -> Optional[str]:
+    """Build an identifier for the provided filepath, given that it is a module stored into the
+    py3dtiles library source code folder.
+
+    Parameters
+    ----------
+    filepath: pathlib.Path
+        Path of a file of interest
+
+    Returns
+    -------
+    str or None
+        Simplified path towards the file, starting from the py3dtiles main folder. Returns None if
+        the file is not in the py3dtiles source code folder
+
+    """
+    source_code_dir = Path.cwd() / "py3dtiles"
+    if not filepath.is_relative_to(source_code_dir):
+        return None
+    return str(filepath.relative_to(source_code_dir))
+
+
+@pytest.mark.doctest
+@pytest.mark.parametrize(
+    "filepath,cleaner",
+    [("../docs/api.rst", cleanup_rst_files), ("../README.rst", None)],
+)
+def test_rst_file(
+    filepath: str, cleaner: Optional[Callable[[], Iterator[None]]]
+) -> None:
+    test_result = doctest.testfile(filepath, optionflags=doctest.ELLIPSIS)
+    assert test_result.failed == 0
+
+
+@pytest.mark.doctest
+@pytest.mark.parametrize(
+    "python_module",
+    Path.cwd().glob("py3dtiles/**/*.py"),
+    ids=identify_module,
+)
+def test_python_docstring(python_module: str) -> None:
+    test_result = doctest.testfile(
+        python_module, module_relative=False, optionflags=doctest.ELLIPSIS
+    )
+    assert test_result.failed == 0

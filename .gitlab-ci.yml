@@ -282,24 +282,6 @@ windows-test:
       - "**/*.py"
       - pyproject.toml
 
-test-api-doc-examples:
-  stage: 🤞 test
-  image:
-    name: python:3.9-slim
-  cache:
-    - paths:
-      - ${PIP_CACHE_DIR}
-  before_script:
-    - pip install .[postgres,ply,las,doc]
-  script:
-    - python tests/test_code_examples.py
-  only:
-    refs:
-      - merge_requests
-      - develop
-      - tags
-      - main
-
 test-cli:
   stage: 🤞 test
   image:
