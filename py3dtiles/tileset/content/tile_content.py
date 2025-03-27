@@ -21,10 +21,6 @@ class TileContent(ABC):
         body_arr = self.body.to_array()
         return np.concatenate((header_arr, body_arr))
 
-    def to_hex_str(self) -> str:
-        arr = self.to_array()
-        return " ".join(f"{x:02X}" for x in arr)
-
     def save_as(self, path: Path) -> None:
         tile_arr = self.to_array()
         with path.open("bw") as f:
