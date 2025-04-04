@@ -283,7 +283,7 @@ class Node:
                 self.dirty = True
                 # print('Added node {}'.format(name))
 
-            mask = np.where(indices - child == 0)
+            mask = indices - child == 0
             xyz = pending_xyz_arr[mask]
             if len(xyz) > 0:
                 extra_fields = {}
