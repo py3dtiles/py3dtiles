@@ -229,19 +229,19 @@ class Grid:
         keys = xyz_to_key(xyz, self.cell_count, aabmin, inv_aabb_size)
         # allocate this one once and for all
         for k in np.unique(keys):
-            idx = np.nonzero(keys - k == 0)
-            self.cells_xyz[k] = np.concatenate((self.cells_xyz[k], xyz[idx]))
+            mask = np.nonzero(keys - k == 0)
+            self.cells_xyz[k] = np.concatenate((self.cells_xyz[k], xyz[mask]))
             if self.cells_rgb is not None:
                 if rgb is None:
                     raise ValueError("rgb cannot be None if this grid expects rgb")
-                self.cells_rgb[k] = np.concatenate((self.cells_rgb[k], rgb[idx]))
+                self.cells_rgb[k] = np.concatenate((self.cells_rgb[k], rgb[mask]))
             for f, arr in extra_fields.items():
                 if f in self.cells_extra_fields:
                     self.cells_extra_fields[f][k] = np.concatenate(
-                        self.cells_extra_fields[f][k], arr[idx]
+                        self.cells_extra_fields[f][k], arr[mask]
                     )
                 else:
-                    self.cells_extra_fields[f] = [arr[idx]]
+                    self.cells_extra_fields[f] = [arr[mask]]
         return None
 
     def needs_balance(self) -> bool:
