@@ -229,7 +229,7 @@ class Grid:
         keys = xyz_to_key(xyz, self.cell_count, aabmin, inv_aabb_size)
         # allocate this one once and for all
         for k in np.unique(keys):
-            mask = np.nonzero(keys - k == 0)
+            mask = keys - k == 0
             self.cells_xyz[k] = np.concatenate((self.cells_xyz[k], xyz[mask]))
             if self.cells_rgb is not None:
                 if rgb is None:
