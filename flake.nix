@@ -17,7 +17,7 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
       in
-      {
+      rec {
         # generate one devshells per supported python version
         devShells =
           # map a [{ name = name1; value = value1;} { name = name2; value = value2; } ...] to an object of the form
@@ -37,7 +37,7 @@
                   value = shell;
                 })
               # all the supported minor versions
-              [ "9" "10" "11" "12" "13" ])
+              [ "9" "10" "11" "12" "13" ]) // { default = devShells.python39; }
         ;
       }
     );
