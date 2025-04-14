@@ -16,6 +16,8 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
+        supportedMinorVersions = [ "9" "10" "11" "12" "13" ];
+        defaultMinorVersion = "9";
       in
       rec {
         # generate one devshells per supported python version
@@ -37,7 +39,7 @@
                   value = shell;
                 })
               # all the supported minor versions
-              [ "9" "10" "11" "12" "13" ]) // { default = devShells.python39; }
+              supportedMinorVersions) // { default = devShells."python3${defaultMinorVersion}"; }
         ;
       }
     );

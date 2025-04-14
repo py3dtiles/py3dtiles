@@ -32,6 +32,7 @@ In both case, update the following files:
   - add or remove the python version in `classifiers` list
 - [sonar-project.properties](sonar-project.properties)
   - edit the `sonar.python.version` variable
+- [flake.nix](flake.nix): add or remove the minor version number to the `supportedMinorVersions` variable.
 
 For dropped python version:
 
@@ -43,6 +44,7 @@ For dropped python version:
 - [Dockerfile](docker%2FDockerfile)
   - check if the version of python is still supported by py3dtiles and change it if needed (always use the oldest supported)
   - if the python version in the Dockerfile is changed, regenerate [requirements.txt](requirements.txt). Be careful not to add unnecessary packages
+- [flake.nix](flake.nix): increase `defaultMinorVersion` (alway the oldest supported)
 
 NOTE: as of 11-2024, the windows and Docker jobs don't yet use the oldest supported version, but they will eventually.
 
