@@ -47,11 +47,11 @@ def identify_module(filepath: Path) -> Optional[str]:
 
 @pytest.mark.doctest
 @pytest.mark.parametrize(
-    "filepath,cleaner",
-    [("../docs/api.rst", cleanup_rst_files), ("../README.rst", None)],
+    "filepath",
+    ["../docs/api.rst", "../README.rst"],
 )
 def test_rst_file(
-    filepath: str, cleaner: Optional[Callable[[], Iterator[None]]]
+    filepath: str, cleanup_rst_files: Callable[[], Iterator[None]]
 ) -> None:
     test_result = doctest.testfile(filepath, optionflags=doctest.ELLIPSIS)
     assert test_result.failed == 0
