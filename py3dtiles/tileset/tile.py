@@ -186,7 +186,13 @@ class Tile(RootProperty[TileDictType]):
 
         # The information that depends on (is defined by) the children
         # nodes is limited to be bounding volume.
-        self.bounding_volume.sync_with_children(self)
+        for child in self.children:
+            if child.bounding_volume is None:
+                raise TilerException("Child should have a bounding volume.")
+
+            child_bounding_volume = copy.deepcopy(child.bounding_volume)
+            child_bounding_volume.transform(child.transform)
+            self.bounding_volume.add(child_bounding_volume)
 
     def transform_coords(self, coords: npt.NDArray[T]) -> npt.NDArray[T]:
         """

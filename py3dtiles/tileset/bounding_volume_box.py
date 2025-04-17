@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.exceptions import TilerException
 from py3dtiles.typing import BoundingVolumeBoxDictType
 
 from .bounding_volume import BoundingVolume
@@ -14,7 +13,6 @@ from .bounding_volume import BoundingVolume
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from .tile import Tile
 
 # In order to prevent the appearance of ghost newline characters ("\n")
 # when printing a numpy.array (mainly self._box in this file):
@@ -227,23 +225,6 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
         corners = self.get_corners() + other.get_corners()
         self.set_from_points(corners)
-
-    def sync_with_children(self, owner: Tile) -> None:
-        # We reset to some dummy state of this Bounding Volume Box so we
-        # can add up in place the boxes of the owner's children
-        # If there is no child, no modifications are done.
-        for child in owner.children:
-            if child.bounding_volume is None:
-                raise TilerException("Child should have a bounding volume.")
-
-            bounding_volume = copy.deepcopy(child.bounding_volume)
-            bounding_volume.transform(child.transform)
-            if not isinstance(bounding_volume, BoundingVolumeBox):
-                raise TilerException(
-                    "All children must also have a box as bounding volume "
-                    "if the parent has a bounding box"
-                )
-            self.add(bounding_volume)
 
     def to_dict(self) -> BoundingVolumeBoxDictType:
         if self._box is None:
