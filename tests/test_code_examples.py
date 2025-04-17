@@ -17,12 +17,6 @@ def clean_test_artifacts() -> None:
     shutil.rmtree("./my3dtiles2", ignore_errors=True)
 
 
-@pytest.fixture()
-def cleanup_rst_files() -> Iterator[None]:
-    yield
-    clean_test_artifacts()
-
-
 def identify_module(filepath: Path) -> Optional[str]:
     """Build an identifier for the provided filepath, given that it is a module stored into the
     py3dtiles library source code folder.
@@ -45,15 +39,19 @@ def identify_module(filepath: Path) -> Optional[str]:
     return str(filepath.relative_to(source_code_dir))
 
 
-@pytest.mark.doctest
-@pytest.mark.parametrize(
-    "filepath,cleaner",
-    [("../docs/api.rst", cleanup_rst_files), ("../README.rst", None)],
-)
-def test_rst_file(
-    filepath: str, cleaner: Optional[Callable[[], Iterator[None]]]
-) -> None:
-    test_result = doctest.testfile(filepath, optionflags=doctest.ELLIPSIS)
+@pytest.fixture()
+def cleanup_api_rst_files() -> Iterator[None]:
+    yield
+    clean_test_artifacts()
+
+
+def test_api_rst_file(cleanup_api_rst_files: Callable[[], Iterator[None]]) -> None:
+    test_result = doctest.testfile("../docs/api.rst", optionflags=doctest.ELLIPSIS)
+    assert test_result.failed == 0
+
+
+def test_readme_rst_file() -> None:
+    test_result = doctest.testfile("../README.rst", optionflags=doctest.ELLIPSIS)
     assert test_result.failed == 0
 
 
