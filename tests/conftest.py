@@ -404,18 +404,34 @@ def z_up_matrix() -> npt.NDArray[np.float32]:
 
 
 @fixture
-def dummy_matrix() -> list[int]:
+def dummy_matrix() -> list[float]:
     # fmt: off
     return [
-        1, 2, 3, 4,
-        5, 6, 7, 8,
-        9, 10, 11, 12,
+        0, 0, 0,
+        1, 0, 0,
+        0, 2, 0,
+        0, 0, 3.4,
     ]
     # fmt: on
 
 
 @fixture
-def bounding_volume_box_sample(dummy_matrix: list[int]) -> BoundingVolumeBox:
+def bounding_volume_box_sample(dummy_matrix: list[np.float32]) -> BoundingVolumeBox:
     bounding_volume_box = BoundingVolumeBox()
     bounding_volume_box.set_from_list(dummy_matrix)
     return bounding_volume_box
+
+
+@fixture
+def complex_bounding_volume_box() -> BoundingVolumeBox:
+    """
+    A more complex bounding box with the center not in [0, 0, 0] and axes not aligned with world axis
+    """
+    # fmt: off
+    return BoundingVolumeBox.from_list([
+        1, 2, 3,
+        1, 1, 0,
+        2, -2, 0,
+        0, 0, 5
+    ])
+    # fmt: on

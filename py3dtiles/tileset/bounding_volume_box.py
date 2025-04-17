@@ -49,6 +49,13 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         self._box: npt.NDArray[np.float64] | None = None
 
     @classmethod
+    def union(cls, bbox1: BoundingVolumeBox, bbox2: BoundingVolumeBox) -> Self:
+        bounding_volume_box = cls()
+        bounding_volume_box.add(bbox1)
+        bounding_volume_box.add(bbox2)
+        return bounding_volume_box
+
+    @classmethod
     def from_dict(cls, bounding_volume_box_dict: BoundingVolumeBoxDictType) -> Self:
         """
         Construct a BoundingVolumeBox from a dict following the structure of a 3dtiles bounding volume
@@ -88,11 +95,26 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         result.set_from_list(box_list)
         return result
 
+    def is_valid(self) -> bool:
+        return self._box is not None and BoundingVolumeBox._is_box3_valid(self._box)[0]
+
     def get_center(self) -> npt.NDArray[np.float64]:
         if self._box is None:
             raise AttributeError("Bounding Volume Box is not defined.")
 
         return self._box[0:3]
+
+    def get_half_size(self) -> npt.NDArray[np.float64]:
+        if self._box is None:
+            raise AttributeError("Bounding Volume Box is not defined.")
+
+        return np.array(
+            [
+                np.linalg.norm(self._box[3:6]),
+                np.linalg.norm(self._box[6:9]),
+                np.linalg.norm(self._box[9:12]),
+            ]
+        )
 
     def translate(self, offset: npt.NDArray[np.float64]) -> None:
         """
@@ -146,7 +168,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         """
         box = np.array(box_list, dtype=np.float64)
 
-        valid, reason = BoundingVolumeBox.is_valid(box)
+        valid, reason = BoundingVolumeBox._is_box3_valid(box)
         if not valid:
             raise ValueError(reason)
         self._box = box
@@ -161,7 +183,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         """
         box = BoundingVolumeBox.get_box_array_from_point(points)
 
-        valid, reason = BoundingVolumeBox.is_valid(box)
+        valid, reason = BoundingVolumeBox._is_box3_valid(box)
         if not valid:
             raise ValueError(reason)
         self._box = box
@@ -291,7 +313,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         )
 
     @staticmethod
-    def is_valid(box: npt.NDArray[np.float64]) -> tuple[bool, str]:
+    def _is_box3_valid(box: npt.NDArray[np.float64]) -> tuple[bool, str]:
         if box is None:
             return False, "Bounding Volume Box is not defined."
         if box.ndim != 1:

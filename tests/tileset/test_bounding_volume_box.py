@@ -93,28 +93,34 @@ def test_set_from_invalid_points() -> None:
     pass
 
 
-def test_get_center(bounding_volume_box_sample: BoundingVolumeBox) -> None:
+def test_get_center(
+    bounding_volume_box_sample: BoundingVolumeBox,
+    complex_bounding_volume_box: BoundingVolumeBox,
+) -> None:
     bounding_volume_box = BoundingVolumeBox()
     with pytest.raises(AttributeError):
         bounding_volume_box.get_center()
 
-    assert_array_equal(bounding_volume_box_sample.get_center(), [1, 2, 3])
+    assert_array_equal(bounding_volume_box_sample.get_center(), [0, 0, 0])
+
+    assert_array_equal(complex_bounding_volume_box.get_center(), [1, 2, 3])
 
 
 def test_translate(bounding_volume_box_sample: BoundingVolumeBox) -> None:
     bounding_volume_box = BoundingVolumeBox()
     with pytest.raises(AttributeError):
-        bounding_volume_box.translate(np.array([-1, -2, -3]))
+        bounding_volume_box.translate(np.array([1, 2, 3]))
 
-    assert_array_equal(bounding_volume_box_sample.get_center(), [1, 2, 3])
+    assert_array_equal(bounding_volume_box_sample.get_center(), [0, 0, 0])
 
-    bounding_volume_box_sample.translate(np.array([-1, -2, -3]))
+    bounding_volume_box_sample.translate(np.array([1, 2, 3]))
     # Should move only the center
     # fmt: off
     expected_result = [
-        0, 0, 0, 4,
-        5, 6, 7, 8,
-        9, 10, 11, 12,
+        1, 2, 3,
+        1, 0, 0,
+        0, 2, 0,
+        0, 0, 3.4,
     ]
     # fmt: on
     box = bounding_volume_box_sample._box
@@ -137,9 +143,10 @@ def test_transform(
     bounding_volume_box.transform(transformer)
     # fmt: off
     expected_result = [
-        11, 12, 13, 4,
-        5, 6, 7, 8,
-        9, 10, 11, 12,
+        10, 10, 10,
+        1, 0, 0,
+        0, 2, 0,
+        0, 0, 3.4,
     ]
     # fmt: on
     assert_array_equal(bounding_volume_box._box, expected_result)
@@ -234,7 +241,10 @@ def test_transform(
     )
 
 
-def test_get_corners(bounding_volume_box_sample: BoundingVolumeBox) -> None:
+def test_get_corners(
+    bounding_volume_box_sample: BoundingVolumeBox,
+    complex_bounding_volume_box: BoundingVolumeBox,
+) -> None:
     bounding_volume_box = BoundingVolumeBox()
     with pytest.raises(AttributeError):
         bounding_volume_box.get_corners()
@@ -242,14 +252,28 @@ def test_get_corners(bounding_volume_box_sample: BoundingVolumeBox) -> None:
     assert_array_equal(
         bounding_volume_box_sample.get_corners(),
         [  # almost a kindness test
-            [-20, -22, -24],
-            [-12, -12, -12],
-            [-6, -6, -6],
-            [2, 4, 6],
-            [0, 0, 0],
-            [8, 10, 12],
-            [14, 16, 18],
-            [22, 26, 30],
+            [-1, -2, -3.4],
+            [1, -2, -3.4],
+            [-1, 2, -3.4],
+            [1, 2, -3.4],
+            [-1, -2, 3.4],
+            [1, -2, 3.4],
+            [-1, 2, 3.4],
+            [1, 2, 3.4],
+        ],
+    )
+
+    assert_array_equal(
+        complex_bounding_volume_box.get_corners(),
+        [
+            [-2, 3, -2],
+            [0, 5, -2],
+            [2, -1, -2],
+            [4, 1, -2],
+            [-2, 3, 8],
+            [0, 5, 8],
+            [2, -1, 8],
+            [4, 1, 8],
         ],
     )
 
@@ -266,3 +290,50 @@ def test_to_dict(
         bounding_volume_box.to_dict()
 
     assert bounding_volume_box_sample.to_dict() == {"box": dummy_matrix}
+
+
+def test_is_valid(bounding_volume_box_sample: BoundingVolumeBox) -> None:
+    assert bounding_volume_box_sample.is_valid()
+
+    assert not BoundingVolumeBox().is_valid()
+
+    bbox = BoundingVolumeBox.from_points([np.array([1, 2, 3], dtype=np.float64)])
+    assert bbox.is_valid()
+
+
+def test_get_half_size(
+    bounding_volume_box_sample: BoundingVolumeBox,
+    complex_bounding_volume_box: BoundingVolumeBox,
+) -> None:
+    bbox = BoundingVolumeBox.from_points([np.array([0, 0, 0]), np.array([1, 1, 1])])
+    assert_array_equal(bbox.get_half_size(), [0.5, 0.5, 0.5])
+
+    assert all(bounding_volume_box_sample.get_half_size() == [1, 2, 3.4])
+    assert_array_almost_equal(
+        complex_bounding_volume_box.get_half_size(), [1.41421356, 2.82842712, 5.0]
+    )
+
+
+def test_union(
+    bounding_volume_box_sample: BoundingVolumeBox,
+    complex_bounding_volume_box: BoundingVolumeBox,
+) -> None:
+    newbb = BoundingVolumeBox.union(
+        BoundingVolumeBox.from_points([[0, 0, 0], [1, 1, 1]]),
+        BoundingVolumeBox.from_points([[0, 0, 1], [1, 1, 2]]),
+    )
+
+    assert newbb._box is not None
+    assert_array_equal(
+        newbb.get_corners(),
+        [
+            [0, 0, 0],
+            [1, 0, 0],
+            [0, 1, 0],
+            [1, 1, 0],
+            [0, 0, 2],
+            [1, 0, 2],
+            [0, 1, 2],
+            [1, 1, 2],
+        ],
+    )
