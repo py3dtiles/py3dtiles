@@ -401,3 +401,21 @@ def z_up_matrix() -> npt.NDArray[np.float32]:
     return np.array(
         [[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=np.float32
     )
+
+
+@fixture
+def dummy_matrix() -> list[int]:
+    # fmt: off
+    return [
+        1, 2, 3, 4,
+        5, 6, 7, 8,
+        9, 10, 11, 12,
+    ]
+    # fmt: on
+
+
+@fixture
+def bounding_volume_box_sample(dummy_matrix: list[int]) -> BoundingVolumeBox:
+    bounding_volume_box = BoundingVolumeBox()
+    bounding_volume_box.set_from_list(dummy_matrix)
+    return bounding_volume_box
