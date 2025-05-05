@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import struct
 
 import numpy as np
@@ -11,7 +10,7 @@ from py3dtiles.exceptions import InvalidB3dmError
 
 from .b3dm_feature_table import B3dmFeatureTable
 from .batch_table import BatchTable
-from .gltf_utils import GltfPrimitive, gltf_component_from_primitive
+from .gltf_utils import GltfMesh, GltfPrimitive, gltf_from_meshes
 from .tile_content import TileContent, TileContentBody, TileContentHeader
 
 
@@ -78,16 +77,20 @@ class B3dm(TileContent):
         :param texture_uri: the URI of the texture image if the primitive is textured.
         :param material: a glTF material. If not set, a default material is created.
         """
-        return B3dm.from_primitives(
+        return B3dm.from_meshes(
             [
-                GltfPrimitive(
+                GltfMesh(
                     points,
-                    triangles=triangles,
+                    primitives=[
+                        GltfPrimitive(
+                            triangles=triangles,
+                            material=material,
+                            texture_uri=texture_uri,
+                        )
+                    ],
                     normals=normal,
                     uvs=uvs,
                     batchids=batchids,
-                    texture_uri=texture_uri,
-                    material=material,
                 )
             ],
             batch_table,
@@ -96,14 +99,17 @@ class B3dm(TileContent):
         )
 
     @staticmethod
-    def from_primitives(
-        primitives: list[GltfPrimitive],
+    def from_meshes(
+        meshes: list[GltfMesh],
         batch_table: BatchTable | None = None,
         feature_table: B3dmFeatureTable | None = None,
         transform: npt.NDArray[np.float32] | None = None,
     ) -> B3dm:
+        """
+        Create a b3dm from GltfMesh instances. This allows for finer control than `from_numpy_arrays` by allowing several meshes in one b3dm.
+        """
         b3dm_header = B3dmHeader()
-        b3dm_body = B3dmBody.from_primitives(primitives, transform)
+        b3dm_body = B3dmBody.from_meshes(meshes, transform)
         if batch_table is not None:
             b3dm_body.batch_table = batch_table
         if feature_table is not None:
@@ -118,6 +124,9 @@ class B3dm(TileContent):
         batch_table: BatchTable | None = None,
         feature_table: B3dmFeatureTable | None = None,
     ) -> B3dm:
+        """
+        Wrap a pygltflib.GLTF2 instance into a b3dm. This gives the most control on the scene creation, as pygltflib.GLTF2 instance are as near as possible to the gltf specification.
+        """
         b3dm_body = B3dmBody()
         b3dm_body.gltf = gltf
         if batch_table is not None:
@@ -236,83 +245,11 @@ class B3dmBody(TileContentBody):
         )
 
     @staticmethod
-    def from_primitives(
-        primitives: list[GltfPrimitive],
+    def from_meshes(
+        meshes: list[GltfMesh],
         transform: npt.NDArray[np.float32] | None = None,
     ) -> B3dmBody:
-        gltf_binary_blob = b""
-        gltf_primitives = []
-        gltf_accessors = []
-        gltf_buffer_views = []
-        counter = 0
-        texture_index = 0
-
-        node_matrix = np.identity(4).flatten("F").tolist()
-        if transform is not None:
-            node_matrix = transform.flatten("F").tolist()
-
-        gltf = pygltflib.GLTF2(
-            scene=0,
-            scenes=[pygltflib.Scene(nodes=[0])],
-            nodes=[pygltflib.Node(mesh=0, matrix=node_matrix)],
-            meshes=[pygltflib.Mesh()],
-        )
-
-        for i, primitive in enumerate(primitives):
-            (
-                gltf_primitive,
-                accessors,
-                buffer_views,
-                binary_blob,
-            ) = gltf_component_from_primitive(
-                primitive,
-                len(gltf_binary_blob),
-                counter,
-            )
-
-            material = (
-                copy.deepcopy(primitive.material)
-                if primitive.material is not None
-                else pygltflib.Material(
-                    pbrMetallicRoughness=pygltflib.PbrMetallicRoughness()
-                )
-            )
-            if primitive.uvs is not None:
-                gltf.textures.append(pygltflib.Texture(sampler=0, source=texture_index))
-                material.pbrMetallicRoughness.baseColorTexture = pygltflib.TextureInfo(
-                    index=texture_index
-                )
-                if primitive.texture_uri is None:
-                    raise InvalidB3dmError(
-                        "A texture URI must be specify if the glTF primitive has UV"
-                    )
-                gltf.images.append(pygltflib.Image(uri=primitive.texture_uri))
-                texture_index += 1
-
-            gltf.materials.append(material)
-            gltf_primitive.material = i
-
-            counter += len(accessors)
-            gltf_primitives.append(gltf_primitive)
-            gltf_accessors.extend(accessors)
-            gltf_buffer_views.extend(buffer_views)
-            gltf_binary_blob += binary_blob
-
-        gltf.meshes[0].primitives = gltf_primitives
-        gltf.accessors = gltf_accessors
-        gltf.bufferViews = gltf_buffer_views
-        gltf.buffers = [pygltflib.Buffer(byteLength=len(gltf_binary_blob))]
-        if len(gltf.textures) > 0:
-            gltf.samplers.append(
-                pygltflib.Sampler(
-                    magFilter=pygltflib.LINEAR,
-                    minFilter=pygltflib.LINEAR_MIPMAP_LINEAR,
-                    wrapS=pygltflib.REPEAT,
-                    wrapT=pygltflib.REPEAT,
-                )
-            )
-
-        gltf.set_binary_blob(gltf_binary_blob)
+        gltf = gltf_from_meshes(meshes, transform=transform)
         return B3dmBody.from_gltf(gltf)
 
     @staticmethod

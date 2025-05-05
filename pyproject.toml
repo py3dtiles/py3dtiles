@@ -137,7 +137,6 @@ strict = true
 [[tool.mypy.overrides]]
 module = [ # These 2 modules will be removed of py3dtiles
     "py3dtiles.export",
-    "py3dtiles.tileset.content.gltf",
 ]
 
 ignore_errors = true

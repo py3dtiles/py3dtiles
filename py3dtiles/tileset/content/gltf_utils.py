@@ -8,8 +8,16 @@ import pygltflib
 
 
 class GltfAttribute(NamedTuple):
+    """
+    A high level representation of a gltf attribute
+
+    `accessor_type` can only take `values autorized by the spec <https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_accessor_type>`_.
+
+    `component_type` should take `these values <https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_accessor_componenttype>`_.
+    """
+
     name: str
-    accessor_type: pygltflib.SCALAR | pygltflib.VEC2 | pygltflib.VEC3
+    accessor_type: str  # Literal["SCALAR", "VEC2", "VEC3"] # pygltflib.SCALAR | pygltflib.VEC2 | pygltflib.VEC3
     component_type: pygltflib.UNSIGNED_BYTE | pygltflib.UNSIGNED_INT | pygltflib.FLOAT
     array: npt.NDArray[np.uint8 | np.uint16 | np.uint32 | np.float32]
 
@@ -34,32 +42,24 @@ def get_component_type_from_dtype(dt: np.dtype[Any]) -> int:
 
 
 class GltfPrimitive:
+    """
+    A data structure storing all information to create a glTF mesh's primitive.
+
+    This is intended for higher-level usage than pygltflib.Primitive.
+
+    The transformation will be done automatically while transforming a `GltfMesh`.
+
+    :param triangles: array of triangle indices, must have a (n, 3) shape.
+    :param material: a glTF material. If not set, a default material is created.
+    :param texture_uri: the URI of the texture image if the primitive is textured.
+    """
+
     def __init__(
         self,
-        points: npt.NDArray[np.float32],
         triangles: npt.NDArray[np.uint8 | np.uint16 | np.uint32] | None = None,
-        normals: npt.NDArray[np.float32] | None = None,
-        uvs: npt.NDArray[np.float32] | None = None,
-        batchids: npt.NDArray[np.uint32] | None = None,
-        additional_attributes: list[GltfAttribute] | None = None,
-        texture_uri: str | None = None,
         material: pygltflib.Material | None = None,
+        texture_uri: str | None = None,
     ) -> None:
-        """
-        A data structure storing all information to create a glTF mesh's primitive.
-
-        :param points: array of vertex positions, must have a (n, 3) shape.
-        :param triangles: array of triangle indices, must have a (n, 3) shape.
-        :param normals: array of vertex normals, must have a (n, 3) shape.
-        :param uvs: array of texture coordinates, must have a (n, 2) shape.
-        :param batchids: array of batch table IDs, must have a (n) shape.
-        :param additional_attributes: additional attributes to add to the primitive.
-        :param texture_uri: the URI of the texture image if the primitive is textured.
-        :param material: a glTF material. If not set, a default material is created.
-        """
-        self.points: GltfAttribute = GltfAttribute(
-            "POSITION", pygltflib.VEC3, pygltflib.FLOAT, points
-        )
         self.triangles: GltfAttribute | None = (
             GltfAttribute(
                 "INDICE",
@@ -70,14 +70,56 @@ class GltfPrimitive:
             if triangles is not None
             else None
         )
+        self.material: pygltflib.Material | None = material
+        self.texture_uri: str | None = texture_uri
+
+
+class GltfMesh:
+    """
+    A data structure representing a mesh.
+
+    This is intended for higher-level usage than pygltflib.Mesh, which are an exact translation of the specification.
+
+    This is intented to be easier to construct by keeping a more hierarchical and logical organization. `GltfMesh` are constructed with all the vertices, normals, uvs and additional attributes, and an optional list of `GltfPrimitive` that contains indices and material informations.
+
+    Use `gltf_from_meshes` or `populate_gltf_from_mesh` to convert it to GLTF format.
+
+    :param points: array of vertex positions, must have a (n, 3) shape.
+    :param primitives: array of GltfPrimitive
+    :param normals: array of vertex normals for the whole mesh, must have a (n, 3) shape.
+    :param batchids: array of batch table IDs, must have a (n) shape.
+    :param additional_attributes: additional attributes to add to the primitive.
+    :param uvs: array of texture coordinates, must have a (n, 2) shape.
+    """
+
+    def __init__(
+        self,
+        points: npt.NDArray[np.float32],
+        name: str | None = None,
+        normals: npt.NDArray[np.float32] | None = None,
+        primitives: list[GltfPrimitive] | None = None,
+        batchids: npt.NDArray[np.uint32] | None = None,
+        uvs: npt.NDArray[np.float32] | None = None,
+        additional_attributes: list[GltfAttribute] | None = None,
+    ) -> None:
+        """
+        A data structure storing all information to create a glTF mesh's primitive.
+
+        """
+        if points is None or len(points.shape) < 2 or points.shape[1] != 3:
+            raise ValueError(
+                "points arguments should be an array of coordinate triplets (of shape (N, 3))"
+            )
+        self.points: GltfAttribute = GltfAttribute(
+            "POSITION", pygltflib.VEC3, pygltflib.FLOAT, points
+        )
+        self.name = name
+        self.primitives = primitives or []
+        if not self.primitives:
+            self.primitives.append(GltfPrimitive())
         self.normals: GltfAttribute | None = (
             GltfAttribute("NORMAL", pygltflib.VEC3, pygltflib.FLOAT, normals)
             if normals is not None
-            else None
-        )
-        self.uvs: GltfAttribute | None = (
-            GltfAttribute("TEXCOORD_0", pygltflib.VEC2, pygltflib.FLOAT, uvs)
-            if uvs is not None
             else None
         )
         self.batchids: GltfAttribute | None = (
@@ -87,114 +129,201 @@ class GltfPrimitive:
             if batchids is not None
             else None
         )
+        self.uvs: GltfAttribute | None = (
+            GltfAttribute("TEXCOORD_0", pygltflib.VEC2, pygltflib.FLOAT, uvs)
+            if uvs is not None
+            else None
+        )
         self.additional_attributes: list[GltfAttribute] = (
             additional_attributes if additional_attributes is not None else []
         )
-        self.texture_uri: str | None = texture_uri
-        self.material: pygltflib.Material | None = material
 
 
-def gltf_component_from_primitive(
-    primitive: GltfPrimitive,
-    byte_offset: int = 0,
-    attribute_counter: int = 0,
-) -> tuple[
-    pygltflib.Primitive, list[pygltflib.Accessor], list[pygltflib.BufferView], bytes
-]:
-    """Build the GlTF structure that corresponds to a triangulated mesh.
-
-    The mesh is represented as numpy arrays as follows:
-
-    - a 3D-point array;
-    - a triangle array, where points are identified by their positional ID in the 3D-point
-      array.
-
-    See https://gitlab.com/dodgyville/pygltflib/ (section "Create a mesh, convert to bytes,
-    convert back to mesh").
-
+def gltf_from_meshes(
+    meshes: list[GltfMesh], transform: npt.NDArray[np.float32] | None = None
+) -> pygltflib.GLTF2:
     """
-    gltf_primitive = pygltflib.Primitive(
-        attributes=pygltflib.Attributes(),
-    )
-    gltf_binary_blob = b""
-    gltf_accessors = []
-    gltf_buffer_views = []
+    Builds a GLTF2 instance from a list of meshes.
+    """
 
-    if primitive.triangles is not None:
-        indice_blob, indice_accessor, indice_buffer_view = prepare_gltf_component(
-            attribute_counter,
-            primitive.triangles.array,
-            byte_offset,
-            primitive.triangles.array.size,
-            primitive.triangles.accessor_type,
-            primitive.triangles.component_type,
-            pygltflib.ELEMENT_ARRAY_BUFFER,
+    gltf = pygltflib.GLTF2(
+        scene=0,
+        scenes=[pygltflib.Scene(nodes=[])],
+        nodes=[],
+        meshes=[],
+    )
+
+    # insert the default material
+    # if we don't add it there, we would have to test if one primitive doesn't have one and add
+    # only in this case, but we'd need to remember the material_id of the default material.
+    # For a few bytes, it's not worthy to do all this.
+    # it also makes debugging easier. material_id = 0 is the default material, and that's it.
+    # Note that the specification is ambiguous here, it's not clear if a gltf should always have a
+    # default material OR if it's the viewer's job.
+    gltf.materials.append(pygltflib.Material())
+
+    for i, mesh in enumerate(meshes):
+        node = pygltflib.Node(
+            mesh=i,
+            matrix=(transform.flatten("F").tolist() if transform is not None else None),
         )
-        gltf_binary_blob += indice_blob
-        gltf_accessors.append(indice_accessor)
-        gltf_buffer_views.append(indice_buffer_view)
-        gltf_primitive.indices = attribute_counter
-        attribute_counter += 1
+        gltf.scenes[0].nodes.append(i)
+        gltf.nodes.append(node)
+
+        populate_gltf_from_mesh(
+            gltf,
+            mesh,
+        )
+
+    gltf.buffers = [pygltflib.Buffer(byteLength=len(gltf.binary_blob()))]
+    if len(gltf.textures) > 0:
+        gltf.samplers.append(
+            pygltflib.Sampler(
+                magFilter=pygltflib.LINEAR,
+                minFilter=pygltflib.LINEAR_MIPMAP_LINEAR,
+                wrapS=pygltflib.REPEAT,
+                wrapT=pygltflib.REPEAT,
+            )
+        )
+
+    return gltf
+
+
+def _set_texture_to_primitive(
+    gltf: pygltflib.GLTF2, material: pygltflib.Material, texture_uri: str
+) -> None:
+    gltf.images.append(pygltflib.Image(uri=texture_uri))
+    gltf.textures.append(pygltflib.Texture(sampler=0, source=len(gltf.images) - 1))
+
+    if material.pbrMetallicRoughness is None:
+        material.pbrMetallicRoughness = pygltflib.PbrMetallicRoughness()
+    if material.pbrMetallicRoughness.baseColorTexture is None:
+        material.pbrMetallicRoughness.baseColorTexture = pygltflib.TextureInfo()
+
+    material.pbrMetallicRoughness.baseColorTexture.index = len(gltf.textures) - 1
+
+
+def _create_gltf_primitive(
+    gltf: pygltflib.GLTF2, primitive: GltfPrimitive
+) -> pygltflib.Primitive:
+    material_id = None
+    if primitive.material:
+
+        gltf.materials.append(primitive.material)
+        material_id = len(gltf.materials) - 1
+    else:
+        # default material
+        # it will always be 0 by internal py3dtiles convention
+        material_id = 0
+
+    return pygltflib.Primitive(
+        attributes=pygltflib.Attributes(),
+        material=material_id,
+    )
+
+
+def populate_gltf_from_mesh(
+    gltf: pygltflib.GLTF2,
+    mesh: GltfMesh,
+) -> None:
+    """
+    Add a GltfMesh to a pygltflib.GLTF2
+
+    This method takes care of all the nitty-gritty work about setting buffer, bufferViews, accessors and primitives.
+    """
+    # see https://gitlab.com/dodgyville/pygltflib/#create-a-mesh
+    gltf_binary_blob = cast(bytes, gltf.binary_blob()) or b""
 
     attributes_array: list[GltfAttribute | None] = [
-        primitive.points,
-        primitive.normals,
-        primitive.uvs,
-        primitive.batchids,
+        mesh.points,
+        mesh.normals,
+        mesh.uvs,
+        mesh.batchids,
     ]
-    attributes_array.extend(primitive.additional_attributes)
+    attributes_array.extend(mesh.additional_attributes)
 
+    attributes_indices_by_name: dict[str, int] = {}
     for attribute in attributes_array:
         if attribute is None:
             continue
-        (
-            array_blob,
-            accessor,
-            buffer_view,
-        ) = prepare_gltf_component(
-            attribute_counter,
-            attribute.array,
-            byte_offset + len(gltf_binary_blob),
-            len(attribute.array),
-            attribute.accessor_type,
-            attribute.component_type,
-        )
-        gltf_binary_blob += array_blob
-        gltf_accessors.append(accessor)
-        gltf_buffer_views.append(buffer_view)
-        setattr(gltf_primitive.attributes, attribute.name, attribute_counter)
-        attribute_counter += 1
-    gltf_accessors[int(primitive.triangles is not None)].min = np.min(
-        primitive.points.array, axis=0
-    ).tolist()
-    gltf_accessors[int(primitive.triangles is not None)].max = np.max(
-        primitive.points.array, axis=0
-    ).tolist()
+        attributes_indices_by_name[attribute.name] = len(gltf.accessors)
 
-    return gltf_primitive, gltf_accessors, gltf_buffer_views, gltf_binary_blob
+        array_blob = prepare_gltf_component(
+            gltf,
+            attribute,
+            len(gltf_binary_blob),
+        )
+
+        gltf_binary_blob += array_blob
+
+    gltf_mesh = pygltflib.Mesh(name=mesh.name)
+    for primitive in mesh.primitives:
+
+        # deal with texture
+        if primitive.texture_uri:
+            # if we have a texture_uri, we need a material to bear it
+            if primitive.material is None:
+                primitive.material = pygltflib.Material()
+            _set_texture_to_primitive(gltf, primitive.material, primitive.texture_uri)
+            primitive.material.pbrMetallicRoughness.baseColorTexture.texCoord = (
+                attributes_indices_by_name.get("TEXCOORD_0")
+            )
+
+        # deal with material
+        gltf_primitive = _create_gltf_primitive(gltf, primitive)
+        gltf_mesh.primitives.append(gltf_primitive)
+
+        # all primitive shares the same attributes. What they take is determined by the triangles
+        # we need to do that because the spec mandates that all attribute accessors of a primitives have the same count
+        # this is efficient because we store the attributes data only once
+        for name, index in attributes_indices_by_name.items():
+            setattr(gltf_primitive.attributes, name, index)
+        # triangles
+        if primitive.triangles is not None:
+            gltf_primitive.indices = len(gltf.accessors)
+            indice_blob = prepare_gltf_component(
+                gltf,
+                primitive.triangles,
+                len(gltf_binary_blob),
+                pygltflib.ELEMENT_ARRAY_BUFFER,
+            )
+
+            gltf_binary_blob += indice_blob
+
+    gltf.meshes.append(gltf_mesh)
+    gltf.set_binary_blob(gltf_binary_blob)
 
 
 def prepare_gltf_component(
-    array_idx: int,
-    array: npt.NDArray[np.uint8 | np.uint16 | np.uint32 | np.float32],
+    gltf: pygltflib.GLTF2,
+    attribute: GltfAttribute,
     byte_offset: int,
-    count: int,
-    accessor_type: str = pygltflib.VEC3,
-    component_type: int = pygltflib.FLOAT,
     buffer_view_target: int = pygltflib.ARRAY_BUFFER,
-) -> tuple[bytes, pygltflib.Accessor, pygltflib.BufferView]:
+) -> bytes:
+    array = attribute.array
     array_blob = array.flatten().tobytes()
-    BUFFER_INDEX = 0  # Everything is stored in the same buffer for sake of simplicity
-    accessor = pygltflib.Accessor(
-        bufferView=array_idx,
-        componentType=component_type,
-        count=count,
-        type=accessor_type,
+    # note: triangles are sometimes expressed as array of face vertex indices, but from the gltf point of view, it is a flat scalar array
+    count = (
+        array.size if attribute.accessor_type == pygltflib.SCALAR else array.shape[0]
     )
     buffer_view = pygltflib.BufferView(
-        buffer=BUFFER_INDEX,
+        buffer=0,  # Everything is stored in the same buffer for sake of simplicity
         byteOffset=byte_offset,
         byteLength=len(array_blob),
         target=buffer_view_target,
     )
-    return array_blob, accessor, buffer_view
+    gltf.bufferViews.append(buffer_view)
+    accessor = pygltflib.Accessor(
+        bufferView=len(gltf.bufferViews) - 1,
+        componentType=attribute.component_type,
+        count=count,
+        type=attribute.accessor_type,
+    )
+
+    # min / max for positions, mandatory
+    if attribute.name == "POSITION":
+        accessor.min = np.min(attribute.array, axis=0).tolist()
+        accessor.max = np.max(attribute.array, axis=0).tolist()
+
+    gltf.accessors.append(accessor)
+    return array_blob
