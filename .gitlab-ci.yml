@@ -216,6 +216,8 @@ windows-test:
     -  saas-windows-medium-amd64
   before_script:
     - Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+    # the current image contains python3.13 already
+    - choco uninstall python3
     - choco install -y python --version=3.9.5
     - RefreshEnv
     - python -m pip install --upgrade pip setuptools wheel
