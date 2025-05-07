@@ -12,4 +12,4 @@ All client applications should use the :py:mod:`py3dtiles.exceptions` module, wh
 
 """
 
-__version__ = "9.0.0"
+__version__ = "10.0.0"
