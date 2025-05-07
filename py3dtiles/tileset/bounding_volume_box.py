@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -60,7 +61,9 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         return bounding_volume_box
 
     @classmethod
-    def from_points(cls, points: list[npt.NDArray[np.float64]]) -> BoundingVolumeBox:
+    def from_points(
+        cls, points: Sequence[npt.NDArray[np.float64] | list[float]]
+    ) -> BoundingVolumeBox:
         """
         Construct a bounding box enclosing all the points.
 
@@ -148,7 +151,9 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
             raise ValueError(reason)
         self._box = box
 
-    def set_from_points(self, points: list[npt.NDArray[np.float64]]) -> None:
+    def set_from_points(
+        self, points: Sequence[npt.NDArray[np.float64] | list[float]]
+    ) -> None:
         """
         Make the current box only include a list of points. Note: the box limits are replaced, not extended.
 
@@ -235,7 +240,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
     @staticmethod
     def get_box_array_from_mins_maxs(
-        mins_maxs: npt.NDArray[np.float64],
+        mins_maxs: npt.NDArray[np.float64] | list[float],
     ) -> npt.NDArray[np.float64]:
         """
         :param mins_maxs: the list [x_min, y_min, z_min, x_max, y_max, z_max]
@@ -264,7 +269,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
     @staticmethod
     def get_box_array_from_point(
-        points: list[npt.NDArray[np.float64]],
+        points: Sequence[npt.NDArray[np.float64] | list[float]],
     ) -> npt.NDArray[np.float64]:
         """
         :param points: a list of 3D points
