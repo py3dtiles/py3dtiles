@@ -279,12 +279,15 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         if crs_out:
             if self.files_info["crs_in"] is None:
                 raise SrsInMissingException(
-                    "None file has a input srs specified. Should be provided."
+                    "No file contains CRS in its metadata. Please specify the input crs manually."
                 )
-
-            transformer = Transformer.from_crs(
-                self.files_info["crs_in"], crs_out, always_xy=always_xy
-            )
+            elif crs_out.equals(self.files_info["crs_in"]):
+                # nothing to do :-)
+                transformer = None
+            else:
+                transformer = Transformer.from_crs(
+                    self.files_info["crs_in"], crs_out, always_xy=always_xy
+                )
         else:
             transformer = None
 
