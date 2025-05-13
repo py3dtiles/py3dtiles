@@ -33,7 +33,8 @@ dependencies = [
     "numpy>=1.24.0,<2.2.0",
     "psutil",
     "pyproj",
-    "pyzmq",
+    # https://github.com/zeromq/pyzmq/issues/2093
+    "pyzmq<26.4.0",
     "pygltflib",
 ]
 
