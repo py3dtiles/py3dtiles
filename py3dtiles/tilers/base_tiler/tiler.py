@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Generic, Optional, TypeVar
-
-from pyproj import CRS
+from typing import Any, Generic, TypeVar
 
 from .shared_metadata import SharedMetadata
 from .tiler_worker import TilerWorker
@@ -24,13 +22,11 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
 
     name = b""
     shared_metadata: _SharedMetadataT
+    files: list[Path]
 
     @abstractmethod
     def initialization(
-        self,
-        crs_out: Optional[CRS],
-        working_dir: Path,
-        number_of_jobs: int,
+        self, files: list[Path], working_dir: Path, out_folder: Path
     ) -> None:
         """
         The __init__ method must only set attributes without any action.
@@ -46,9 +42,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def get_tasks(
-        self, startup: float
-    ) -> Generator[tuple[bytes, list[bytes]], None, None]:
+    def get_tasks(self, startup: float) -> Iterator[tuple[bytes, list[bytes]]]:
         """
         Yields tasks to be sent to workers.
 
@@ -65,9 +59,11 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def write_tileset(self) -> None:
+    def write_tileset(self, use_process_pool: bool = True) -> None:
         """
         Writes the tileset file once the binary data written
+
+        :param use_process_pool: allow the use of a process pool. Process pools can cause issues in environment lacking shared memory.
         """
 
     def validate_binary_data(self) -> None:

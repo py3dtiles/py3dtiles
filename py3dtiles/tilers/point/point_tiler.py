@@ -10,6 +10,7 @@ import numpy as np
 import numpy.typing as npt
 from pyproj import CRS, Transformer
 
+from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE
 from py3dtiles.exceptions import (
     SrsInMissingException,
     SrsInMixinException,
@@ -69,46 +70,77 @@ def can_pnts_be_written(
 
 
 class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
+    """
+    Tiler that split pointclouds.
+
+    This tiler is able to reproject pointclouds, and can embed arbitrary fields in the resulting 3dtiles
+
+    :param crs_in: crs to use for files that don't have crs informations in their metadata, or for all files if `force_crs_in` is used
+    :param crs_out: output crs
+    :param force_crs_in: whether or not to apply crs_in for all files.
+    :param pyproj_always_xy: some crs defines an axis order, but some dataset still use xy order nonetheless. This boolean allows to support this case.
+    :param rgb: whether to include rgb info or not
+    :param color_scale: scale the color in the case of colors wrongly encoded in 8 bit in a 16-bit field (like in las/laz files).
+    :param cache_size: the size in MB to use for ram cache.
+    :param verbosity: verbosity level
+    :param number_of_jobs: how many process this tiler is allowed to use
+    :param extra_fields: the list of extra fields to include in the resulting 3dtiles
+    """
+
     name = b"points"
 
     files_info: dict[str, Any]
+    out_folder: Path
+    crs_in: Optional[CRS]
+    crs_out: Optional[CRS]
+    force_crs_in: bool
+    rgb: bool
+    color_scale: Optional[float]
+    cache_size: int
+    verbosity: int
+    file_info: dict[str, Any]
     root_aabb: npt.NDArray[np.float64]
     root_scale: npt.NDArray[np.float32]
     root_spacing: float
     node_store: SharedNodeStore
     state: PointState
     extra_fields_to_include: list[str]
+    transformer: Optional[Transformer]
+    number_of_jobs: int
+    shared_metadata: PointSharedMetadata
 
     def __init__(
         self,
-        out_folder: Path,
-        files: Union[list[Union[str, Path]], str, Path],
-        crs_in: Optional[CRS],
-        force_crs_in: bool,
-        pyproj_always_xy: bool,
-        rgb: bool,
-        color_scale: Optional[float],
-        cache_size: int,
-        verbosity: int,
+        crs_in: Optional[CRS] = None,
+        crs_out: Optional[CRS] = None,
+        force_crs_in: bool = False,
+        pyproj_always_xy: bool = False,
+        rgb: bool = True,
+        color_scale: Optional[float] = None,
+        cache_size: int = DEFAULT_CACHE_SIZE,
+        verbosity: int = 0,
+        number_of_jobs: int = CPU_COUNT,
         extra_fields: Optional[list[str]] = None,
     ):
-        self.out_folder = out_folder
+        """
+        Constructs a PointTiler
 
-        # allow str directly if only one input
-        files = [files] if isinstance(files, (str, Path)) else files
-        self.files = [Path(file) for file in files]
+        """
+        super().__init__()
 
         self.rgb = rgb
         self.extra_fields_to_include = [] if extra_fields is None else extra_fields
         self.color_scale = color_scale
 
         self.crs_in = crs_in
+        self.crs_out = crs_out
         self.force_crs_in = force_crs_in
         self.pyproj_always_xy = pyproj_always_xy
 
         self.cache_size = cache_size
 
         self.verbosity = verbosity
+        self.number_of_jobs = number_of_jobs
 
     def get_worker(self) -> PointTilerWorker:
         return PointTilerWorker(self.shared_metadata)
@@ -125,20 +157,19 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             yield self.send_file_to_read()
 
     def initialization(
-        self,
-        crs_out: Optional[CRS],
-        working_dir: Path,
-        number_of_jobs: int,
+        self, files: list[Path], working_dir: Path, out_folder: Path
     ) -> None:
+        self.files = files
+        self.out_folder = out_folder
         self.files_info = self.get_files_info(self.crs_in, self.force_crs_in)
         self.transformer = self.get_transformer(
-            crs_out, always_xy=self.pyproj_always_xy
+            self.crs_out, always_xy=self.pyproj_always_xy
         )
         (
             self.rotation_matrix,
             self.original_aabb,
             self.avg_min,
-        ) = self.get_rotation_matrix(crs_out, self.transformer)
+        ) = self.get_rotation_matrix(self.crs_out, self.transformer)
 
         self.root_aabb, self.root_scale, self.root_spacing = self.get_root_aabb(
             self.original_aabb
@@ -147,7 +178,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         self.node_store = SharedNodeStore(working_dir)
 
         self.state = PointState(
-            self.files_info["portions"], max(1, number_of_jobs // 2)
+            self.files_info["portions"], max(1, self.number_of_jobs // 2)
         )
 
         self.shared_metadata = PointSharedMetadata(
