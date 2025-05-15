@@ -45,6 +45,9 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
     @classmethod
     def union(cls, bbox1: BoundingVolumeBox, bbox2: BoundingVolumeBox) -> Self:
+        """
+        Create a box containing the 2 box parameters.
+        """
         bounding_volume_box = cls()
         bounding_volume_box.add(bbox1)
         bounding_volume_box.add(bbox2)
@@ -112,22 +115,12 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         )
 
     def translate(self, offset: npt.NDArray[np.float64]) -> None:
-        """
-        Translate the box center with the given offset "vector"
-
-        :param offset: the 3D vector by which the box should be translated
-        """
         if self._box is None:
             raise AttributeError("Bounding Volume Box is not defined.")
 
         self._box[:3] += offset[:3]
 
     def transform(self, transform: npt.NDArray[np.float64]) -> None:
-        """
-        Apply the provided transformation matrix (4x4) to the box
-
-        :param transform: transformation matrix (4x4) to be applied
-        """
         if self._box is None:
             raise AttributeError("Bounding Volume Box is not defined.")
 
@@ -227,14 +220,6 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         return BoundingVolumeBox.get_box_array_from_point(self.get_corners())
 
     def add(self, other: BoundingVolume[Any]) -> None:
-        """
-        Compute the 'canonical' bounding volume fitting this bounding volume
-        together with the added bounding volume. Again (refer above to the
-        class definition) the computed fitting bounding volume is generically
-        not the smallest one (due to its alignment with the coordinate axis).
-
-        :param other: another box bounding volume to be added with this one
-        """
         if not isinstance(other, BoundingVolumeBox):
             raise NotImplementedError(
                 "The add method works only with BoundingVolumeBox"
