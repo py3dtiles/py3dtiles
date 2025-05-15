@@ -15,11 +15,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 
-# In order to prevent the appearance of ghost newline characters ("\n")
-# when printing a numpy.array (mainly self._box in this file):
-np.set_printoptions(linewidth=500)
-
-
 class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
     """
     A box bounding volume as defined in the 3DTiles specifications i.e. an
