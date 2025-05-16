@@ -94,7 +94,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         return result
 
     def is_valid(self) -> bool:
-        return self._box is not None and BoundingVolumeBox._is_box3_valid(self._box)[0]
+        return BoundingVolumeBox._is_box3_valid(self._box)[0]
 
     def get_center(self) -> npt.NDArray[np.float64]:
         if self._box is None:
@@ -169,12 +169,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
         :param points: An array of points
         """
-        box = BoundingVolumeBox.get_box_array_from_point(points)
-
-        valid, reason = BoundingVolumeBox._is_box3_valid(box)
-        if not valid:
-            raise ValueError(reason)
-        self._box = box
+        self._box = BoundingVolumeBox.get_box_array_from_point(points)
 
     def set_from_mins_maxs(self, mins_maxs: npt.NDArray[np.float64]) -> None:
         """
@@ -293,7 +288,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         )
 
     @staticmethod
-    def _is_box3_valid(box: npt.NDArray[np.float64]) -> tuple[bool, str]:
+    def _is_box3_valid(box: npt.NDArray[np.float64] | None) -> tuple[bool, str]:
         if box is None:
             return False, "Bounding Volume Box is not defined."
         if box.ndim != 1:
