@@ -93,6 +93,23 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         result.set_from_list(box_list)
         return result
 
+    @classmethod
+    def from_mins_maxs(cls, mins_maxs: npt.NDArray[np.float64]) -> BoundingVolumeBox:
+        """
+        Build a box from a min and a max.
+
+        Internally call `set_from_mins_maxs`.
+
+        :param mins_maxs: the array [x_min, y_min, z_min, x_max, y_max, z_max]
+                          that is the boundaries of the box along each
+                          coordinate axis
+
+        :return: a new instance of BoundingVolumeBox
+        """
+        result = cls()
+        result.set_from_mins_maxs(mins_maxs)
+        return result
+
     def is_valid(self) -> bool:
         return BoundingVolumeBox._is_box3_valid(self._box)[0]
 
