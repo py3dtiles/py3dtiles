@@ -12,18 +12,30 @@ _TilerWorkerT = TypeVar("_TilerWorkerT", bound=TilerWorker[Any])
 
 class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
     """
-    This class is the superclass for all tilers in py3dtilers. It is responsible to instanciate the workers it will use and generate new tasks according to the current state of the conversion.
+    This class is the superclass for all tilers in py3dtilers. It is
+    responsible to instantiate the workers it will use and generate new tasks
+    according to the current state of the conversion.
 
     It will receive messages both from its workers and the main process (see `process_message`).
 
-    Its role is to organize tasks to be dispatched to the worker it has constructed and later, to write the tileset corresponding to the hierarchy of tiles it created.
+    Its role is to organize tasks to be dispatched to the worker it has
+    constructed and later, to write the tileset corresponding to the hierarchy
+    of tiles it created.
 
-    **Implementor notes**
+    **Implementation notice**:
 
-    - the `name` class attribute should be changed by suclasses.
-    - `__init__` should not read any files on the disk, `initialization` on the other hand is espected to gather metadata for input files.
+    - the `name` class attribute should be changed by each subclass
+    - `__init__` should not read any files on the disk, `initialize` on the
+      other hand is expected to gather metadata for input files
+    - as this class is generic over the type of SharedMetadata and TilerWorker,
+      subclassing these 2 classes is also needed when creating a Tiler
+    - modifications to the SharedMetadata instance will *not* be transmitted to other processes, initialize it in `initialization` and **don't mutate it afterwards**
+    - all mutable data and parameters **must** be passed as messages between tilers and workers. Workers will send messages by using ``yield`` (see :class:`py3dtiles.tilers.base_tiler.tiler_worker.TilerWorker`)
+    - the constructor of a Tiler is not expected to do any real work. The ``initialize`` method on the other hand, should gather metadata from input files
 
-    This class will organize the different tasks and their order of dispatch to the TilerWorker instances. When creating a subclass of Tiler, you're supposed to subclass SharedMetadata and TilerWorker as well.
+    This class will organize the different tasks and their order of dispatch to
+    the TilerWorker instances. When creating a subclass of Tiler, you're
+    supposed to subclass SharedMetadata and TilerWorker as well.
     """
 
     name = b""
@@ -63,30 +75,45 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
         Yields tasks to be sent to workers.
 
-        This methods will get called by the main convert function each time it wants new tasks to be fed to workers.
-        Implementors should each time returns the task that has the biggest priority.
+        This methods will get called by the main convert function each time it wants new tasks to be
+        fed to workers. Implementors should each time returns the task that has the biggest
+        priority.
 
+        py3dtiles will iterate until the returned iterator is exhausted before continuing the
+        process. It will call it as many times as needed during the execution. It is therefore not
+        necessary to generate all the tasks in one go.
 
+        Once this function returns an empty list and all the workers are idle, the conversion
+        process stops.
+
+        If generating the tasks is somewhat expensive, do return a Generator instead. Tasks will be
+        sent to workers as soon as they are yielded.
         """
 
     @abstractmethod
     def process_message(self, return_type: bytes, content: list[bytes]) -> None:
         """
-        Updates the state of the tiler in function of the return type and the returned data
+        This method is called with each message sent by workers. Its role is to process those
+        messages, to update the internal state of the tiler, so that new tasks or a tileset writing
+        could proceed.
         """
 
     @abstractmethod
     def write_tileset(self, use_process_pool: bool = True) -> None:
         """
-        Writes the tileset file once the binary data written
+        Writes the tileset file once the binary data are written.
 
-        :param use_process_pool: allow the use of a process pool. Process pools can cause issues in environment lacking shared memory.
+        This function will be called by convert once this tiler has stopped generating tasks and all
+        the workers are idle.
+
+        :param use_process_pool: allow the use of a process pool. Process pools can cause issues in
+        environment lacking shared memory.
         """
 
     def validate(self) -> None:
         """
         Checks if the state of the tiler or the binary data written is correct.
-        This method is called after the end of the conversion of this tiler (but before writing the_tileset). Overwrite this method if you wish to run some validation code for the generated tileset.
+        This method is called after the end of the conversion of this tiler (but before writing the tileset). Overwrite this method if you wish to run some validation code for the generated tileset.
         """
 
     def memory_control(self) -> None:
