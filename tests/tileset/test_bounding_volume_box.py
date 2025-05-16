@@ -25,6 +25,10 @@ def test_set_from_list(dummy_matrix: list[int]) -> None:
     box = bounding_volume_box._box
     assert_array_equal(box, np.array(dummy_matrix))  # type: ignore [arg-type]
 
+    with pytest.raises(ValueError):
+        m2 = np.array(dummy_matrix).reshape((3, 4))
+        bounding_volume_box.set_from_list(m2)
+
 
 def test_set_from_invalid_list(dummy_matrix: list[int]) -> None:
     bounding_volume_box = BoundingVolumeBox()
@@ -130,6 +134,10 @@ def test_translate(bounding_volume_box_sample: BoundingVolumeBox) -> None:
 def test_transform(
     dummy_matrix: list[int], bounding_volume_box_sample: BoundingVolumeBox
 ) -> None:
+    # error case
+    bounding_volume_box = BoundingVolumeBox()
+    with pytest.raises(AttributeError):
+        bounding_volume_box.transform(np.array(dummy_matrix))
 
     # Assert box hasn't change after transformation with identity matrix
     transformer = np.identity(4)
@@ -305,6 +313,10 @@ def test_get_half_size(
     bounding_volume_box_sample: BoundingVolumeBox,
     complex_bounding_volume_box: BoundingVolumeBox,
 ) -> None:
+    bbox = BoundingVolumeBox()
+    with pytest.raises(AttributeError):
+        bbox.get_half_size()
+
     bbox = BoundingVolumeBox.from_points([np.array([0, 0, 0]), np.array([1, 1, 1])])
     assert_array_equal(bbox.get_half_size(), [0.5, 0.5, 0.5])
 
