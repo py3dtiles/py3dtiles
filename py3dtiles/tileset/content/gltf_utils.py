@@ -101,6 +101,7 @@ class GltfMesh:
         batchids: npt.NDArray[np.uint32] | None = None,
         uvs: npt.NDArray[np.float32] | None = None,
         additional_attributes: list[GltfAttribute] | None = None,
+        properties: dict[str, Any] | None = None,
     ) -> None:
         """
         A data structure storing all information to create a glTF mesh's primitive.
@@ -137,6 +138,7 @@ class GltfMesh:
         self.additional_attributes: list[GltfAttribute] = (
             additional_attributes if additional_attributes is not None else []
         )
+        self.properties = properties
 
 
 def gltf_from_meshes(
@@ -256,7 +258,7 @@ def populate_gltf_from_mesh(
 
         gltf_binary_blob += array_blob
 
-    gltf_mesh = pygltflib.Mesh(name=mesh.name)
+    gltf_mesh = pygltflib.Mesh(name=mesh.name, extras=mesh.properties)
     for primitive in mesh.primitives:
 
         # deal with texture
