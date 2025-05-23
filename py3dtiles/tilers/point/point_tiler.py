@@ -193,6 +193,10 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             self.verbosity,
         )
 
+    def supports(self, file: Path) -> bool:
+        extension = file.suffix.lower()
+        return extension in READER_MAP
+
     def get_files_info(
         self,
         crs_in: Optional[CRS],
@@ -208,14 +212,8 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         extra_fields_dict: dict[str, ExtraFieldsDescription] = {}
         for file in self.files:
             extension = file.suffix.lower()
-            if extension in READER_MAP:
-                reader = READER_MAP[extension]
-            else:
-                raise ValueError(
-                    f"The file with {extension} extension can't be read, "
-                    f"the available extensions are: {READER_MAP.keys()}"
-                )
 
+            reader = READER_MAP[extension]
             file_info = reader.get_metadata(file, self.color_scale)
             extra_fields_by_name = {obj.name: obj for obj in file_info["extra_fields"]}
 

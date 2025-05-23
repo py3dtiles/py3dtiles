@@ -19,6 +19,7 @@ from py3dtiles.exceptions import (
     Py3dtilesException,
     SrsInMissingException,
     TilerException,
+    TilerNotFoundException,
     WorkerException,
 )
 from py3dtiles.tilers.base_tiler import Tiler
@@ -295,7 +296,15 @@ def convert(
         use_process_pool=use_process_pool,
         verbose=verbose,
     )
-    return converter.convert(paths, Path(outfolder), overwrite=overwrite)
+
+    try:
+        return converter.convert(paths, Path(outfolder), overwrite=overwrite)
+    except TilerNotFoundException:
+        print("ERROR: support not found for files", files)
+        print(
+            "Please check https://py3dtiles.org/v9.0.0/install.html#file-formats-support"
+        )
+        sys.exit(1)
 
 
 class Converter:
@@ -339,6 +348,23 @@ class Converter:
         self.benchmark = benchmark
         self.use_process_pool = use_process_pool
 
+    def _assign_file_to_tilers(self, files: list[Path]) -> dict[bytes, list[Path]]:
+        files_by_tiler_names: dict[bytes, list[Path]] = {}
+        tiler_not_found_files: list[Path] = []
+        for file in files:
+            for tiler in self.tilers:
+                if tiler.supports(file):
+                    if tiler.name not in files_by_tiler_names:
+                        files_by_tiler_names[tiler.name] = []
+                    files_by_tiler_names[tiler.name].append(file)
+                    break
+            else:
+                tiler_not_found_files.append(file)
+
+        if len(tiler_not_found_files) > 0:
+            raise TilerNotFoundException(tiler_not_found_files)
+        return files_by_tiler_names
+
     def convert(
         self,
         files: Union[Path, list[Path]],
@@ -362,13 +388,19 @@ class Converter:
 
         paths = [files] if isinstance(files, Path) else files
 
+        paths_by_tiler_name = self._assign_file_to_tilers(paths)
+
         worker_tilers: dict[bytes, TilerWorker[Any]] = {}
         for tiler in self.tilers:
             if tiler.name in worker_tilers:
                 raise TilerException("There are tilers with the same attribute name.")
 
             try:
-                tiler.initialization(paths, working_dir / str(tiler.name), out_folder)
+                tiler.initialization(
+                    paths_by_tiler_name[tiler.name],
+                    working_dir / str(tiler.name),
+                    out_folder,
+                )
             except Py3dtilesException as e:
                 shutil.rmtree(out_folder)
                 raise e

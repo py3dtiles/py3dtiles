@@ -2,6 +2,8 @@
 This module contains all the exceptions that py3dtiles generates. They all derive from :py:class:`Py3dtilesException`.
 """
 
+from pathlib import Path
+
 
 class Py3dtilesException(Exception):
     """
@@ -15,6 +17,17 @@ class TilerException(Py3dtilesException):
     """
     This exception will be thrown when there is an issue during a tiling task.
     """
+
+
+class TilerNotFoundException(Py3dtilesException):
+    """
+    Exception raised when the convert process cannot assign a file to a tiler
+    """
+
+    def __init__(self, files: list[Path]):
+        self.files = files
+        message = ", ".join([str(f) for f in self.files])
+        super().__init__(f"Cannot find tiler for the following files: {message}")
 
 
 class WorkerException(TilerException):

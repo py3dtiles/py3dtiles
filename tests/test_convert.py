@@ -2,6 +2,7 @@ import json
 import multiprocessing
 import os
 import shutil
+from collections.abc import Iterator
 from contextlib import nullcontext
 from pathlib import Path
 from time import sleep
@@ -11,13 +12,21 @@ from unittest.mock import patch
 import laspy
 import numpy as np
 import plyfile
+import zmq
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from pyproj import CRS
 from pytest import RaisesExc, mark, raises
 
-from py3dtiles.convert import convert
-from py3dtiles.exceptions import SrsInMissingException, SrsInMixinException
+from py3dtiles.convert import Converter, convert
+from py3dtiles.exceptions import (
+    SrsInMissingException,
+    SrsInMixinException,
+    TilerNotFoundException,
+)
 from py3dtiles.reader.ply_reader import create_plydata_with_renamed_property
+from py3dtiles.tilers.base_tiler import Tiler
+from py3dtiles.tilers.base_tiler.shared_metadata import SharedMetadata
+from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
 from py3dtiles.tileset import TileSet, number_of_points_in_tileset
 from py3dtiles.tileset.content import Pnts
 
@@ -861,7 +870,7 @@ def test_convert_export_folder_already_exists(
 
     # now, subsequent conversion will fail
     with raises(
-        FileExistsError, match=f"Folder '{tmp_dir}' already exists and is not empty."
+        FileExistsError, match=f"Folder '{ tmp_dir}' already exists and is not empty."
     ):
         convert(
             fixtures_dir / "simple.xyz",
@@ -884,7 +893,7 @@ def test_convert_export_folder_already_exists(
     tmp_dir.touch()
     with raises(
         FileExistsError,
-        match=f"'{tmp_dir}' already exists and is not a directory. Not deleting it.",
+        match=f"'{ tmp_dir}' already exists and is not a directory. Not deleting it.",
     ):
         convert(
             fixtures_dir / "simple.xyz",
@@ -1007,3 +1016,102 @@ def test_convert_crs_traditional_ordering(
     assert_array_almost_equal(
         tileset.root_tile.transform[:-1, 3], [12706441.9, 2544660, 530], decimal=0
     )
+
+
+class Metadata(SharedMetadata):
+    pass
+
+
+class Worker(TilerWorker[Metadata]):
+    def execute(
+        self, skt: zmq.Socket[bytes], command: bytes, content: list[bytes]
+    ) -> None:
+        skt.send_multipart([b"WORK"])
+
+
+class Tiler1(Tiler[Metadata, Worker]):
+    name = b"tiler1"
+
+    def initialization(
+        self, files: list[Path], working_dir: Path, out_folder: Path
+    ) -> None:
+        self.files = files
+        self.get_tasks_called = False
+        self.write_tileset_called = False
+
+    def supports(self, file: Path) -> bool:
+        return file.suffix == ".1"
+
+    def get_tasks(self, startup: float) -> Iterator[tuple[bytes, list[bytes]]]:
+        if not self.get_tasks_called:
+            yield (b"command", [b"args"])
+            self.get_tasks_called = True
+
+    def process_message(self, return_type: bytes, content: list[bytes]) -> None:
+        print(return_type, content)
+
+    def get_worker(self) -> Worker:
+        return Worker(Metadata())
+
+    def write_tileset(self, use_process_pool: bool = True) -> None:
+        self.write_tileset_called = True
+
+
+class Tiler2(Tiler[Metadata, Worker]):
+    name = b"tiler2"
+
+    def initialization(
+        self, files: list[Path], working_dir: Path, out_folder: Path
+    ) -> None:
+        self.files = files
+        self.get_tasks_called = False
+        self.write_tileset_called = False
+
+    def supports(self, file: Path) -> bool:
+        return file.suffix == ".2"
+
+    def get_tasks(self, startup: float) -> Iterator[tuple[bytes, list[bytes]]]:
+        if not self.get_tasks_called:
+            yield (b"command", [b"args"])
+            self.get_tasks_called = True
+
+    def process_message(self, return_type: bytes, content: list[bytes]) -> None:
+        print(return_type, content)
+
+    def get_worker(self) -> Worker:
+        return Worker(Metadata())
+
+    def write_tileset(self, use_process_pool: bool = True) -> None:
+        self.write_tileset_called = True
+
+
+def test_assign_file_to_tilers() -> None:
+    converter = Converter([Tiler1(), Tiler2()])
+    assert converter._assign_file_to_tilers(
+        [Path("file.1"), Path("file.2"), Path("file2.2")]
+    ) == {b"tiler1": [Path("file.1")], b"tiler2": [Path("file.2"), Path("file2.2")]}
+
+    with raises(TilerNotFoundException):
+        converter._assign_file_to_tilers(
+            [Path("file.1"), Path("file.2"), Path("file2.2"), Path("file.3")]
+        )
+
+
+def test_convert_custom_tilers(tmp_dir: Path) -> None:
+    tiler1 = Tiler1()
+    converter = Converter([tiler1])
+
+    converter.convert([Path("files.1")], tmp_dir / "custom_tilers")
+    with raises(TilerNotFoundException):
+        converter.convert([Path("files.2")], tmp_dir / "custom_tilers", overwrite=True)
+
+    tiler2 = Tiler2()
+    converter = Converter([tiler1, tiler2])
+    converter.convert(
+        [Path("files.2"), Path("files.1")], tmp_dir / "custom_tilers", overwrite=True
+    )
+
+    assert tiler1.files == [Path("files.1")]
+    assert tiler1.write_tileset_called
+    assert tiler2.files == [Path("files.2")]
+    assert tiler2.write_tileset_called

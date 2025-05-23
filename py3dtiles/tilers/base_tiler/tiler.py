@@ -12,17 +12,34 @@ _TilerWorkerT = TypeVar("_TilerWorkerT", bound=TilerWorker[Any])
 
 class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
     """
-    Tiler abstract class, this list of attributes and methods is used by convert.
-    This class will organize the different tasks and their order of dispatch to the TilerWorker instances.
+    This class is the superclass for all tilers in py3dtilers. It is responsible to instanciate the workers it will use and generate new tasks according to the current state of the conversion.
 
-    You must set a name as class attribute and overwrite all abstract methods.
+    It will receive messages both from its workers and the main process (see `process_message`).
 
-    Some methods are not required, overwrite them only if needed (like `validate_binary_data` or `memory_control`)
+    Its role is to organize tasks to be dispatched to the worker it has constructed and later, to write the tileset corresponding to the hierarchy of tiles it created.
+
+    **Implementor notes**
+
+    - the `name` class attribute should be changed by suclasses.
+    - `__init__` should not read any files on the disk, `initialization` on the other hand is espected to gather metadata for input files.
+
+    This class will organize the different tasks and their order of dispatch to the TilerWorker instances. When creating a subclass of Tiler, you're supposed to subclass SharedMetadata and TilerWorker as well.
     """
 
     name = b""
     shared_metadata: _SharedMetadataT
-    files: list[Path]
+
+    @abstractmethod
+    def supports(self, file: Path) -> bool:
+        """
+        This function tells the main process if this tiler supports this file or not.
+
+        The main process will use the first supporting tiler it finds for each file.
+
+        Implementation should not require to read the whole file to determine
+        if this tiler supports it. In other word, the execution time should be
+        a constant regardless of the file size.
+        """
 
     @abstractmethod
     def initialization(
