@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterator, Sequence
 from typing import Generic, TypeVar
-
-import zmq
 
 from py3dtiles.tilers.base_tiler.shared_metadata import SharedMetadata
 
@@ -15,8 +14,16 @@ class TilerWorker(ABC, Generic[_SharedMetadataT]):
 
     @abstractmethod
     def execute(
-        self, skt: zmq.Socket[bytes], command: bytes, content: list[bytes]
-    ) -> None:
+        self, command: bytes, content: list[bytes]
+    ) -> Iterator[Sequence[bytes]]:
         """
-        Executes a command sent by the tiler. The method returns directly the response with the skt variable.
+        Executes a command sent by the tiler. The method should yield all the
+        messages that it wants to be sent back to the tiler or the main
+        process.
+
+        Implementing classes can use any message format they like provided it
+        is a Sequence of bytes. The only restriction is that the first element
+        of the sequence should **not** be a value in the :class:`py3dtiles.tilers.base_tiler.message_type.WorkerMessageType`
+        enum, as  those are used internally by the convert process to manage
+        the lifecycles of the different entities.
         """

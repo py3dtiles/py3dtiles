@@ -2,7 +2,7 @@ import json
 import multiprocessing
 import os
 import shutil
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import nullcontext
 from pathlib import Path
 from time import sleep
@@ -12,7 +12,6 @@ from unittest.mock import patch
 import laspy
 import numpy as np
 import plyfile
-import zmq
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from pyproj import CRS
 from pytest import RaisesExc, mark, raises
@@ -1024,9 +1023,9 @@ class Metadata(SharedMetadata):
 
 class Worker(TilerWorker[Metadata]):
     def execute(
-        self, skt: zmq.Socket[bytes], command: bytes, content: list[bytes]
-    ) -> None:
-        skt.send_multipart([b"WORK"])
+        self, command: bytes, content: list[bytes]
+    ) -> Iterator[Sequence[bytes]]:
+        yield [b"WORK"]
 
 
 class Tiler1(Tiler[Metadata, Worker]):

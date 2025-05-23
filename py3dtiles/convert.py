@@ -105,7 +105,10 @@ class _WorkerDispatcher:
                 if command == ManagerMessage.SHUTDOWN.value:
                     break  # ack
                 else:
-                    self.worker_tilers[tiler_name].execute(self.skt, command, content)
+                    for answer in self.worker_tilers[tiler_name].execute(
+                        command, content
+                    ):
+                        self.skt.send_multipart(answer, copy=False)
 
                 # notify we're idle
                 self.skt.send_multipart([WorkerMessageType.IDLE.value])
