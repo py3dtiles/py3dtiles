@@ -49,7 +49,7 @@ def is_ancestor(node_name: bytes, ancestor: bytes) -> bool:
 
 
 def is_ancestor_in_list(
-    node_name: bytes, ancestors: Union[list[bytes], dict[bytes, Any]]
+    node_name: bytes, ancestors: Union[set[bytes], dict[bytes, Any]]
 ) -> bool:
     return any(
         not ancestor or is_ancestor(node_name, ancestor) for ancestor in ancestors
@@ -59,8 +59,8 @@ def is_ancestor_in_list(
 def can_pnts_be_written(
     node_name: bytes,
     finished_node: bytes,
-    input_nodes: Union[list[bytes], dict[bytes, Any]],
-    active_nodes: Union[list[bytes], dict[bytes, Any]],
+    input_nodes: dict[bytes, Any],
+    active_nodes: set[bytes],
 ) -> bool:
     return (
         is_ancestor(node_name, finished_node)
@@ -145,13 +145,11 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
     def get_worker(self) -> PointTilerWorker:
         return PointTilerWorker(self.shared_metadata)
 
-    def get_tasks(
-        self, startup: float
-    ) -> Generator[tuple[bytes, list[bytes]], None, None]:
+    def get_tasks(self) -> Generator[tuple[bytes, list[bytes]], None, None]:
         while len(self.state.pnts_to_writing) > 0:
             yield self.send_pnts_to_write()
 
-        yield from self.send_points_to_process(time.time() - startup)
+        yield from self.send_points_to_process()
 
         while self.state.can_add_reading_jobs():
             yield self.send_file_to_read()
@@ -390,7 +388,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         ]
 
     def send_points_to_process(
-        self, now: float
+        self,
     ) -> Generator[tuple[bytes, list[bytes]], None, None]:
         potentials = sorted(
             # a key (=task) can be in node_to_process and processing_nodes if the node isn't completely processed
@@ -418,11 +416,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 del potentials[idx]
 
                 del self.state.node_to_process[name]
-                self.state.processing_nodes[name] = (
-                    len(tasks),
-                    point_count,
-                    now,
-                )
+                self.state.processing_nodes.add(name)
 
                 if name in self.state.waiting_writing_nodes:
                     self.state.waiting_writing_nodes.pop(
@@ -444,23 +438,18 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
         return PointManagerMessage.WRITE_PNTS.value, [node_name, data]
 
-    def process_message(self, return_type: bytes, result: list[bytes]) -> bool:
-        at_least_one_job_ended = False
-
+    def process_message(self, return_type: bytes, result: list[bytes]) -> None:
         if return_type == PointWorkerMessageType.READ.value:
             self.state.number_of_reading_jobs -= 1
-            at_least_one_job_ended = True
 
         elif return_type == PointWorkerMessageType.PROCESSED.value:
             content = pickle.loads(result[-1])
             self.state.processed_points += content["total"]
             self.state.points_in_progress -= content["total"]
 
-            del self.state.processing_nodes[content["name"]]
+            self.state.processing_nodes.remove(content["name"])
 
             self.dispatch_processed_nodes(content)
-
-            at_least_one_job_ended = True
 
         elif return_type == PointWorkerMessageType.PNTS_WRITTEN.value:
             self.state.points_in_pnts += struct.unpack(">I", result[0])[0]
@@ -475,8 +464,6 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
         else:
             raise NotImplementedError(f"The command {return_type!r} is not implemented")
-
-        return at_least_one_job_ended
 
     def dispatch_processed_nodes(self, content: dict[str, bytes]) -> None:
         if not content["name"]:
@@ -518,7 +505,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 self.state.pnts_to_writing.append(c)
             self.state.waiting_writing_nodes.clear()
 
-    def validate_binary_data(self) -> None:
+    def validate(self) -> None:
         if self.state.points_in_pnts != self.files_info["point_count"]:
             raise ValueError(
                 "Invalid point count in the written .pnts"
@@ -637,66 +624,6 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 round(time.time() - startup, 1),
             )
         )
-
-    def print_debug(
-        self, now: float, number_of_jobs: int, number_of_idle_clients: int
-    ) -> None:
-        if self.verbosity >= 3:
-            print("{:^16}|{:^8}|{:^8}".format("Name", "Points", "Seconds"))
-            for name, v in self.state.processing_nodes.items():
-                print(
-                    "{:^16}|{:^8}|{:^8}".format(
-                        "{} ({})".format(name.decode("ascii"), v[0]),
-                        v[1],
-                        round(now - v[2], 1),
-                    )
-                )
-            print("")
-            print("Pending:")
-            print(
-                "  - root: {} / {}".format(
-                    len(self.state.point_cloud_file_parts),
-                    self.state.initial_portion_count,
-                )
-            )
-            print(
-                "  - other: {} files for {} nodes".format(
-                    sum([len(f[0]) for f in self.state.node_to_process.values()]),
-                    len(self.state.node_to_process),
-                )
-            )
-            print("")
-
-        elif self.verbosity >= 2:
-            self.state.print_debug()
-
-        if self.verbosity >= 1:
-            print(
-                "{} % points in {} sec [{} tasks, {} nodes, {} wip]".format(
-                    round(
-                        100
-                        * self.state.processed_points
-                        / self.files_info["point_count"],
-                        2,
-                    ),
-                    round(now, 1),
-                    number_of_jobs - number_of_idle_clients,
-                    len(self.state.processing_nodes),
-                    self.state.points_in_progress,
-                )
-            )
-
-        elif self.verbosity >= 0:
-            percent = round(
-                100 * self.state.processed_points / self.files_info["point_count"],
-                2,
-            )
-            time_left = (100 - percent) * now / (percent + 0.001)
-            print(
-                f"\r{percent:>6} % in {round(now)} sec [est. time left: {round(time_left)} sec]      ",
-                end="",
-                flush=True,
-            )
 
     def memory_control(self) -> None:
         self.node_store.control_memory_usage(self.cache_size, self.verbosity)

@@ -421,14 +421,11 @@ class Converter:
         try:
             for tiler in self.tilers:
                 while True:
-                    now = time.time() - startup
-
-                    at_least_one_job_ended = False
                     if (
                         not self.zmq_manager.can_queue_more_jobs()
                         or self.zmq_manager.socket.poll(timeout=0, flags=zmq.POLLIN)
                     ):
-                        at_least_one_job_ended = self._process_message(tiler)
+                        self._process_message(tiler)
 
                     # we wait for all processes/threads to register
                     # if we don't there are tricky cases where an exception fires in a worker before all the workers registered, which means that not all workers will receive the shutdown signal
@@ -437,7 +434,7 @@ class Converter:
                         continue
 
                     if self.zmq_manager.can_queue_more_jobs():
-                        for command, data in tiler.get_tasks(startup):
+                        for command, data in tiler.get_tasks():
                             self.zmq_manager.send_to_process(
                                 [tiler.name, command] + data
                             )
@@ -448,14 +445,9 @@ class Converter:
                     if self.zmq_manager.are_all_processes_idle():
                         break
 
-                    if at_least_one_job_ended:
-                        tiler.print_debug(
-                            now, self.jobs, len(self.zmq_manager.idle_clients)
-                        )
-
                     tiler.memory_control()
 
-                tiler.validate_binary_data()
+                tiler.validate()
 
                 if self.verbose >= 1:
                     print("Writing 3dtiles")
@@ -480,9 +472,7 @@ class Converter:
 
             self.zmq_manager.context.destroy()
 
-    def _process_message(self, tiler: Tiler[Any, Any]) -> bool:
-        at_least_one_job_ended = False
-
+    def _process_message(self, tiler: Tiler[Any, Any]) -> None:
         # Blocking read but it's fine because either all our child processes are busy
         # or we know that there's something to read (zmq.POLLIN)
         start = time.time()
@@ -509,9 +499,7 @@ class Converter:
             )
 
         else:
-            at_least_one_job_ended = tiler.process_message(return_type, content)
-
-        return at_least_one_job_ended
+            tiler.process_message(return_type, content)
 
 
 def _init_parser(

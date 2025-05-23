@@ -59,7 +59,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def get_tasks(self, startup: float) -> Iterator[tuple[bytes, list[bytes]]]:
+    def get_tasks(self) -> Iterator[tuple[bytes, list[bytes]]]:
         """
         Yields tasks to be sent to workers.
 
@@ -70,7 +70,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def process_message(self, return_type: bytes, content: list[bytes]) -> bool:
+    def process_message(self, return_type: bytes, content: list[bytes]) -> None:
         """
         Updates the state of the tiler in function of the return type and the returned data
         """
@@ -83,10 +83,10 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         :param use_process_pool: allow the use of a process pool. Process pools can cause issues in environment lacking shared memory.
         """
 
-    def validate_binary_data(self) -> None:
+    def validate(self) -> None:
         """
         Checks if the state of the tiler or the binary data written is correct.
-        This method is called after the end of the conversion of this tiler (but before write_tileset)
+        This method is called after the end of the conversion of this tiler (but before writing the_tileset). Overwrite this method if you wish to run some validation code for the generated tileset.
         """
 
     def memory_control(self) -> None:
@@ -95,21 +95,13 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         Checks if there is no too much memory used by the tiler and do actions in function
         """
 
-    @abstractmethod
     def print_summary(self) -> None:
         """
         Prints the summary of the tiler before the start of the conversion.
         """
+        ...
 
     def benchmark(self, benchmark_id: str, startup: float) -> None:
         """
         Prints benchmark info at the end of the conversion of this tiler and the writing of the tileset.
-        """
-
-    @abstractmethod
-    def print_debug(
-        self, now: float, number_of_jobs: int, number_of_idle_clients: int
-    ) -> None:
-        """
-        Prints info about the progression of the conversion. Called everytime a tiler worker task is finished.
         """

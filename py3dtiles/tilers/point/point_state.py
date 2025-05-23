@@ -26,7 +26,7 @@ class PointState:
         # when a node is sent to a process, the item moves to processing_nodes
         # the structure is different. The key remains the node name. But the value is : (len(tasks), point_count, now)
         # these values is for logging
-        self.processing_nodes: dict[bytes, tuple[int, int, float]] = {}
+        self.processing_nodes: set[bytes] = set()
         # when processing is finished, move the tile name in processed_nodes
         # since the content is at this stage, stored in the node_store,
         # just keep the name of the node.
@@ -59,31 +59,4 @@ class PointState:
             self.point_cloud_file_parts
             and self.points_in_progress < self.max_point_in_progress
             and self.number_of_reading_jobs < self.max_reading_jobs
-        )
-
-    def print_debug(self) -> None:
-        print("{:^16}|{:^8}|{:^8}|{:^8}".format("Step", "Input", "Active", "Inactive"))
-        print(
-            "{:^16}|{:^8}|{:^8}|{:^8}".format(
-                "Reader",
-                len(self.point_cloud_file_parts),
-                self.number_of_reading_jobs,
-                "",
-            )
-        )
-        print(
-            "{:^16}|{:^8}|{:^8}|{:^8}".format(
-                "Node process",
-                len(self.node_to_process),
-                len(self.processing_nodes),
-                len(self.waiting_writing_nodes),
-            )
-        )
-        print(
-            "{:^16}|{:^8}|{:^8}|{:^8}".format(
-                "Pnts writer",
-                len(self.pnts_to_writing),
-                self.number_of_writing_jobs,
-                "",
-            )
         )

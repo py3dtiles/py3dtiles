@@ -1042,7 +1042,7 @@ class Tiler1(Tiler[Metadata, Worker]):
     def supports(self, file: Path) -> bool:
         return file.suffix == ".1"
 
-    def get_tasks(self, startup: float) -> Iterator[tuple[bytes, list[bytes]]]:
+    def get_tasks(self) -> Iterator[tuple[bytes, list[bytes]]]:
         if not self.get_tasks_called:
             yield (b"command", [b"args"])
             self.get_tasks_called = True
@@ -1070,7 +1070,7 @@ class Tiler2(Tiler[Metadata, Worker]):
     def supports(self, file: Path) -> bool:
         return file.suffix == ".2"
 
-    def get_tasks(self, startup: float) -> Iterator[tuple[bytes, list[bytes]]]:
+    def get_tasks(self) -> Iterator[tuple[bytes, list[bytes]]]:
         if not self.get_tasks_called:
             yield (b"command", [b"args"])
             self.get_tasks_called = True
