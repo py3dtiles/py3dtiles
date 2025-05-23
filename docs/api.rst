@@ -530,9 +530,9 @@ Instead of using the `convert` function, create an instance of the :class:`py3dt
     >>>
     >>> # For demo purpose, we'll inherit PointTiler
     >>> class MyPointTiler(PointTiler):
-    ...     def initialization(self, *args, **kwargs) -> None:
+    ...     def initialize(self, *args, **kwargs) -> None:
     ...         print("Custom initialization")
-    ...         super().initialization(*args, **kwargs)
+    ...         super().initialize(*args, **kwargs)
     >>>
     >>> my_point_tiler = MyPointTiler(verbosity=-1)
     >>> converter = Converter([my_point_tiler])

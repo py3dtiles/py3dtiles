@@ -399,7 +399,7 @@ class Converter:
                 raise TilerException("There are tilers with the same attribute name.")
 
             try:
-                tiler.initialization(
+                tiler.initialize(
                     paths_by_tiler_name[tiler.name],
                     working_dir / str(tiler.name),
                     out_folder,

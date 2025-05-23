@@ -1031,7 +1031,7 @@ class Worker(TilerWorker[Metadata]):
 class Tiler1(Tiler[Metadata, Worker]):
     name = b"tiler1"
 
-    def initialization(
+    def initialize(
         self, files: list[Path], working_dir: Path, out_folder: Path
     ) -> None:
         self.files = files
@@ -1059,7 +1059,7 @@ class Tiler1(Tiler[Metadata, Worker]):
 class Tiler2(Tiler[Metadata, Worker]):
     name = b"tiler2"
 
-    def initialization(
+    def initialize(
         self, files: list[Path], working_dir: Path, out_folder: Path
     ) -> None:
         self.files = files

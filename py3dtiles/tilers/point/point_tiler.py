@@ -154,7 +154,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         while self.state.can_add_reading_jobs():
             yield self.send_file_to_read()
 
-    def initialization(
+    def initialize(
         self, files: list[Path], working_dir: Path, out_folder: Path
     ) -> None:
         self.files = files

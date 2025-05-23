@@ -29,7 +29,9 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
       other hand is expected to gather metadata for input files
     - as this class is generic over the type of SharedMetadata and TilerWorker,
       subclassing these 2 classes is also needed when creating a Tiler
-    - modifications to the SharedMetadata instance will *not* be transmitted to other processes, initialize it in `initialization` and **don't mutate it afterwards**
+    - modifications to the SharedMetadata instance will *not* be transmitted to
+      other processes, initialize it in `initialize` and **don't mutate it
+      afterwards**
     - all mutable data and parameters **must** be passed as messages between tilers and workers. Workers will send messages by using ``yield`` (see :class:`py3dtiles.tilers.base_tiler.tiler_worker.TilerWorker`)
     - the constructor of a Tiler is not expected to do any real work. The ``initialize`` method on the other hand, should gather metadata from input files
 
@@ -54,14 +56,19 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def initialization(
+    def initialize(
         self, files: list[Path], working_dir: Path, out_folder: Path
     ) -> None:
         """
-        The __init__ method must only set attributes without any action.
-        It is in this method that this work must be done (and the initialization of shared_metadata).
+        This method will be called first by convert to initialize the conversion
+        process. Tilers will receive all the paths informations as argument to
+        this method. Only files supported by this tiler will be in the files
+        argument.  Tilers are expected to gather metadata from those input
+        files so that subsequent call to `get_tasks` can generate some
+        conversion work to do by workers.
 
-        The method will be called before all others.
+        This method is probably a good place to init the SharedMetadata
+        subclass instance as well.
         """
 
     @abstractmethod
