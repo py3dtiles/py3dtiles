@@ -438,11 +438,11 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
         return PointManagerMessage.WRITE_PNTS.value, [node_name, data]
 
-    def process_message(self, return_type: bytes, result: list[bytes]) -> None:
-        if return_type == PointWorkerMessageType.READ.value:
+    def process_message(self, message_type: bytes, result: list[bytes]) -> None:
+        if message_type == PointWorkerMessageType.READ.value:
             self.state.number_of_reading_jobs -= 1
 
-        elif return_type == PointWorkerMessageType.PROCESSED.value:
+        elif message_type == PointWorkerMessageType.PROCESSED.value:
             content = pickle.loads(result[-1])
             self.state.processed_points += content["total"]
             self.state.points_in_progress -= content["total"]
@@ -451,11 +451,11 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
             self.dispatch_processed_nodes(content)
 
-        elif return_type == PointWorkerMessageType.PNTS_WRITTEN.value:
+        elif message_type == PointWorkerMessageType.PNTS_WRITTEN.value:
             self.state.points_in_pnts += struct.unpack(">I", result[0])[0]
             self.state.number_of_writing_jobs -= 1
 
-        elif return_type == PointWorkerMessageType.NEW_TASK.value:
+        elif message_type == PointWorkerMessageType.NEW_TASK.value:
             self.state.add_tasks_to_process(
                 node_name=result[0],
                 data=result[1],
@@ -463,7 +463,9 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             )
 
         else:
-            raise NotImplementedError(f"The command {return_type!r} is not implemented")
+            raise NotImplementedError(
+                f"The command {message_type!r} is not implemented"
+            )
 
     def dispatch_processed_nodes(self, content: dict[str, bytes]) -> None:
         if not content["name"]:

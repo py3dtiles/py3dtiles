@@ -98,7 +98,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def process_message(self, return_type: bytes, content: list[bytes]) -> None:
+    def process_message(self, message_type: bytes, content: list[bytes]) -> None:
         """
         This method is called with each message sent by workers. Its role is to process those
         messages, to update the internal state of the tiler, so that new tasks or a tileset writing

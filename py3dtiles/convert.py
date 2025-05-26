@@ -482,27 +482,27 @@ class Converter:
         message = self.zmq_manager.socket.recv_multipart()
 
         client_id = message[0]
-        return_type = message[1]
+        message_type = message[1]
         content = message[2:]
 
-        if return_type == WorkerMessageType.REGISTER.value:
+        if message_type == WorkerMessageType.REGISTER.value:
             self.zmq_manager.register_client(client_id)
-        elif return_type == WorkerMessageType.IDLE.value:
+        elif message_type == WorkerMessageType.IDLE.value:
             self.zmq_manager.add_idle_client(client_id)
 
             if not self.zmq_manager.can_queue_more_jobs():
                 self.zmq_manager.time_waiting_an_idle_process += time.time() - start
 
-        elif return_type == WorkerMessageType.HALTED.value:
+        elif message_type == WorkerMessageType.HALTED.value:
             self.zmq_manager.number_processes_killed += 1
 
-        elif return_type == WorkerMessageType.ERROR.value:
+        elif message_type == WorkerMessageType.ERROR.value:
             raise WorkerException(
                 f"An exception occurred in a worker: {content[0].decode()}"
             )
 
         else:
-            tiler.process_message(return_type, content)
+            tiler.process_message(message_type, content)
 
 
 def _init_parser(

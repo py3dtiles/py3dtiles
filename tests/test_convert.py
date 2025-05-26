@@ -1046,8 +1046,8 @@ class Tiler1(Tiler[Metadata, Worker]):
             yield (b"command", [b"args"])
             self.get_tasks_called = True
 
-    def process_message(self, return_type: bytes, content: list[bytes]) -> None:
-        print(return_type, content)
+    def process_message(self, message_type: bytes, content: list[bytes]) -> None:
+        print(message_type, content)
 
     def get_worker(self) -> Worker:
         return Worker(Metadata())
@@ -1074,8 +1074,8 @@ class Tiler2(Tiler[Metadata, Worker]):
             yield (b"command", [b"args"])
             self.get_tasks_called = True
 
-    def process_message(self, return_type: bytes, content: list[bytes]) -> None:
-        print(return_type, content)
+    def process_message(self, message_type: bytes, content: list[bytes]) -> None:
+        print(message_type, content)
 
     def get_worker(self) -> Worker:
         return Worker(Metadata())
