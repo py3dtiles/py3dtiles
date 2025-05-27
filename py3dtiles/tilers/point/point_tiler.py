@@ -358,6 +358,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
     def print_summary(self) -> None:
         print("Summary:")
+        print(f"  - files to process: {self.files}")
         print("  - points to process: {}".format(self.files_info["point_count"]))
         print(f"  - offset to use: {self.avg_min}")
         print(f"  - root spacing: {self.root_spacing / self.root_scale[0]}")
@@ -514,7 +515,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 + f"(expected: {self.files_info['point_count']}, was: {self.state.points_in_pnts})"
             )
 
-    def write_tileset(self, use_process_pool: bool = True) -> None:
+    def get_tileset(self, use_process_pool: bool = True) -> TileSet:
         # compute tile transform matrix
         transform = np.linalg.inv(self.rotation_matrix)
         transform = np.dot(transform, make_scale_matrix(1.0 / self.root_scale[0]))
@@ -615,7 +616,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         )
         tileset = TileSet(geometric_error=geometric_error)
         tileset.root_tile = root_tile
-        tileset.write_as_json(self.out_folder / "tileset.json")
+        return tileset
 
     def benchmark(self, benchmark_id: str, startup: float) -> None:
         print(

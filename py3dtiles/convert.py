@@ -22,6 +22,7 @@ from py3dtiles.exceptions import (
     TilerNotFoundException,
     WorkerException,
 )
+from py3dtiles.merger import merge_from_files
 from py3dtiles.tilers.base_tiler import Tiler
 from py3dtiles.tilers.base_tiler.message_type import ManagerMessage, WorkerMessageType
 from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
@@ -428,6 +429,7 @@ class Converter:
         startup: float = time.time()
 
         try:
+            tileset_paths = []
             for tiler in self.tilers:
                 if tiler.name not in paths_by_tiler_name:
                     continue
@@ -464,8 +466,12 @@ class Converter:
                 if self.verbose >= 1:
                     print("Writing 3dtiles")
 
-                tiler.write_tileset(use_process_pool=self.use_process_pool)
-                shutil.rmtree(working_dir / str(tiler.name), ignore_errors=True)
+                tiler_name_str = tiler.name.decode("utf-8")
+                tileset_path = out_folder / f"tileset_{tiler_name_str}.json"
+                tileset_paths.append(tileset_path)
+                tileset = tiler.get_tileset(use_process_pool=self.use_process_pool)
+                with tileset_path.open("w") as f:
+                    f.write(tileset.to_json())
 
                 if self.verbose >= 1:
                     print(f"Tiler {tiler.name!r} done")
@@ -473,9 +479,18 @@ class Converter:
                 if self.benchmark:
                     tiler.benchmark(self.benchmark, startup)
 
+            if len(tileset_paths) == 1:
+                # only one tileset, use that
+                tileset_paths[0].rename(out_folder / "tileset.json")
+            else:
+                if self.verbose >= 1:
+                    print("Merging tilesets")
+                merge_from_files(tileset_paths, out_folder / "tileset.json")
+
         finally:
             self.zmq_manager.shutdown_all_processes()
             self.zmq_manager.join_all_processes()
+            shutil.rmtree(working_dir, ignore_errors=True)
 
             if self.verbose >= 1:
                 print(

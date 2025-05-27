@@ -3,6 +3,8 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
+from py3dtiles.tileset.tileset import TileSet
+
 from .shared_metadata import SharedMetadata
 from .tiler_worker import TilerWorker
 
@@ -106,11 +108,11 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def write_tileset(self, use_process_pool: bool = True) -> None:
+    def get_tileset(self, use_process_pool: bool = True) -> TileSet:
         """
-        Writes the tileset file once the binary data are written.
+        Get the tileset file once the binary data are written.
 
-        This function will be called by convert once this tiler has stopped generating tasks and all
+        This function will be called once by convert after this tiler has stopped generating tasks and all
         the workers are idle.
 
         :param use_process_pool: allow the use of a process pool. Process pools can cause issues in

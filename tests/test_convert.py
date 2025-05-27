@@ -27,6 +27,7 @@ from py3dtiles.tilers.base_tiler import Tiler
 from py3dtiles.tilers.base_tiler.shared_metadata import SharedMetadata
 from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
 from py3dtiles.tileset import TileSet, number_of_points_in_tileset
+from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content import Pnts
 
 
@@ -1036,7 +1037,6 @@ class Tiler1(Tiler[Metadata, Worker]):
     ) -> None:
         self.files = files
         self.get_tasks_called = False
-        self.write_tileset_called = False
 
     def supports(self, file: Path) -> bool:
         return file.suffix == ".1"
@@ -1052,8 +1052,12 @@ class Tiler1(Tiler[Metadata, Worker]):
     def get_worker(self) -> Worker:
         return Worker(Metadata())
 
-    def write_tileset(self, use_process_pool: bool = True) -> None:
-        self.write_tileset_called = True
+    def get_tileset(self, use_process_pool: bool = True) -> TileSet:
+        tileset = TileSet()
+        tileset.root_tile.bounding_volume = BoundingVolumeBox.from_points(
+            [np.array([0, 0, 0]), np.array([1, 1, 1])]
+        )
+        return tileset
 
 
 class Tiler2(Tiler[Metadata, Worker]):
@@ -1064,7 +1068,6 @@ class Tiler2(Tiler[Metadata, Worker]):
     ) -> None:
         self.files = files
         self.get_tasks_called = False
-        self.write_tileset_called = False
 
     def supports(self, file: Path) -> bool:
         return file.suffix == ".2"
@@ -1080,8 +1083,12 @@ class Tiler2(Tiler[Metadata, Worker]):
     def get_worker(self) -> Worker:
         return Worker(Metadata())
 
-    def write_tileset(self, use_process_pool: bool = True) -> None:
-        self.write_tileset_called = True
+    def get_tileset(self, use_process_pool: bool = True) -> TileSet:
+        tileset = TileSet()
+        tileset.root_tile.bounding_volume = BoundingVolumeBox.from_points(
+            [np.array([0, 0, 0]), np.array([2, 2, 2])]
+        )
+        return tileset
 
 
 def test_assign_file_to_tilers() -> None:
@@ -1111,6 +1118,4 @@ def test_convert_custom_tilers(tmp_dir: Path) -> None:
     )
 
     assert tiler1.files == [Path("files.1")]
-    assert tiler1.write_tileset_called
     assert tiler2.files == [Path("files.2")]
-    assert tiler2.write_tileset_called
