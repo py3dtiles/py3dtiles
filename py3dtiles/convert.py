@@ -395,6 +395,10 @@ class Converter:
 
         worker_tilers: dict[bytes, TilerWorker[Any]] = {}
         for tiler in self.tilers:
+            # check if at least one file would use that tiler
+            if tiler.name not in paths_by_tiler_name:
+                continue
+
             if tiler.name in worker_tilers:
                 raise TilerException("There are tilers with the same attribute name.")
 
@@ -412,6 +416,8 @@ class Converter:
 
         if self.verbose >= 1:
             for tiler in self.tilers:
+                if tiler.name not in paths_by_tiler_name:
+                    continue
                 tiler.print_summary()
 
         self.zmq_manager = _ZmqManager(
@@ -423,6 +429,9 @@ class Converter:
 
         try:
             for tiler in self.tilers:
+                if tiler.name not in paths_by_tiler_name:
+                    continue
+
                 while True:
                     if (
                         not self.zmq_manager.can_queue_more_jobs()
