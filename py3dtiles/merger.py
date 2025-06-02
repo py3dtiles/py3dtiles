@@ -290,6 +290,12 @@ def merge_with_pnts_content(
     return tileset
 
 
+def _is_tileset_pnts(tileset: TileSet, tileset_path: Path) -> bool:
+    return tileset.root_tile.content_uri is not None and isinstance(
+        tileset.root_tile.get_or_fetch_content(tileset_path.parent), Pnts
+    )
+
+
 def merge_from_files(
     tileset_paths: list[Path],
     output_tileset_path: Path,
@@ -311,10 +317,8 @@ def merge_from_files(
     for path in tileset_paths:
         tilesets.append(TileSet.from_file(path))
 
-    not_only_pnts = force_universal_merger or any(
-        not isinstance(
-            tileset.root_tile.get_or_fetch_content(tileset_path.parent), Pnts
-        )
+    can_use_pnts_merger = not force_universal_merger and all(
+        _is_tileset_pnts(tileset, tileset_path)
         for tileset_path, tileset in zip(tileset_paths, tilesets)
     )
 
@@ -323,10 +327,10 @@ def merge_from_files(
         for tileset, path in zip(tilesets, tileset_paths)
     }
 
-    if not_only_pnts:
-        tileset = merge(tilesets, relative_tileset_paths)
-    else:
+    if can_use_pnts_merger:
         tileset = merge_with_pnts_content(tilesets, relative_tileset_paths)
+    else:
+        tileset = merge(tilesets, relative_tileset_paths)
 
     tileset.root_uri = output_tileset_path.parent
     tileset.write_to_directory(output_tileset_path)
