@@ -172,7 +172,7 @@ class Tile(RootProperty[TileDictType]):
 
     def sync_bounding_volume_with_children(self) -> None:
         if self.bounding_volume is None:
-            raise TilerException("This Tile has no bounding volume.")
+            self.bounding_volume = BoundingVolumeBox()
         if not isinstance(self.bounding_volume, BoundingVolumeBox):
             raise NotImplementedError(
                 "Don't know yet how to sync non box bounding volume."
@@ -186,7 +186,13 @@ class Tile(RootProperty[TileDictType]):
 
         # The information that depends on (is defined by) the children
         # nodes is limited to be bounding volume.
-        self.bounding_volume.sync_with_children(self)
+        for child in self.children:
+            if child.bounding_volume is None:
+                raise TilerException("Child should have a bounding volume.")
+
+            child_bounding_volume = copy.deepcopy(child.bounding_volume)
+            child_bounding_volume.transform(child.transform)
+            self.bounding_volume.add(child_bounding_volume)
 
     def transform_coords(self, coords: npt.NDArray[T]) -> npt.NDArray[T]:
         """

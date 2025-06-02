@@ -1,24 +1,18 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.exceptions import TilerException
 from py3dtiles.typing import BoundingVolumeBoxDictType
 
 from .bounding_volume import BoundingVolume
 
 if TYPE_CHECKING:
     from typing_extensions import Self
-
-    from .tile import Tile
-
-# In order to prevent the appearance of ghost newline characters ("\n")
-# when printing a numpy.array (mainly self._box in this file):
-np.set_printoptions(linewidth=500)
 
 
 class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
@@ -50,6 +44,16 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         self._box: npt.NDArray[np.float64] | None = None
 
     @classmethod
+    def union(cls, bbox1: BoundingVolumeBox, bbox2: BoundingVolumeBox) -> Self:
+        """
+        Create a box containing the 2 box parameters.
+        """
+        bounding_volume_box = cls()
+        bounding_volume_box.add(bbox1)
+        bounding_volume_box.add(bbox2)
+        return bounding_volume_box
+
+    @classmethod
     def from_dict(cls, bounding_volume_box_dict: BoundingVolumeBoxDictType) -> Self:
         """
         Construct a BoundingVolumeBox from a dict following the structure of a 3dtiles bounding volume
@@ -62,7 +66,9 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         return bounding_volume_box
 
     @classmethod
-    def from_points(cls, points: list[npt.NDArray[np.float64]]) -> BoundingVolumeBox:
+    def from_points(
+        cls, points: Sequence[npt.NDArray[np.float64] | list[float]]
+    ) -> BoundingVolumeBox:
         """
         Construct a bounding box enclosing all the points.
 
@@ -87,29 +93,51 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         result.set_from_list(box_list)
         return result
 
+    @classmethod
+    def from_mins_maxs(cls, mins_maxs: npt.NDArray[np.float64]) -> BoundingVolumeBox:
+        """
+        Build a box from a min and a max.
+
+        Internally call `set_from_mins_maxs`.
+
+        :param mins_maxs: the array [x_min, y_min, z_min, x_max, y_max, z_max]
+                          that is the boundaries of the box along each
+                          coordinate axis
+
+        :return: a new instance of BoundingVolumeBox
+        """
+        result = cls()
+        result.set_from_mins_maxs(mins_maxs)
+        return result
+
+    def is_valid(self) -> bool:
+        return BoundingVolumeBox._is_box3_valid(self._box)[0]
+
     def get_center(self) -> npt.NDArray[np.float64]:
         if self._box is None:
             raise AttributeError("Bounding Volume Box is not defined.")
 
         return self._box[0:3]
 
-    def translate(self, offset: npt.NDArray[np.float64]) -> None:
-        """
-        Translate the box center with the given offset "vector"
+    def get_half_size(self) -> npt.NDArray[np.float64]:
+        if self._box is None:
+            raise AttributeError("Bounding Volume Box is not defined.")
 
-        :param offset: the 3D vector by which the box should be translated
-        """
+        return np.array(
+            [
+                np.linalg.norm(self._box[3:6]),
+                np.linalg.norm(self._box[6:9]),
+                np.linalg.norm(self._box[9:12]),
+            ]
+        )
+
+    def translate(self, offset: npt.NDArray[np.float64]) -> None:
         if self._box is None:
             raise AttributeError("Bounding Volume Box is not defined.")
 
         self._box[:3] += offset[:3]
 
     def transform(self, transform: npt.NDArray[np.float64]) -> None:
-        """
-        Apply the provided transformation matrix (4x4) to the box
-
-        :param transform: transformation matrix (4x4) to be applied
-        """
         if self._box is None:
             raise AttributeError("Bounding Volume Box is not defined.")
 
@@ -145,23 +173,20 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         """
         box = np.array(box_list, dtype=np.float64)
 
-        valid, reason = BoundingVolumeBox.is_valid(box)
+        valid, reason = BoundingVolumeBox._is_box3_valid(box)
         if not valid:
             raise ValueError(reason)
         self._box = box
 
-    def set_from_points(self, points: list[npt.NDArray[np.float64]]) -> None:
+    def set_from_points(
+        self, points: Sequence[npt.NDArray[np.float64] | list[float]]
+    ) -> None:
         """
         Make the current box only include a list of points. Note: the box limits are replaced, not extended.
 
         :param points: An array of points
         """
-        box = BoundingVolumeBox.get_box_array_from_point(points)
-
-        valid, reason = BoundingVolumeBox.is_valid(box)
-        if not valid:
-            raise ValueError(reason)
-        self._box = box
+        self._box = BoundingVolumeBox.get_box_array_from_point(points)
 
     def set_from_mins_maxs(self, mins_maxs: npt.NDArray[np.float64]) -> None:
         """
@@ -207,14 +232,6 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         return BoundingVolumeBox.get_box_array_from_point(self.get_corners())
 
     def add(self, other: BoundingVolume[Any]) -> None:
-        """
-        Compute the 'canonical' bounding volume fitting this bounding volume
-        together with the added bounding volume. Again (refer above to the
-        class definition) the computed fitting bounding volume is generically
-        not the smallest one (due to its alignment with the coordinate axis).
-
-        :param other: another box bounding volume to be added with this one
-        """
         if not isinstance(other, BoundingVolumeBox):
             raise NotImplementedError(
                 "The add method works only with BoundingVolumeBox"
@@ -228,23 +245,6 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         corners = self.get_corners() + other.get_corners()
         self.set_from_points(corners)
 
-    def sync_with_children(self, owner: Tile) -> None:
-        # We reset to some dummy state of this Bounding Volume Box so we
-        # can add up in place the boxes of the owner's children
-        # If there is no child, no modifications are done.
-        for child in owner.children:
-            if child.bounding_volume is None:
-                raise TilerException("Child should have a bounding volume.")
-
-            bounding_volume = copy.deepcopy(child.bounding_volume)
-            bounding_volume.transform(child.transform)
-            if not isinstance(bounding_volume, BoundingVolumeBox):
-                raise TilerException(
-                    "All children must also have a box as bounding volume "
-                    "if the parent has a bounding box"
-                )
-            self.add(bounding_volume)
-
     def to_dict(self) -> BoundingVolumeBoxDictType:
         if self._box is None:
             raise AttributeError("Bounding Volume Box is not defined.")
@@ -254,7 +254,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
     @staticmethod
     def get_box_array_from_mins_maxs(
-        mins_maxs: npt.NDArray[np.float64],
+        mins_maxs: npt.NDArray[np.float64] | list[float],
     ) -> npt.NDArray[np.float64]:
         """
         :param mins_maxs: the list [x_min, y_min, z_min, x_max, y_max, z_max]
@@ -283,7 +283,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
     @staticmethod
     def get_box_array_from_point(
-        points: list[npt.NDArray[np.float64]],
+        points: Sequence[npt.NDArray[np.float64] | list[float]],
     ) -> npt.NDArray[np.float64]:
         """
         :param points: a list of 3D points
@@ -305,7 +305,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         )
 
     @staticmethod
-    def is_valid(box: npt.NDArray[np.float64]) -> tuple[bool, str]:
+    def _is_box3_valid(box: npt.NDArray[np.float64] | None) -> tuple[bool, str]:
         if box is None:
             return False, "Bounding Volume Box is not defined."
         if box.ndim != 1:

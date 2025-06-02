@@ -229,3 +229,41 @@ class TestTile:
                 }
             ],
         }
+
+    def test_sync_bounding_volume_with_children(self) -> None:
+        tile = Tile()
+        tile.sync_bounding_volume_with_children()
+        # bounding volume is init after
+        assert tile.bounding_volume is not None
+        # bbox still invalid
+        assert not tile.bounding_volume.is_valid()
+
+        # add one child
+        child1 = Tile(
+            bounding_volume=BoundingVolumeBox.from_mins_maxs(
+                np.array([1, 1, 1, 2, 2, 2])
+            )
+        )
+        tile.children.append(child1)
+        tile.sync_bounding_volume_with_children()
+        assert tile.bounding_volume.is_valid()
+        assert_array_equal(tile.bounding_volume.get_center(), [1.5, 1.5, 1.5])
+        assert_array_equal(tile.bounding_volume.get_half_size(), [0.5, 0.5, 0.5])
+
+        # add 2 others
+        child2 = Tile(
+            bounding_volume=BoundingVolumeBox.from_mins_maxs(
+                np.array([-4, -2, 1, 2, 4, 4])
+            )
+        )
+        child3 = Tile(
+            bounding_volume=BoundingVolumeBox.from_mins_maxs(
+                np.array([0, -4, -4, 4, 2, 2])
+            )
+        )
+        tile.children.append(child2)
+        tile.children.append(child3)
+        tile.sync_bounding_volume_with_children()
+        assert tile.bounding_volume.is_valid()
+        assert_array_equal(tile.bounding_volume.get_center(), [0, 0, 0])
+        assert_array_equal(tile.bounding_volume.get_half_size(), [4, 4, 4])
