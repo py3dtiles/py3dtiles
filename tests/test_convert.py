@@ -11,10 +11,9 @@ from unittest.mock import patch
 import laspy
 import numpy as np
 import plyfile
-from _pytest.python_api import RaisesContext
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from pyproj import CRS
-from pytest import mark, raises
+from pytest import RaisesExc, mark, raises
 
 from py3dtiles.convert import convert
 from py3dtiles.exceptions import SrsInMissingException, SrsInMixinException
@@ -917,7 +916,7 @@ def test_convert_many_point_same_location(tmp_dir: Path) -> None:
 def test_convert_rgb_classif(
     rgb_bool: bool, classif_bool: bool, tmp_dir: Path, fixtures_dir: Path
 ) -> None:
-    expected_raise: Union[nullcontext[None], RaisesContext[ValueError]]
+    expected_raise: Union[nullcontext[None], RaisesExc[ValueError]]
     if not classif_bool:
         expected_raise = raises(
             ValueError, match="The property classification is not found"
