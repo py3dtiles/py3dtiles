@@ -64,7 +64,7 @@ def merge(
     return global_tileset
 
 
-def quadtree_split(
+def _quadtree_split(
     aabb: "npt.NDArray[np.floating[_T]]",
 ) -> list["npt.NDArray[np.floating[_T]]"]:
     return [
@@ -75,13 +75,14 @@ def quadtree_split(
     ]
 
 
-def is_point_inside(
+# TODO put that elsewhere, probably in a dedicated aabb class
+def _is_point_inside(
     point: "npt.NDArray[np.floating[_T]]", aabb: "npt.NDArray[np.floating[_T]]"
 ) -> np.bool_:
     return np.all(aabb[0] <= point) and np.all(point < aabb[1])
 
 
-def build_tileset_quadtree(
+def _build_tileset_quadtree(
     aabb: npt.NDArray[np.float64],
     tilesets: list[TileSet],
     bounding_box_centers: list[npt.NDArray[np.float64]],
@@ -91,7 +92,7 @@ def build_tileset_quadtree(
     insides = [
         (tileset, center)
         for tileset, center in zip(tilesets, bounding_box_centers)
-        if is_point_inside(center, aabb)
+        if _is_point_inside(center, aabb)
     ]
 
     if len(insides) == 0:
@@ -127,8 +128,8 @@ def build_tileset_quadtree(
     else:
         children = []
 
-        for quarter in quadtree_split(aabb):
-            r = build_tileset_quadtree(
+        for quarter in _quadtree_split(aabb):
+            r = _build_tileset_quadtree(
                 quarter,
                 tileset_insides,
                 center_insides,
@@ -248,7 +249,7 @@ def build_tileset_quadtree(
         return tile
 
 
-def merge_with_pnts_content(
+def _merge_with_pnts_content(
     tilesets: list[TileSet], tileset_paths: Optional[dict[TileSet, Path]] = None
 ) -> TileSet:
     global_bounding_volume = BoundingVolumeBox()
@@ -276,7 +277,7 @@ def merge_with_pnts_content(
     inv_base_transform = np.linalg.inv(base_transform)
 
     # build hierarchical structure
-    result = build_tileset_quadtree(
+    result = _build_tileset_quadtree(
         aabb, tilesets, bounding_box_centers, inv_base_transform, tileset_paths
     )
 
@@ -328,7 +329,7 @@ def merge_from_files(
     }
 
     if can_use_pnts_merger:
-        tileset = merge_with_pnts_content(tilesets, relative_tileset_paths)
+        tileset = _merge_with_pnts_content(tilesets, relative_tileset_paths)
     else:
         tileset = merge(tilesets, relative_tileset_paths)
 

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
-from py3dtiles.merger import merge, merge_from_files, merge_with_pnts_content
+from py3dtiles.merger import _merge_with_pnts_content, merge, merge_from_files
 from py3dtiles.tileset import BoundingVolumeBox, TileSet
 from py3dtiles.tileset.content import Pnts, read_binary_tile_content
 
@@ -53,7 +53,7 @@ def test_merge_with_memory_tilesets(
 def test_merge_with_pnts_content_with_memory_tilesets(
     tmp_dir: Path, tileset_1: TileSet, tileset_2: TileSet
 ) -> None:
-    merged_tileset = merge_with_pnts_content([tileset_1, tileset_2])
+    merged_tileset = _merge_with_pnts_content([tileset_1, tileset_2])
 
     assert len(merged_tileset.root_tile.get_all_children()) == 2
 
