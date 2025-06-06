@@ -404,10 +404,12 @@ class Converter:
                 raise TilerException("There are tilers with the same attribute name.")
 
             try:
+                tiler_out_folder = Path(out_folder) / tiler.name
+                tiler_out_folder.mkdir(exist_ok=True)
                 tiler.initialize(
                     paths_by_tiler_name[tiler.name],
                     working_dir / str(tiler.name),
-                    out_folder,
+                    tiler_out_folder,
                 )
             except Py3dtilesException as e:
                 shutil.rmtree(out_folder)
