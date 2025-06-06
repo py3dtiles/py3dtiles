@@ -42,7 +42,7 @@ META_TILER_NAME = b"meta"
 
 
 def _worker_target(
-    worker_tilers: dict[bytes, TilerWorker[Any]],
+    worker_tilers: dict[str, TilerWorker[Any]],
     verbosity: int,
     uri: bytes,
 ) -> None:
@@ -62,7 +62,7 @@ class _WorkerDispatcher:
 
     def __init__(
         self,
-        worker_tilers: dict[bytes, TilerWorker[Any]],
+        worker_tilers: dict[str, TilerWorker[Any]],
         verbosity: int,
         uri: bytes,
     ) -> None:
@@ -93,7 +93,7 @@ class _WorkerDispatcher:
                 idle_time += after - before
 
                 message = self.skt.recv_multipart()
-                tiler_name = message[1]
+                tiler_name = message[1].decode()
                 command = message[2]
                 content = message[3:]
 
@@ -141,7 +141,7 @@ class _ZmqManager:
     def __init__(
         self,
         number_of_jobs: int,
-        worker_tilers: dict[bytes, TilerWorker[Any]],
+        worker_tilers: dict[str, TilerWorker[Any]],
         verbosity: int,
     ) -> None:
         """
@@ -352,8 +352,8 @@ class Converter:
         self.benchmark = benchmark
         self.use_process_pool = use_process_pool
 
-    def _assign_file_to_tilers(self, files: list[Path]) -> dict[bytes, list[Path]]:
-        files_by_tiler_names: dict[bytes, list[Path]] = {}
+    def _assign_file_to_tilers(self, files: list[Path]) -> dict[str, list[Path]]:
+        files_by_tiler_names: dict[str, list[Path]] = {}
         tiler_not_found_files: list[Path] = []
         for file in files:
             for tiler in self.tilers:
@@ -394,7 +394,7 @@ class Converter:
 
         paths_by_tiler_name = self._assign_file_to_tilers(paths)
 
-        worker_tilers: dict[bytes, TilerWorker[Any]] = {}
+        worker_tilers: dict[str, TilerWorker[Any]] = {}
         for tiler in self.tilers:
             # check if at least one file would use that tiler
             if tiler.name not in paths_by_tiler_name:
@@ -450,7 +450,7 @@ class Converter:
                     if self.zmq_manager.can_queue_more_jobs():
                         for command, data in tiler.get_tasks():
                             self.zmq_manager.send_to_process(
-                                [tiler.name, command] + data
+                                [tiler.name.encode("UTF-8"), command] + data
                             )
                             if not self.zmq_manager.can_queue_more_jobs():
                                 break
@@ -466,9 +466,8 @@ class Converter:
                 if self.verbose >= 1:
                     print("Writing 3dtiles")
 
-                tiler_name_str = tiler.name.decode("utf-8")
-                tileset_path = out_folder / f"tileset_{tiler_name_str}.json"
-                tileset_paths.append(tileset_path)
+                tileset_path = out_folder / tiler.name / "tileset.json"
+                tilesets.append(tileset_path)
                 tileset = tiler.get_tileset(use_process_pool=self.use_process_pool)
                 with tileset_path.open("w") as f:
                     f.write(tileset.to_json())

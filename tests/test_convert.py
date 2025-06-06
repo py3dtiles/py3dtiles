@@ -870,7 +870,7 @@ def test_convert_export_folder_already_exists(
 
     # now, subsequent conversion will fail
     with raises(
-        FileExistsError, match=f"Folder '{ tmp_dir}' already exists and is not empty."
+        FileExistsError, match=f"Folder '{tmp_dir}' already exists and is not empty."
     ):
         convert(
             fixtures_dir / "simple.xyz",
@@ -893,7 +893,7 @@ def test_convert_export_folder_already_exists(
     tmp_dir.touch()
     with raises(
         FileExistsError,
-        match=f"'{ tmp_dir}' already exists and is not a directory. Not deleting it.",
+        match=f"'{tmp_dir}' already exists and is not a directory. Not deleting it.",
     ):
         convert(
             fixtures_dir / "simple.xyz",
@@ -1030,7 +1030,7 @@ class Worker(TilerWorker[Metadata]):
 
 
 class Tiler1(Tiler[Metadata, Worker]):
-    name = b"tiler1"
+    name = "tiler1"
 
     def initialize(
         self, files: list[Path], working_dir: Path, out_folder: Path
@@ -1061,7 +1061,7 @@ class Tiler1(Tiler[Metadata, Worker]):
 
 
 class Tiler2(Tiler[Metadata, Worker]):
-    name = b"tiler2"
+    name = "tiler2"
 
     def initialize(
         self, files: list[Path], working_dir: Path, out_folder: Path
@@ -1095,7 +1095,7 @@ def test_assign_file_to_tilers() -> None:
     converter = Converter([Tiler1(), Tiler2()])
     assert converter._assign_file_to_tilers(
         [Path("file.1"), Path("file.2"), Path("file2.2")]
-    ) == {b"tiler1": [Path("file.1")], b"tiler2": [Path("file.2"), Path("file2.2")]}
+    ) == {"tiler1": [Path("file.1")], "tiler2": [Path("file.2"), Path("file2.2")]}
 
     with raises(TilerNotFoundException):
         converter._assign_file_to_tilers(

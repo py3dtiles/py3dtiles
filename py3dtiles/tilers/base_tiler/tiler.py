@@ -42,7 +42,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
     supposed to subclass SharedMetadata and TilerWorker as well.
     """
 
-    name = b""
+    name = ""
     shared_metadata: _SharedMetadataT
 
     @abstractmethod

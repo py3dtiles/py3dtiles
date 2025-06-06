@@ -87,7 +87,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
     :param extra_fields: the list of extra fields to include in the resulting 3dtiles
     """
 
-    name = b"points"
+    name = "points"
 
     files_info: dict[str, Any]
     out_folder: Path
