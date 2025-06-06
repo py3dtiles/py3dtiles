@@ -277,12 +277,11 @@ class PntsBody(TileContentBody):
         for field in self.batch_table.get_property_names():
             extra_fields[field] = self.batch_table.get_binary_property(field)
 
+        points = Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
         if transform is not None:
-            transform = transform.reshape((4, 4), order="F")
-            xyzw = np.hstack((xyz, np.ones((xyz.shape[0], 1), dtype=xyz.dtype)))
-            xyz = np.dot(xyzw, transform.astype(xyz.dtype))[:, :3]
+            points.transform(transform)
 
-        return Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
+        return points
 
     @staticmethod
     def from_array(header: PntsHeader, array: npt.NDArray[np.uint8]) -> PntsBody:

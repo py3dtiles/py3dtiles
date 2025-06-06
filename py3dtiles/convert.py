@@ -22,7 +22,7 @@ from py3dtiles.exceptions import (
     TilerNotFoundException,
     WorkerException,
 )
-from py3dtiles.merger import merge_from_files
+from py3dtiles.merger import create_tileset_from_root_tiles
 from py3dtiles.tilers.base_tiler import Tiler
 from py3dtiles.tilers.base_tiler.message_type import ManagerMessage, WorkerMessageType
 from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
@@ -431,7 +431,7 @@ class Converter:
         startup: float = time.time()
 
         try:
-            tileset_paths = []
+            root_tiles = []
             for tiler in self.tilers:
                 if tiler.name not in paths_by_tiler_name:
                     continue
@@ -468,11 +468,9 @@ class Converter:
                 if self.verbose >= 1:
                     print("Writing 3dtiles")
 
-                tileset_path = out_folder / tiler.name / "tileset.json"
-                tilesets.append(tileset_path)
-                tileset = tiler.get_tileset(use_process_pool=self.use_process_pool)
-                with tileset_path.open("w") as f:
-                    f.write(tileset.to_json())
+                root_tiles.append(
+                    tiler.get_root_tile(use_process_pool=self.use_process_pool)
+                )
 
                 if self.verbose >= 1:
                     print(f"Tiler {tiler.name!r} done")
@@ -480,13 +478,16 @@ class Converter:
                 if self.benchmark:
                     tiler.benchmark(self.benchmark, startup)
 
-            if len(tileset_paths) == 1:
-                # only one tileset, use that
-                tileset_paths[0].rename(out_folder / "tileset.json")
-            else:
-                if self.verbose >= 1:
-                    print("Merging tilesets")
-                merge_from_files(tileset_paths, out_folder / "tileset.json")
+            if self.verbose >= 1:
+                print("Merging tilesets")
+            for tile in root_tiles:
+                # we need to make sure the contents are loaded for the merger
+                if tile.has_content():
+                    tile.get_or_fetch_content(out_folder)
+            tileset = create_tileset_from_root_tiles(root_tiles)
+            if tileset.root_tile.has_content():
+                tileset.root_tile.write_content(out_folder)
+            tileset.write_as_json(out_folder / "tileset.json")
 
         finally:
             self.zmq_manager.shutdown_all_processes()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from py3dtiles import __version__
 from py3dtiles.tileset import Tile, TileSet
 
 DATA_DIRECTORY = Path(__file__).parent / "fixtures"
@@ -10,45 +11,59 @@ DATA_DIRECTORY = Path(__file__).parent / "fixtures"
 
 def test_constructor() -> None:
     tile_set = TileSet()
-    assert tile_set.asset.to_dict() == {"version": "1.0"}
+    asset_dict = tile_set.asset.to_dict()
+    assert asset_dict["version"] == "1.0"
+    assert "extras" in asset_dict
+    assert asset_dict["extras"]["created_date"] is not None
+    assert asset_dict["extras"]["generator"] == {
+        "name": "py3dtiles",
+        "version": __version__,
+    }
     assert tile_set.extensions == {}
     assert tile_set.geometric_error == 500
     assert isinstance(tile_set.root_tile, Tile)
 
 
 def test_to_dict(tileset: TileSet) -> None:
-    assert tileset.to_dict() == {
-        "root": {
-            "boundingVolume": {
-                "box": [
-                    1.0,
-                    2.0,
-                    3.0,
-                    4.0,
-                    5.0,
-                    6.0,
-                    7.0,
-                    8.0,
-                    9.0,
-                    10.0,
-                    11.0,
-                    12.0,
-                ]
-            },
-            "geometricError": 3.14159,
-            "refine": "ADD",
+    tileset_dict = tileset.to_dict()
+    assert tileset_dict["root"] == {
+        "boundingVolume": {
+            "box": [
+                1.0,
+                2.0,
+                3.0,
+                4.0,
+                5.0,
+                6.0,
+                7.0,
+                8.0,
+                9.0,
+                10.0,
+                11.0,
+                12.0,
+            ]
         },
-        "extensions": {"Test": {}},
-        "extensionsUsed": ["Test"],
-        "geometricError": 500,
-        "asset": {"version": "1.0"},
+        "geometricError": 3.14159,
+        "refine": "ADD",
+    }
+    assert "extensions" in tileset_dict
+    assert tileset_dict["extensions"] == {"Test": {}}
+    assert "extensionsUsed" in tileset_dict
+    assert tileset_dict["extensionsUsed"] == ["Test"]
+    assert tileset_dict["geometricError"] == 500
+    assert tileset_dict["asset"]["version"] == "1.0"
+    assert "extras" in tileset_dict["asset"]
+    assert tileset_dict["asset"]["extras"]["created_date"] is not None
+    assert tileset_dict["asset"]["extras"]["generator"] == {
+        "name": "py3dtiles",
+        "version": __version__,
     }
 
 
 def test_from_dict(tmp_dir_with_content: Path) -> None:
 
     assert Path(tmp_dir_with_content, "tileset.json").exists()
-    assert Path(tmp_dir_with_content, "r.pnts").exists()
+    assert Path(tmp_dir_with_content, "points", "r.pnts").exists()
 
     with (tmp_dir_with_content / "tileset.json").open() as f:
         tileset_dict = json.load(f)
@@ -70,7 +85,7 @@ def test_delete_on_disk(tileset_on_disk_with_sub_tileset_path: Path) -> None:
     tileset.delete_on_disk(tmp_folder / "upper_tileset.json")
 
     assert (tmp_folder / "tileset.json").exists()
-    assert (tmp_folder / "r.pnts").exists()
+    assert (tmp_folder / "points" / "r.pnts").exists()
     assert not (tmp_folder / "upper_tileset.json").exists()
 
 

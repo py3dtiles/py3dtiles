@@ -10,15 +10,15 @@ def number_of_points_in_tileset(tileset_path: Path) -> int:
 
     nb_points = 0
 
-    children_tileset_info = [(tileset["root"], tileset["root"]["refine"])]
+    children_tileset_info = [(tileset["root"], tileset["root"]["refine"], tileset_path)]
     while children_tileset_info:
-        child_tileset, parent_refine = children_tileset_info.pop()
+        child_tileset, parent_refine, path = children_tileset_info.pop()
         child_refine = (
             child_tileset["refine"] if child_tileset.get("refine") else parent_refine
         )
 
         if "content" in child_tileset:
-            content = tileset_path.parent / child_tileset["content"]["uri"]
+            content = path.parent / child_tileset["content"]["uri"]
 
             pnts_should_count = "children" not in child_tileset or child_refine == "ADD"
             if content.suffix == ".pnts" and pnts_should_count:
@@ -28,11 +28,13 @@ def number_of_points_in_tileset(tileset_path: Path) -> int:
             elif content.suffix == ".json":
                 with content.open() as f:
                     sub_tileset = json.load(f)
-                children_tileset_info.append((sub_tileset["root"], child_refine))
+                children_tileset_info.append(
+                    (sub_tileset["root"], child_refine, content)
+                )
 
         if "children" in child_tileset:
             children_tileset_info += [
-                (sub_child_tileset, child_refine)
+                (sub_child_tileset, child_refine, path)
                 for sub_child_tileset in child_tileset["children"]
             ]
 

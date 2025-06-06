@@ -49,7 +49,7 @@ def tmp_dir_with_content(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
 
 
 @fixture
-def tileset_path_1(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
+def tileset_pnts_path_1(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
     tileset_folder = tmp_dir / "1"
     convert(
         fixtures_dir / "with_srs_3857.las",
@@ -61,14 +61,12 @@ def tileset_path_1(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
 
 
 @fixture
-def tileset_1(tileset_path_1: Path) -> TileSet:
-    tileset = TileSet.from_file(tileset_path_1)
-    tileset.root_tile.get_or_fetch_content(tileset_path_1.parent)
-    return tileset
+def tileset_pnts_1(tileset_pnts_path_1: Path) -> TileSet:
+    return TileSet.from_file(tileset_pnts_path_1)
 
 
 @fixture
-def tileset_path_2(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
+def tileset_pnts_path_2(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
     tileset_folder = tmp_dir / "2"
     convert(
         fixtures_dir / "with_srs_3950.las",
@@ -79,9 +77,9 @@ def tileset_path_2(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
 
 
 @fixture
-def tileset_2(tileset_path_2: Path) -> TileSet:
-    tileset = TileSet.from_file(tileset_path_2)
-    tileset.root_tile.get_or_fetch_content(tileset_path_2.parent)
+def tileset_pnts_2(tileset_pnts_path_2: Path) -> TileSet:
+    tileset = TileSet.from_file(tileset_pnts_path_2)
+    tileset.root_tile.get_or_fetch_content(tileset_pnts_path_2.parent)
     return tileset
 
 

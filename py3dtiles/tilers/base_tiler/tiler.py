@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
-from py3dtiles.tileset.tileset import TileSet
+from py3dtiles.tileset.tile import Tile
 
 from .shared_metadata import SharedMetadata
 from .tiler_worker import TilerWorker
@@ -108,12 +108,14 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def get_tileset(self, use_process_pool: bool = True) -> TileSet:
+    def get_root_tile(self, use_process_pool: bool = True) -> Tile:
         """
         Get the tileset file once the binary data are written.
 
         This function will be called once by convert after this tiler has stopped generating tasks and all
         the workers are idle.
+
+        Tilers are expected to returns one root tile which will be the root of all their hierarchy. Tilers are expected to set the `content_uri` of every tile
 
         :param use_process_pool: allow the use of a process pool. Process pools can cause issues in
         environment lacking shared memory.

@@ -7,7 +7,12 @@ from typing import TYPE_CHECKING, Any, TypeVar
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.exceptions import InvalidTilesetError, Py3dtilesException, TilerException
+from py3dtiles.exceptions import (
+    BoundingVolumeMissingException,
+    InvalidTilesetError,
+    Py3dtilesException,
+    TilerException,
+)
 from py3dtiles.typing import RefineType, TileDictType
 
 from .bounding_volume import BoundingVolume
@@ -189,10 +194,21 @@ class Tile(RootProperty[TileDictType]):
         for child in self.children:
             if child.bounding_volume is None:
                 raise TilerException("Child should have a bounding volume.")
+            self.bounding_volume.add(child.get_transformed_bounding_volume())
 
-            child_bounding_volume = copy.deepcopy(child.bounding_volume)
-            child_bounding_volume.transform(child.transform)
-            self.bounding_volume.add(child_bounding_volume)
+    def get_transformed_bounding_volume(self) -> BoundingVolume[Any]:
+        """
+        Get the bounding volume of this tile, transformed according to this tile transformation.
+
+        This bounding volume is therefore in the parent's local coordinate system, possibly the world coordinate if this tile has no parent.
+        """
+        bounding_volume = copy.deepcopy(self.bounding_volume)
+        if bounding_volume is None:
+            raise BoundingVolumeMissingException(
+                "This tile doesn't have a bounding volume"
+            )
+        bounding_volume.transform(self.transform)
+        return bounding_volume
 
     def transform_coords(self, coords: npt.NDArray[T]) -> npt.NDArray[T]:
         """

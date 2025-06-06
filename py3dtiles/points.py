@@ -45,3 +45,10 @@ class Points:
             self.colors = colors
 
         self.extra_fields = {} if extra_fields is None else extra_fields
+
+    def transform(self, transform: npt.NDArray[np.float64]) -> None:
+        transform = transform.reshape((4, 4), order="F")
+        xyz = self.positions
+        xyzw = np.hstack((xyz, np.ones((xyz.shape[0], 1), dtype=xyz.dtype)))
+        xyz = xyzw.dot(transform.T.astype(xyz.dtype))[:, :3]
+        self.positions = xyz

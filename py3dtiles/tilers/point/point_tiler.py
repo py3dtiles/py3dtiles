@@ -18,7 +18,7 @@ from py3dtiles.exceptions import (
 )
 from py3dtiles.tilers.base_tiler import Tiler
 from py3dtiles.tileset.content import read_binary_tile_content
-from py3dtiles.tileset.tileset import TileSet
+from py3dtiles.tileset.tile import Tile
 from py3dtiles.typing import ExtraFieldsDescription
 from py3dtiles.utils import (
     READER_MAP,
@@ -516,7 +516,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 + f"(expected: {self.files_info['point_count']}, was: {self.state.points_in_pnts})"
             )
 
-    def get_tileset(self, use_process_pool: bool = True) -> TileSet:
+    def get_root_tile(self, use_process_pool: bool = True) -> Tile:
         # compute tile transform matrix
         transform = np.linalg.inv(self.rotation_matrix)
         transform = np.dot(transform, make_scale_matrix(1.0 / self.root_scale[0]))
@@ -603,7 +603,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 "root_tile cannot be None here. This is likely a tiler bug."
             )
 
-        root_tile.transform = transform.reshape(16, order="F")
+        root_tile.transform = transform
         root_tile.set_refine_mode(
             "REPLACE"
         )  # The root tile is in the "REPLACE" refine mode
@@ -612,12 +612,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         for child in root_tile.children:
             child.set_refine_mode("ADD")
 
-        geometric_error = (
-            np.linalg.norm(self.root_aabb[1] - self.root_aabb[0]) / self.root_scale[0]
-        )
-        tileset = TileSet(geometric_error=geometric_error)
-        tileset.root_tile = root_tile
-        return tileset
+        return root_tile
 
     def benchmark(self, benchmark_id: str, startup: float) -> None:
         print(

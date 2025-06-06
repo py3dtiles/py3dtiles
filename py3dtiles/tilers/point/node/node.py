@@ -464,7 +464,7 @@ class Node:
 
         content_uri = None
         if not prune:
-            content_uri = pnts_path.relative_to(folder)
+            content_uri = pnts_path.relative_to(folder.parent)
             xyz_float = xyz.view(np.float32)
 
             # update aabb based on real values
