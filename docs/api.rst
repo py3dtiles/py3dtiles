@@ -510,3 +510,34 @@ In the snippet below, the number of jobs is set to 2. The main process will mana
     ...     verbose=-1
     ... )
     >>>
+
+Customization of the conversion process
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The conversion process can be customized by passing custom instances of tilers.
+
+Instead of using the `convert` function, create an instance of the :class:`py3dtiles.convert.Converter` class in the same module.
+
+
+.. code-block:: python
+
+    >>> from pathlib import Path
+    >>>
+    >>> from py3dtiles.convert import Converter
+    >>> from py3dtiles.tilers.point.point_tiler import PointTiler
+    >>>
+    >>> las_path = Path("tests/fixtures/with_srs_3857.las")
+    >>>
+    >>> # For demo purpose, we'll inherit PointTiler
+    >>> class MyPointTiler(PointTiler):
+    ...     def initialize(self, *args, **kwargs) -> None:
+    ...         print("Custom initialization")
+    ...         super().initialize(*args, **kwargs)
+    >>>
+    >>> my_point_tiler = MyPointTiler(verbosity=-1)
+    >>> converter = Converter([my_point_tiler])
+    >>> # let's check if the tiler is indeed used
+    >>> converter.convert(las_path, Path("3dtiles_output/"), overwrite=True)
+    Custom initialization
+
+Writing a custom tiler is an involved operation. Do it only if you wish complete control over how tiles are generated or if you want to support a whole different type of data currently supported by py3dtiles. The :class:`py3dtiles.tilers.base_tiler.Tiler` documentation details what is expected of a custom ``Tiler`` instance.

@@ -10,6 +10,7 @@ import numpy as np
 import numpy.typing as npt
 from pyproj import CRS, Transformer
 
+from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE
 from py3dtiles.exceptions import (
     SrsInMissingException,
     SrsInMixinException,
@@ -48,7 +49,7 @@ def is_ancestor(node_name: bytes, ancestor: bytes) -> bool:
 
 
 def is_ancestor_in_list(
-    node_name: bytes, ancestors: Union[list[bytes], dict[bytes, Any]]
+    node_name: bytes, ancestors: Union[set[bytes], dict[bytes, Any]]
 ) -> bool:
     return any(
         not ancestor or is_ancestor(node_name, ancestor) for ancestor in ancestors
@@ -58,8 +59,8 @@ def is_ancestor_in_list(
 def can_pnts_be_written(
     node_name: bytes,
     finished_node: bytes,
-    input_nodes: Union[list[bytes], dict[bytes, Any]],
-    active_nodes: Union[list[bytes], dict[bytes, Any]],
+    input_nodes: dict[bytes, Any],
+    active_nodes: set[bytes],
 ) -> bool:
     return (
         is_ancestor(node_name, finished_node)
@@ -69,76 +70,104 @@ def can_pnts_be_written(
 
 
 class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
+    """
+    Tiler that split pointclouds.
+
+    This tiler is able to reproject pointclouds, and can embed arbitrary fields in the resulting 3dtiles
+
+    :param crs_in: crs to use for files that don't have crs informations in their metadata, or for all files if `force_crs_in` is used
+    :param crs_out: output crs
+    :param force_crs_in: whether or not to apply crs_in for all files.
+    :param pyproj_always_xy: some crs defines an axis order, but some dataset still use xy order nonetheless. This boolean allows to support this case.
+    :param rgb: whether to include rgb info or not
+    :param color_scale: scale the color in the case of colors wrongly encoded in 8 bit in a 16-bit field (like in las/laz files).
+    :param cache_size: the size in MB to use for ram cache.
+    :param verbosity: verbosity level
+    :param number_of_jobs: how many process this tiler is allowed to use
+    :param extra_fields: the list of extra fields to include in the resulting 3dtiles
+    """
+
     name = b"points"
 
     files_info: dict[str, Any]
+    out_folder: Path
+    crs_in: Optional[CRS]
+    crs_out: Optional[CRS]
+    force_crs_in: bool
+    rgb: bool
+    color_scale: Optional[float]
+    cache_size: int
+    verbosity: int
+    file_info: dict[str, Any]
     root_aabb: npt.NDArray[np.float64]
     root_scale: npt.NDArray[np.float32]
     root_spacing: float
     node_store: SharedNodeStore
     state: PointState
     extra_fields_to_include: list[str]
+    transformer: Optional[Transformer]
+    number_of_jobs: int
+    shared_metadata: PointSharedMetadata
 
     def __init__(
         self,
-        out_folder: Path,
-        files: Union[list[Union[str, Path]], str, Path],
-        crs_in: Optional[CRS],
-        force_crs_in: bool,
-        pyproj_always_xy: bool,
-        rgb: bool,
-        color_scale: Optional[float],
-        cache_size: int,
-        verbosity: int,
+        crs_in: Optional[CRS] = None,
+        crs_out: Optional[CRS] = None,
+        force_crs_in: bool = False,
+        pyproj_always_xy: bool = False,
+        rgb: bool = True,
+        color_scale: Optional[float] = None,
+        cache_size: int = DEFAULT_CACHE_SIZE,
+        verbosity: int = 0,
+        number_of_jobs: int = CPU_COUNT,
         extra_fields: Optional[list[str]] = None,
     ):
-        self.out_folder = out_folder
+        """
+        Constructs a PointTiler
 
-        # allow str directly if only one input
-        files = [files] if isinstance(files, (str, Path)) else files
-        self.files = [Path(file) for file in files]
+        """
+        super().__init__()
 
         self.rgb = rgb
         self.extra_fields_to_include = [] if extra_fields is None else extra_fields
         self.color_scale = color_scale
 
         self.crs_in = crs_in
+        self.crs_out = crs_out
         self.force_crs_in = force_crs_in
         self.pyproj_always_xy = pyproj_always_xy
 
         self.cache_size = cache_size
 
         self.verbosity = verbosity
+        self.number_of_jobs = number_of_jobs
 
     def get_worker(self) -> PointTilerWorker:
         return PointTilerWorker(self.shared_metadata)
 
-    def get_tasks(
-        self, startup: float
-    ) -> Generator[tuple[bytes, list[bytes]], None, None]:
+    def get_tasks(self) -> Generator[tuple[bytes, list[bytes]], None, None]:
         while len(self.state.pnts_to_writing) > 0:
             yield self.send_pnts_to_write()
 
-        yield from self.send_points_to_process(time.time() - startup)
+        yield from self.send_points_to_process()
 
         while self.state.can_add_reading_jobs():
             yield self.send_file_to_read()
 
-    def initialization(
-        self,
-        crs_out: Optional[CRS],
-        working_dir: Path,
-        number_of_jobs: int,
+    def initialize(
+        self, files: list[Path], working_dir: Path, out_folder: Path
     ) -> None:
+        self.files = files
+        self.out_folder = out_folder
         self.files_info = self.get_files_info(self.crs_in, self.force_crs_in)
         self.transformer = self.get_transformer(
-            crs_out, always_xy=self.pyproj_always_xy
+            self.crs_out, always_xy=self.pyproj_always_xy
         )
         (
             self.rotation_matrix,
             self.original_aabb,
             self.avg_min,
-        ) = self.get_rotation_matrix(crs_out, self.transformer)
+        ) = self.get_rotation_matrix(self.crs_out, self.transformer)
 
         self.root_aabb, self.root_scale, self.root_spacing = self.get_root_aabb(
             self.original_aabb
@@ -147,7 +176,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         self.node_store = SharedNodeStore(working_dir)
 
         self.state = PointState(
-            self.files_info["portions"], max(1, number_of_jobs // 2)
+            self.files_info["portions"], max(1, self.number_of_jobs // 2)
         )
 
         self.shared_metadata = PointSharedMetadata(
@@ -161,6 +190,10 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             self.files_info["extra_fields"],
             self.verbosity,
         )
+
+    def supports(self, file: Path) -> bool:
+        extension = file.suffix.lower()
+        return extension in READER_MAP
 
     def get_files_info(
         self,
@@ -177,14 +210,8 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         extra_fields_dict: dict[str, ExtraFieldsDescription] = {}
         for file in self.files:
             extension = file.suffix.lower()
-            if extension in READER_MAP:
-                reader = READER_MAP[extension]
-            else:
-                raise ValueError(
-                    f"The file with {extension} extension can't be read, "
-                    f"the available extensions are: {READER_MAP.keys()}"
-                )
 
+            reader = READER_MAP[extension]
             file_info = reader.get_metadata(file, self.color_scale)
             extra_fields_by_name = {obj.name: obj for obj in file_info["extra_fields"]}
 
@@ -331,6 +358,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
     def print_summary(self) -> None:
         print("Summary:")
+        print(f"  - files to process: {self.files}")
         print("  - points to process: {}".format(self.files_info["point_count"]))
         print(f"  - offset to use: {self.avg_min}")
         print(f"  - root spacing: {self.root_spacing / self.root_scale[0]}")
@@ -361,7 +389,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         ]
 
     def send_points_to_process(
-        self, now: float
+        self,
     ) -> Generator[tuple[bytes, list[bytes]], None, None]:
         potentials = sorted(
             # a key (=task) can be in node_to_process and processing_nodes if the node isn't completely processed
@@ -389,11 +417,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 del potentials[idx]
 
                 del self.state.node_to_process[name]
-                self.state.processing_nodes[name] = (
-                    len(tasks),
-                    point_count,
-                    now,
-                )
+                self.state.processing_nodes.add(name)
 
                 if name in self.state.waiting_writing_nodes:
                     self.state.waiting_writing_nodes.pop(
@@ -415,29 +439,24 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
         return PointManagerMessage.WRITE_PNTS.value, [node_name, data]
 
-    def process_message(self, return_type: bytes, result: list[bytes]) -> bool:
-        at_least_one_job_ended = False
-
-        if return_type == PointWorkerMessageType.READ.value:
+    def process_message(self, message_type: bytes, result: list[bytes]) -> None:
+        if message_type == PointWorkerMessageType.READ.value:
             self.state.number_of_reading_jobs -= 1
-            at_least_one_job_ended = True
 
-        elif return_type == PointWorkerMessageType.PROCESSED.value:
+        elif message_type == PointWorkerMessageType.PROCESSED.value:
             content = pickle.loads(result[-1])
             self.state.processed_points += content["total"]
             self.state.points_in_progress -= content["total"]
 
-            del self.state.processing_nodes[content["name"]]
+            self.state.processing_nodes.remove(content["name"])
 
             self.dispatch_processed_nodes(content)
 
-            at_least_one_job_ended = True
-
-        elif return_type == PointWorkerMessageType.PNTS_WRITTEN.value:
+        elif message_type == PointWorkerMessageType.PNTS_WRITTEN.value:
             self.state.points_in_pnts += struct.unpack(">I", result[0])[0]
             self.state.number_of_writing_jobs -= 1
 
-        elif return_type == PointWorkerMessageType.NEW_TASK.value:
+        elif message_type == PointWorkerMessageType.NEW_TASK.value:
             self.state.add_tasks_to_process(
                 node_name=result[0],
                 data=result[1],
@@ -445,9 +464,9 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             )
 
         else:
-            raise NotImplementedError(f"The command {return_type!r} is not implemented")
-
-        return at_least_one_job_ended
+            raise NotImplementedError(
+                f"The command {message_type!r} is not implemented"
+            )
 
     def dispatch_processed_nodes(self, content: dict[str, bytes]) -> None:
         if not content["name"]:
@@ -489,14 +508,14 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 self.state.pnts_to_writing.append(c)
             self.state.waiting_writing_nodes.clear()
 
-    def validate_binary_data(self) -> None:
+    def validate(self) -> None:
         if self.state.points_in_pnts != self.files_info["point_count"]:
             raise ValueError(
                 "Invalid point count in the written .pnts"
                 + f"(expected: {self.files_info['point_count']}, was: {self.state.points_in_pnts})"
             )
 
-    def write_tileset(self, use_process_pool: bool = True) -> None:
+    def get_tileset(self, use_process_pool: bool = True) -> TileSet:
         # compute tile transform matrix
         transform = np.linalg.inv(self.rotation_matrix)
         transform = np.dot(transform, make_scale_matrix(1.0 / self.root_scale[0]))
@@ -597,7 +616,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         )
         tileset = TileSet(geometric_error=geometric_error)
         tileset.root_tile = root_tile
-        tileset.write_as_json(self.out_folder / "tileset.json")
+        return tileset
 
     def benchmark(self, benchmark_id: str, startup: float) -> None:
         print(
@@ -608,66 +627,6 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 round(time.time() - startup, 1),
             )
         )
-
-    def print_debug(
-        self, now: float, number_of_jobs: int, number_of_idle_clients: int
-    ) -> None:
-        if self.verbosity >= 3:
-            print("{:^16}|{:^8}|{:^8}".format("Name", "Points", "Seconds"))
-            for name, v in self.state.processing_nodes.items():
-                print(
-                    "{:^16}|{:^8}|{:^8}".format(
-                        "{} ({})".format(name.decode("ascii"), v[0]),
-                        v[1],
-                        round(now - v[2], 1),
-                    )
-                )
-            print("")
-            print("Pending:")
-            print(
-                "  - root: {} / {}".format(
-                    len(self.state.point_cloud_file_parts),
-                    self.state.initial_portion_count,
-                )
-            )
-            print(
-                "  - other: {} files for {} nodes".format(
-                    sum([len(f[0]) for f in self.state.node_to_process.values()]),
-                    len(self.state.node_to_process),
-                )
-            )
-            print("")
-
-        elif self.verbosity >= 2:
-            self.state.print_debug()
-
-        if self.verbosity >= 1:
-            print(
-                "{} % points in {} sec [{} tasks, {} nodes, {} wip]".format(
-                    round(
-                        100
-                        * self.state.processed_points
-                        / self.files_info["point_count"],
-                        2,
-                    ),
-                    round(now, 1),
-                    number_of_jobs - number_of_idle_clients,
-                    len(self.state.processing_nodes),
-                    self.state.points_in_progress,
-                )
-            )
-
-        elif self.verbosity >= 0:
-            percent = round(
-                100 * self.state.processed_points / self.files_info["point_count"],
-                2,
-            )
-            time_left = (100 - percent) * now / (percent + 0.001)
-            print(
-                f"\r{percent:>6} % in {round(now)} sec [est. time left: {round(time_left)} sec]      ",
-                end="",
-                flush=True,
-            )
 
     def memory_control(self) -> None:
         self.node_store.control_memory_usage(self.cache_size, self.verbosity)

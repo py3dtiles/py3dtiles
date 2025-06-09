@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterator, Sequence
 from typing import Generic, TypeVar
-
-import zmq
 
 from py3dtiles.tilers.base_tiler.shared_metadata import SharedMetadata
 
@@ -15,8 +14,21 @@ class TilerWorker(ABC, Generic[_SharedMetadataT]):
 
     @abstractmethod
     def execute(
-        self, skt: zmq.Socket[bytes], command: bytes, content: list[bytes]
-    ) -> None:
+        self, command: bytes, content: list[bytes]
+    ) -> Iterator[Sequence[bytes]]:
         """
-        Executes a command sent by the tiler. The method returns directly the response with the skt variable.
+        Executes a command sent by the tiler. Each sequence of bytes returned by the returned Iterator will be sent back to the corresponding tiler.
+
+        The easiest way to do so is to ``yield`` the Sequence to be sent. This
+        will automatically turn the method into a generator, which is
+        incidentally an Iterator. This has the good additional side-effect of
+        passing back control to the calling method, which will in turn send the
+        message immediately, without waiting for this method to be executed.
+
+        Implementing classes can use any message format they like provided it
+        is a Sequence of bytes. The only restriction is that the first element
+        of the sequence should **not** be a value in the
+        :class:`py3dtiles.tilers.base_tiler.message_type.WorkerMessageType`
+        enum, as those are used internally by the convert process to manage
+        the lifecycles of the different entities.
         """

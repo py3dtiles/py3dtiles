@@ -29,7 +29,7 @@ dependencies = [
     "earcut==1.1.5",
     "lz4",
     # NOTE: 0.61 is the first supporting python 3.13 and it also drops support for python 3.9
-    "numba>=0.59,<=0.61",
+    "numba>=0.59,<0.62.0",
     "numpy>=1.24.0,<2.2.0",
     "psutil",
     "pyproj",

@@ -2,11 +2,11 @@ import os
 import pickle
 import struct
 import time
+from collections.abc import Iterator, Sequence
 from pathlib import PurePath
 from typing import TYPE_CHECKING
 
 import lz4.frame as gzip
-import zmq
 
 from py3dtiles.tilers.base_tiler import TilerWorker
 from py3dtiles.tilers.point.node import DummyNode
@@ -23,18 +23,18 @@ if TYPE_CHECKING:
 
 class PointTilerWorker(TilerWorker[PointSharedMetadata]):
     def execute(
-        self, skt: zmq.Socket[bytes], command: bytes, content: list[bytes]
-    ) -> None:
+        self, command: bytes, content: list[bytes]
+    ) -> Iterator[Sequence[bytes]]:
         if command == PointManagerMessage.READ_FILE.value:
-            self.execute_read_file(skt, content)
+            yield from self.execute_read_file(content)
         elif command == PointManagerMessage.PROCESS_JOBS.value:
-            self.execute_process_jobs(skt, content)
+            yield from self.execute_process_jobs(content)
         elif command == PointManagerMessage.WRITE_PNTS.value:
-            self.execute_write_pnts(skt, content[1], content[0])
+            yield from self.execute_write_pnts(content[1], content[0])
         else:
             raise NotImplementedError(f"Unknown command {command!r}")
 
-    def execute_read_file(self, skt: zmq.Socket[bytes], content: list[bytes]) -> None:
+    def execute_read_file(self, content: list[bytes]) -> Iterator[Sequence[bytes]]:
         parameters = pickle.loads(content[0])
 
         extension = PurePath(parameters["filename"]).suffix.lower()
@@ -56,23 +56,20 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
             self.shared_metadata.extra_fields_to_include,
         )
         for coords, colors, extra_fields in reader_gen:
-            skt.send_multipart(
-                [
-                    PointWorkerMessageType.NEW_TASK.value,
-                    b"",
-                    pickle.dumps(
-                        {"xyz": coords, "rgb": colors, "extra_fields": extra_fields}
-                    ),
-                    struct.pack(">I", len(coords)),
-                ],
-                copy=False,
-            )
+            yield [
+                PointWorkerMessageType.NEW_TASK.value,
+                b"",
+                pickle.dumps(
+                    {"xyz": coords, "rgb": colors, "extra_fields": extra_fields}
+                ),
+                struct.pack(">I", len(coords)),
+            ]
 
-        skt.send_multipart([PointWorkerMessageType.READ.value])
+        yield [PointWorkerMessageType.READ.value]
 
     def execute_write_pnts(
-        self, skt: zmq.Socket[bytes], content: bytes, node_name: bytes
-    ) -> None:
+        self, content: bytes, node_name: bytes
+    ) -> Iterator[Sequence[bytes]]:
         # we can safely write the .pnts file
         if len(content) > 0:
             root = pickle.loads(gzip.decompress(content))
@@ -83,17 +80,13 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
                 total += pnts_writer.node_to_pnts(
                     name, node, self.shared_metadata.out_folder
                 )
-            skt.send_multipart(
-                [
-                    PointWorkerMessageType.PNTS_WRITTEN.value,
-                    struct.pack(">I", total),
-                    node_name,
-                ]
-            )
+            yield [
+                PointWorkerMessageType.PNTS_WRITTEN.value,
+                struct.pack(">I", total),
+                node_name,
+            ]
 
-    def execute_process_jobs(
-        self, skt: zmq.Socket[bytes], content: list[bytes]
-    ) -> None:
+    def execute_process_jobs(self, content: list[bytes]) -> Iterator[Sequence[bytes]]:
         begin = time.time()
         log_enabled = self.shared_metadata.verbosity >= 2
         if log_enabled:
@@ -128,16 +121,12 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
                 log_file,
             )
             for proc_name, proc_data, proc_point_count in node_process.run():
-                skt.send_multipart(
-                    [
-                        PointWorkerMessageType.NEW_TASK.value,
-                        proc_name,
-                        proc_data,
-                        struct.pack(">I", proc_point_count),
-                    ],
-                    copy=False,
-                    block=False,
-                )
+                yield [
+                    PointWorkerMessageType.NEW_TASK.value,
+                    proc_name,
+                    proc_data,
+                    struct.pack(">I", proc_point_count),
+                ]
 
             if log_enabled:
                 print(f"save on disk {name!r} [{time.time() - begin}]", file=log_file)
@@ -151,19 +140,16 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
             if log_enabled:
                 print(f"saved on disk [{time.time() - begin}]", file=log_file)
 
-            skt.send_multipart(
-                [
-                    PointWorkerMessageType.PROCESSED.value,
-                    pickle.dumps(
-                        {
-                            "name": name,
-                            "total": node_process.total_point_count,
-                            "data": data,
-                        }
-                    ),
-                ],
-                copy=False,
-            )
+            yield [
+                PointWorkerMessageType.PROCESSED.value,
+                pickle.dumps(
+                    {
+                        "name": name,
+                        "total": node_process.total_point_count,
+                        "data": data,
+                    }
+                ),
+            ]
 
         if log_enabled:
             print(
