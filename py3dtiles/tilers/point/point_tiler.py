@@ -594,13 +594,13 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             self.root_spacing,
             self.shared_metadata.write_rgb,
             self.shared_metadata.extra_fields_to_include,
-        ).to_tileset(self.out_folder, self.root_scale, None, 0, pool_executor)
+        ).to_tile(self.out_folder, self.root_scale, None, 0, pool_executor)
         if pool_executor is not None:
             pool_executor.shutdown()
 
         if root_tile is None:
             raise RuntimeError(
-                "root_tileset cannot be None here. This is likely a tiler bug."
+                "root_tile cannot be None here. This is likely a tiler bug."
             )
 
         root_tile.transform = transform.reshape(16, order="F")

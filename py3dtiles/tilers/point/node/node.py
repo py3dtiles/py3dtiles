@@ -39,10 +39,10 @@ if TYPE_CHECKING:
     _T = TypeVar("_T", bound=npt.NBitBase)
 
 
-def node_to_tileset(
+def node_to_tile(
     args: tuple[Node, Path, npt.NDArray[np.float32], Node | None, int],
 ) -> Tile | None:
-    return args[0].to_tileset(args[1], args[2], args[3], args[4], None)
+    return args[0].to_tile(args[1], args[2], args[3], args[4], None)
 
 
 class DummyNodeDictType(TypedDict):
@@ -343,7 +343,7 @@ class Node:
         for number_child in range(8):
             yield f"{self.name.decode('ascii')}{number_child}".encode("ascii")
 
-    def to_tileset(
+    def to_tile(
         self,
         folder: Path,
         scale: npt.NDArray[np.float32],
@@ -371,7 +371,7 @@ class Node:
                         (child_node, folder, scale, self, depth + 1)
                     )
                 else:
-                    children_tileset_part = child_node.to_tileset(
+                    children_tileset_part = child_node.to_tile(
                         folder, scale, self, depth + 1
                     )
                     if (
@@ -382,7 +382,7 @@ class Node:
         if pool_executor and parent_node is None:
             children_tileset_parts = [
                 t
-                for t in pool_executor.map(node_to_tileset, parameter_to_compute)
+                for t in pool_executor.map(node_to_tile, parameter_to_compute)
                 if t is not None
             ]
 
