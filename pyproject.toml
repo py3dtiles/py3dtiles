@@ -59,7 +59,7 @@ ply = ["plyfile"]
 dev = [
     "line_profiler",
     "pre-commit",
-    "pytest",
+    "pytest>=8.4.0",
     "pytest-benchmark",
     "pytest-cov",
     "mypy",
