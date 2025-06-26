@@ -8,7 +8,6 @@ from typing import cast
 
 import numpy as np
 import numpy.typing as npt
-from ifcopenshell import entity_instance
 
 from py3dtiles.tilers.base_tiler import Tiler
 from py3dtiles.tilers.shared_store import SharedStore
@@ -19,29 +18,6 @@ from .ifc_message_type import IfcTilerMessage, IfcWorkerMessage
 from .ifc_model import FileMetadata, IfcTileInfo
 from .ifc_shared_metadata import IfcSharedMetadata
 from .ifc_tiler_worker import IfcTilerWorker
-
-
-# from https://github.com/IfcOpenShell/IfcOpenShell/blob/master/src/ifcblender/io_import_scene_ifc/__init__.py#L72C1-L89C1
-# NOTE: ifcopenshell doesn't seem to type everything, so there are some type: ignore in the body of this function
-def _get_parent(element: entity_instance) -> entity_instance | None:
-    """This is based on ifcopenshell.app.geom"""
-    if element.is_a("IfcOpeningElement"):
-        # We skip opening elements as they are nameless.
-        # We use this function to get usable collections.
-        return _get_parent(element.VoidsElements[0].RelatingBuildingElement)
-    if element.is_a("IfcElement"):
-        fills = element.FillsVoids
-        if fills:
-            return fills[0].RelatingOpeningElement  # type: ignore
-        containments = element.ContainedInStructure
-        if containments:
-            return containments[0].RelatingStructure  # type: ignore
-    if element.is_a("IfcObjectDefinition"):
-        decompositions = element.Decomposes
-        if decompositions:
-            return decompositions[0].RelatingObject  # type: ignore
-    return None
-
 
 TILE_STOPS = [
     "IfcSite",
@@ -263,12 +239,8 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         return self.root_tile
 
     def print_summary(self) -> None:
-        print("Summary:")
-
-    def print_debug(
-        self, now: float, number_of_jobs: int, number_of_idle_clients: int
-    ) -> None:
-        print("debug log!")
+        print("IfcTiler - summary:")
+        print(f"  - files to process: {self.files_to_read}")
 
     def memory_control(self) -> None:
         self.store.control_memory_usage(self.cache_size, self.verbosity)

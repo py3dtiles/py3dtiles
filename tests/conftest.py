@@ -98,6 +98,30 @@ def tileset_pnts_2(tileset_pnts_path_2: Path) -> TileSet:
 
 
 @fixture
+def tileset_ifc_path_1(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
+    tileset_folder = tmp_dir / "simple1_ifc"
+    convert(fixtures_dir / "simple1.ifc", outfolder=tileset_folder, overwrite=True)
+    yield tileset_folder / "tileset.json"
+
+
+@fixture
+def tileset_ifc_1(tileset_ifc_path_1: Path) -> TileSet:
+    return TileSet.from_file(tileset_ifc_path_1)
+
+
+@fixture
+def tileset_ifc_path_2(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
+    tileset_folder = tmp_dir / "simple2_ifc"
+    convert(fixtures_dir / "simple2.ifc", outfolder=tileset_folder, overwrite=True)
+    yield tileset_folder / "tileset.json"
+
+
+@fixture
+def tileset_ifc_2(tileset_ifc_path_2: Path) -> TileSet:
+    return TileSet.from_file(tileset_ifc_path_2)
+
+
+@fixture
 def ply_filepath(fixtures_dir: Path) -> Path:
     return fixtures_dir / "simple.ply"
 

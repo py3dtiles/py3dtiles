@@ -359,7 +359,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         return root_aabb, root_scale, root_spacing
 
     def print_summary(self) -> None:
-        print("Summary:")
+        print("Point tiler - summary:")
         print(f"  - files to process: {self.files}")
         print("  - points to process: {}".format(self.files_info["point_count"]))
         print(f"  - offset to use: {self.avg_min}")
