@@ -30,6 +30,10 @@ T = TypeVar("T", bound=np.generic)
 
 
 class Tile(RootProperty[TileDictType]):
+    """
+    Represents a Tile in the 3dtiles specs
+    """
+
     def __init__(
         self,
         geometric_error: float = 500,
