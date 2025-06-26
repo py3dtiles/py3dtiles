@@ -440,12 +440,12 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
         return PointManagerMessage.WRITE_PNTS.value, [node_name, data]
 
-    def process_message(self, message_type: bytes, result: list[bytes]) -> None:
+    def process_message(self, message_type: bytes, message: list[bytes]) -> None:
         if message_type == PointWorkerMessageType.READ.value:
             self.state.number_of_reading_jobs -= 1
 
         elif message_type == PointWorkerMessageType.PROCESSED.value:
-            content = pickle.loads(result[-1])
+            content = pickle.loads(message[-1])
             self.state.processed_points += content["total"]
             self.state.points_in_progress -= content["total"]
 
@@ -454,14 +454,14 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             self.dispatch_processed_nodes(content)
 
         elif message_type == PointWorkerMessageType.PNTS_WRITTEN.value:
-            self.state.points_in_pnts += struct.unpack(">I", result[0])[0]
+            self.state.points_in_pnts += struct.unpack(">I", message[0])[0]
             self.state.number_of_writing_jobs -= 1
 
         elif message_type == PointWorkerMessageType.NEW_TASK.value:
             self.state.add_tasks_to_process(
-                node_name=result[0],
-                data=result[1],
-                point_count=struct.unpack(">I", result[2])[0],
+                node_name=message[0],
+                data=message[1],
+                point_count=struct.unpack(">I", message[2])[0],
             )
 
         else:
