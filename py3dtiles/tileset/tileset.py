@@ -101,7 +101,8 @@ class TileSet(RootProperty[TilesetDictType]):
     ) -> Generator[TileContent | TileSet]:
         tiles = [self.root_tile] + self.root_tile.get_all_children()
         for tile in tiles:
-            yield tile.get_or_fetch_content(self.root_uri)
+            if tile.has_content():
+                yield tile.get_or_fetch_content(self.root_uri)
 
     def delete_on_disk(
         self, tileset_path: Path, delete_sub_tileset: bool = False
