@@ -67,7 +67,7 @@ class DummyNode:
             points = self.points
             if len(points) == 0:
                 return None
-            xyz = np.concatenate(tuple([pt.positions for pt in points]))
+            xyz = np.concatenate(tuple(pt.positions for pt in points))
 
             if points[0].colors is None:
                 # assume we don't have color
@@ -75,13 +75,13 @@ class DummyNode:
             else:
                 # is not none only to make mypy happy
                 rgb = np.concatenate(
-                    tuple([pt.colors for pt in points if pt.colors is not None])
+                    tuple(pt.colors for pt in points if pt.colors is not None)
                 )
 
             extra_fields = {}
             for f in self.points[0].extra_fields.keys():
                 extra_fields[f] = np.concatenate(
-                    tuple([pt.extra_fields[f] for pt in points])
+                    tuple(pt.extra_fields[f] for pt in points)
                 )
 
             return Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
@@ -319,12 +319,12 @@ class Node:
         if self.children is None:
             if len(self.points) == 0:
                 return None
-            xyz = np.concatenate(tuple([pt.positions for pt in self.points]))
+            xyz = np.concatenate(tuple(pt.positions for pt in self.points))
 
             if self.points[0].colors is not None:
                 # the "or []" is just to make mypy happy. Normally it shouldn't be None here
                 rgb: npt.NDArray[np.uint8 | np.uint16] | None = np.concatenate(
-                    tuple([pt.colors or [] for pt in self.points])
+                    tuple(pt.colors or [] for pt in self.points)
                 )
             else:
                 rgb = None
@@ -332,7 +332,7 @@ class Node:
             extra_fields = {}
             for f in self.extra_fields:
                 extra_fields[f.name] = np.concatenate(
-                    tuple([pt.extra_fields[f.name] for pt in self.points])
+                    tuple(pt.extra_fields[f.name] for pt in self.points)
                 )
 
             return Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
