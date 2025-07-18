@@ -160,9 +160,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         self.files = files
         self.out_folder = out_folder
         self.files_info = self.get_files_info(self.crs_in, self.force_crs_in)
-        self.transformer = self.get_transformer(
-            self.crs_out, always_xy=self.pyproj_always_xy
-        )
+        self.transformer = self.get_transformer()
         (
             self.rotation_matrix,
             self.original_aabb,
@@ -273,20 +271,20 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             "extra_fields": list(extra_fields_dict.values()),
         }
 
-    def get_transformer(
-        self, crs_out: Optional[CRS], always_xy: bool = False
-    ) -> Optional[Transformer]:
-        if crs_out:
+    def get_transformer(self) -> Optional[Transformer]:
+        if self.crs_out:
             if self.files_info["crs_in"] is None:
                 raise SrsInMissingException(
                     "No file contains CRS in its metadata. Please specify the input crs manually."
                 )
-            elif crs_out.equals(self.files_info["crs_in"]):
+            elif self.crs_out.equals(self.files_info["crs_in"]):
                 # nothing to do :-)
                 transformer = None
             else:
                 transformer = Transformer.from_crs(
-                    self.files_info["crs_in"], crs_out, always_xy=always_xy
+                    self.files_info["crs_in"],
+                    self.crs_out,
+                    always_xy=self.pyproj_always_xy,
                 )
         else:
             transformer = None
