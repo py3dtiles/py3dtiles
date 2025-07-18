@@ -29,6 +29,7 @@ from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
 from py3dtiles.tileset import TileSet, number_of_points_in_tileset
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content import Pnts
+from py3dtiles.tileset.tile import Tile
 
 
 def test_convert(tmp_dir: Path, fixtures_dir: Path) -> None:
@@ -40,11 +41,30 @@ def test_convert(tmp_dir: Path, fixtures_dir: Path) -> None:
     with tileset_path.open() as f:
         tileset = json.load(f)
 
-    expecting_box = [5.0, 5.0, 0.8832, 5.0, 0, 0, 0, 5.0, 0, 0, 0, 0.8832]
+    expecting_box = [0.0, 0.0, 0.0, 5.0, 0, 0, 0, 5.0, 0, 0, 0, 0.8832]
     box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
     assert box == expecting_box
+    assert tileset["root"]["transform"] == [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.2167949676513672,
+        1.0,
+    ]
 
-    assert Path(tmp_dir, "r0.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r0.pnts").exists()
 
     with laspy.open(path) as f:
         las_point_count = f.header.point_count
@@ -69,11 +89,30 @@ def test_convert_with_prune(tmp_dir: Path, fixtures_dir: Path) -> None:
     with tileset_path.open() as f:
         tileset = json.load(f)
 
-    expecting_box = [1.5, 1.5, 1.5, 1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5]
+    assert tileset["root"]["transform"] == [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -0.5,
+        -0.5,
+        -0.5,
+        1.0,
+    ]
+    expecting_box = [0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5]
     box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
     assert box == expecting_box
 
-    assert Path(tmp_dir, "r0.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r0.pnts").exists()
 
     with laspy.open(laz_path) as f:
         las_point_count = f.header.point_count
@@ -103,18 +142,36 @@ def test_convert_without_srs(tmp_dir: Path, fixtures_dir: Path) -> None:
     with tileset_path.open() as f:
         tileset = json.load(f)
 
-    expecting_box = [0.9662, 0.0008, 0.7066, 0.9662, 0, 0, 0, 0.0024, 0, 0, 0, 0.7066]
-    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
-    assert box == expecting_box
+    assert tileset["root"]["transform"] == [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        4203111.466352918,
+        171019.2566206994,
+        4778277.619872708,
+        1.0,
+    ]
 
-    assert Path(tmp_dir, "r.pnts").exists()
+    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    assert box == [0.0, 0.0, 0.0, 0.5057, 0.0, 0.0, 0.0, 0.9801, 0.0, 0.0, 0.0, 0.5432]
+
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     with laspy.open(fixtures_dir / "without_srs.las") as f:
         las_point_count = f.header.point_count
 
     assert las_point_count == number_of_points_in_tileset(tileset_path)
 
-    tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
@@ -130,7 +187,7 @@ def test_convert_las_color_scale(tmp_dir: Path, fixtures_dir: Path) -> None:
         jobs=1,
     )
 
-    tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
@@ -143,7 +200,7 @@ def test_convert_las_color_scale(tmp_dir: Path, fixtures_dir: Path) -> None:
         outfolder=tmp_dir,
         jobs=1,
     )
-    tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     # it should clamp to 255
@@ -158,7 +215,7 @@ def test_convert_las_color_scale(tmp_dir: Path, fixtures_dir: Path) -> None:
         outfolder=tmp_dir,
         jobs=1,
     )
-    tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     # it should clamp to 255
@@ -182,6 +239,27 @@ def test_convert_with_srs(tmp_dir: Path, fixtures_dir: Path) -> None:
     assert_array_almost_equal(
         tileset["root"]["transform"],
         [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            -435960.9784218713,
+            -5438487.100036068,
+            3292675.726167237,
+            1.0,
+        ],
+    )
+    assert_array_almost_equal(
+        tileset["root"]["children"][0]["transform"],
+        [
             99.67987521469695,
             -7.9951492419151196,
             0.008110606960175354,
@@ -194,9 +272,9 @@ def test_convert_with_srs(tmp_dir: Path, fixtures_dir: Path) -> None:
             -85.34644109292454,
             51.66301092062502,
             0.0,
-            -436496.4274249223,
-            -5438698.662382579,
-            3292223.375579676,
+            -535.4490030509769,
+            -211.56234651152045,
+            -452.35058756079525,
             1.0,
         ],
     )
@@ -214,10 +292,13 @@ def test_convert_with_srs(tmp_dir: Path, fixtures_dir: Path) -> None:
         0.0,
         0.1952,
     ]
-    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    box = [
+        round(value, 4)
+        for value in tileset["root"]["children"][0]["boundingVolume"]["box"]
+    ]
     assert box == expecting_box
 
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     with laspy.open(fixtures_dir / "with_srs_3857.las") as f:
         las_point_count = f.header.point_count
@@ -234,7 +315,7 @@ def test_convert_simple_xyz(tmp_dir: Path, fixtures_dir: Path) -> None:
         jobs=1,
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     xyz_point_count = 0
     with open(fixtures_dir / "simple.xyz") as f:
@@ -246,9 +327,11 @@ def test_convert_simple_xyz(tmp_dir: Path, fixtures_dir: Path) -> None:
 
     with tileset_path.open() as f:
         tileset = json.load(f)
-
     expecting_box = [0.3916, 0.3253, -0.0001, 0.39, 0, 0, 0, 0.3099, 0, 0, 0, 0.0001]
-    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    box = [
+        round(value, 4)
+        for value in tileset["root"]["children"][0]["boundingVolume"]["box"]
+    ]
     assert box == expecting_box
 
 
@@ -260,7 +343,7 @@ def test_convert_xyz_rgb_i_c(tmp_dir: Path, fixtures_dir: Path) -> None:
         extra_fields=["intensity", "classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     xyz_point_count = -1  # compensate for header line
     with open(fixtures_dir / "simple_with_irgb_and_classification.csv") as f:
@@ -270,11 +353,15 @@ def test_convert_xyz_rgb_i_c(tmp_dir: Path, fixtures_dir: Path) -> None:
     tileset_path = tmp_dir / "tileset.json"
     assert xyz_point_count == number_of_points_in_tileset(tileset_path)
 
-    tileset = TileSet.from_file(tmp_dir / "tileset.json")
-    tile_content = Pnts.from_file(tmp_dir / "r.pnts")
+    tileset = TileSet.from_file(tileset_path)
+    tile_content = Pnts.from_file(tmp_dir / "points" / "r.pnts")
     ft_body = tile_content.body.feature_table.body
     # assert position
-    world_coords = tileset.root_tile.transform_coords(ft_body.position.reshape(-1, 3))
+    local_coords = tileset.root_tile.children[0].transform_coords(
+        ft_body.position.reshape(-1, 3)
+    )
+    world_coords = tileset.root_tile.transform_coords(local_coords)
+
     assert_array_equal(
         world_coords,
         np.array(
@@ -303,7 +390,7 @@ def test_convert_xyz_rgb_i_c_with_srs(tmp_dir: Path, fixtures_dir: Path) -> None
         jobs=1,
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     xyz_point_count = -1  # compensate for header line
     with open(fixtures_dir / "simple_with_irgb_and_classification.csv") as f:
@@ -317,7 +404,7 @@ def test_convert_xyz_rgb_i_c_with_srs(tmp_dir: Path, fixtures_dir: Path) -> None
 def test_convert_xyz_with_rgb(tmp_dir: Path, fixtures_dir: Path) -> None:
     convert(fixtures_dir / "simple_with_rgb.xyz", outfolder=tmp_dir)
 
-    tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
@@ -325,7 +412,7 @@ def test_convert_xyz_with_rgb(tmp_dir: Path, fixtures_dir: Path) -> None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((10, 0, 0), dtype=np.uint8))
 
-    tile2 = Pnts.from_file(tmp_dir / "r4.pnts")
+    tile2 = Pnts.from_file(tmp_dir / "points" / "r4.pnts")
     assert tile2.body.feature_table.nb_points() == 1
     pt2_color = tile2.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
@@ -333,7 +420,7 @@ def test_convert_xyz_with_rgb(tmp_dir: Path, fixtures_dir: Path) -> None:
         raise RuntimeError("pt2_color shouldn't be None.")
     assert_array_equal(pt2_color, np.array((0, 0, 200), dtype=np.uint8))
 
-    tile3 = Pnts.from_file(tmp_dir / "r6.pnts")
+    tile3 = Pnts.from_file(tmp_dir / "points" / "r6.pnts")
     assert tile3.body.feature_table.nb_points() == 1
     pt3_color = tile3.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
@@ -345,7 +432,7 @@ def test_convert_xyz_with_rgb(tmp_dir: Path, fixtures_dir: Path) -> None:
 def test_convert_xyz_with_rgb_color_scale(tmp_dir: Path, fixtures_dir: Path) -> None:
     convert(fixtures_dir / "simple_with_rgb.xyz", outfolder=tmp_dir, color_scale=1.5)
 
-    tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
@@ -353,7 +440,7 @@ def test_convert_xyz_with_rgb_color_scale(tmp_dir: Path, fixtures_dir: Path) -> 
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((15, 0, 0), dtype=np.uint8))
 
-    tile2 = Pnts.from_file(tmp_dir / "r4.pnts")
+    tile2 = Pnts.from_file(tmp_dir / "points" / "r4.pnts")
     assert tile2.body.feature_table.nb_points() == 1
     pt2_color = tile2.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
@@ -361,7 +448,7 @@ def test_convert_xyz_with_rgb_color_scale(tmp_dir: Path, fixtures_dir: Path) -> 
         raise RuntimeError("pt2_color shouldn't be None.")
     assert_array_equal(pt2_color, np.array((0, 0, 255), dtype=np.uint8))
 
-    tile3 = Pnts.from_file(tmp_dir / "r6.pnts")
+    tile3 = Pnts.from_file(tmp_dir / "points" / "r6.pnts")
     assert tile3.body.feature_table.nb_points() == 1
     pt3_color = tile3.body.feature_table.get_feature_color_at(0)
     # Note the first point is taken as offset base
@@ -373,7 +460,7 @@ def test_convert_xyz_with_rgb_color_scale(tmp_dir: Path, fixtures_dir: Path) -> 
 def test_convert_ply(tmp_dir: Path, fixtures_dir: Path) -> None:
     convert(fixtures_dir / "simple.ply", outfolder=tmp_dir, jobs=1)
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     expected_point_count = 22300
     tileset_path = tmp_dir / "tileset.json"
@@ -396,10 +483,13 @@ def test_convert_ply(tmp_dir: Path, fixtures_dir: Path) -> None:
         0.0,
         1.1842,
     ]
-    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    box = [
+        round(value, 4)
+        for value in tileset["root"]["children"][0]["boundingVolume"]["box"]
+    ]
     assert box == expecting_box
 
-    tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 5293
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
@@ -411,34 +501,34 @@ def test_convert_ply_with_color(tmp_dir: Path, fixtures_dir: Path) -> None:
     # 8 bits color
     convert(fixtures_dir / "simple_with_8_bits_colors.ply", outfolder=tmp_dir, jobs=1)
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     expected_point_count = 4
     tileset_path = tmp_dir / "tileset.json"
     assert expected_point_count == number_of_points_in_tileset(tileset_path)
 
-    tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((0, 128, 0), dtype=np.uint8))
 
-    tile1 = Pnts.from_file(tmp_dir / "r3.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r3.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((10, 0, 0), dtype=np.uint8))
 
-    tile1 = Pnts.from_file(tmp_dir / "r5.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r5.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((0, 0, 20), dtype=np.uint8))
 
-    tile1 = Pnts.from_file(tmp_dir / "r6.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r6.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
@@ -454,34 +544,34 @@ def test_convert_ply_with_color(tmp_dir: Path, fixtures_dir: Path) -> None:
         overwrite=True,
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     expected_point_count = 4
     tileset_path = tmp_dir / "tileset.json"
     assert expected_point_count == number_of_points_in_tileset(tileset_path)
 
-    tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((0, 0, 0), dtype=np.uint8))
 
-    tile1 = Pnts.from_file(tmp_dir / "r3.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r3.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((1, 0, 0), dtype=np.uint8))
 
-    tile1 = Pnts.from_file(tmp_dir / "r5.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r5.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((0, 0, 4), dtype=np.uint8))
 
-    tile1 = Pnts.from_file(tmp_dir / "r6.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r6.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
@@ -498,30 +588,30 @@ def test_convert_ply_with_color_scale(tmp_dir: Path, fixtures_dir: Path) -> None
         color_scale=3,
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
-    tile1 = Pnts.from_file(tmp_dir / "r0.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r0.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((0, 255, 0), dtype=np.uint8))
 
-    tile1 = Pnts.from_file(tmp_dir / "r3.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r3.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((30, 0, 0), dtype=np.uint8))
 
-    tile1 = Pnts.from_file(tmp_dir / "r5.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r5.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
         raise RuntimeError("pt1_color shouldn't be None.")
     assert_array_equal(pt1_color, np.array((0, 0, 60), dtype=np.uint8))
 
-    tile1 = Pnts.from_file(tmp_dir / "r6.pnts")
+    tile1 = Pnts.from_file(tmp_dir / "points" / "r6.pnts")
     assert tile1.body.feature_table.nb_points() == 1
     pt1_color = tile1.body.feature_table.get_feature_color_at(0)
     if pt1_color is None:
@@ -540,7 +630,7 @@ def test_convert_ply_with_wrong_classification(
         extra_fields=["classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     for py3dt_file in tmp_dir.iterdir():
         if py3dt_file.suffix != ".pnts":
@@ -557,9 +647,9 @@ def test_convert_ply_with_wrong_classification(
         extra_fields=["classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
     classification: list[int] = []
-    for py3dt_file in tmp_dir.iterdir():
+    for py3dt_file in (tmp_dir / "points").iterdir():
         if py3dt_file.suffix != ".pnts":
             continue
         tile_content = Pnts.from_file(py3dt_file)
@@ -590,10 +680,10 @@ def test_convert_ply_with_good_classification(
         extra_fields=["classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     tileset_labels = np.array((), dtype=np.uint8)
-    for py3dt_file in tmp_dir.iterdir():
+    for py3dt_file in (tmp_dir / "points").iterdir():
         if py3dt_file.suffix != ".pnts":
             continue
         tile_content = Pnts.from_file(py3dt_file)
@@ -618,9 +708,9 @@ def test_convert_ply_with_intensity(tmp_dir: Path, fixtures_dir: Path) -> None:
         extra_fields=["intensity"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
-    tile_content = Pnts.from_file(tmp_dir / "r.pnts")
+    tile_content = Pnts.from_file(tmp_dir / "points" / "r.pnts")
     assert_array_equal(
         tile_content.body.feature_table.body.position,
         [0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1],
@@ -643,9 +733,9 @@ def test_convert_ply_with_classification_and_intensity(
         extra_fields=["intensity", "classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
-    tile_content = Pnts.from_file(tmp_dir / "r.pnts")
+    tile_content = Pnts.from_file(tmp_dir / "points" / "r.pnts")
     assert_array_equal(
         tile_content.body.feature_table.body.position,
         [0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1],
@@ -673,9 +763,9 @@ def test_convert_ply_with_classification_and_intensity_f4(
         extra_fields=["intensity", "classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
-    tile_content = Pnts.from_file(tmp_dir / "r.pnts")
+    tile_content = Pnts.from_file(tmp_dir / "points" / "r.pnts")
     assert_array_equal(
         tile_content.body.feature_table.body.position,
         [0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1],
@@ -700,9 +790,9 @@ def test_convert_ply_with_classification_and_intensity_f4(
         extra_fields=["classification"],
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
-    tile_content = Pnts.from_file(tmp_dir / "r.pnts")
+    tile_content = Pnts.from_file(tmp_dir / "points" / "r.pnts")
     assert_array_equal(
         tile_content.body.feature_table.body.position,
         [0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1],
@@ -723,7 +813,7 @@ def test_convert_mix_las_xyz(tmp_dir: Path, fixtures_dir: Path) -> None:
         jobs=1,
     )
     assert Path(tmp_dir, "tileset.json").exists()
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     xyz_point_count = 0
     with open(fixtures_dir / "simple.xyz") as f:
@@ -755,7 +845,10 @@ def test_convert_mix_las_xyz(tmp_dir: Path, fixtures_dir: Path) -> None:
         0.0,
         1585.8657,
     ]
-    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    box = [
+        round(value, 4)
+        for value in tileset["root"]["children"][0]["boundingVolume"]["box"]
+    ]
     assert box == expecting_box
 
 
@@ -870,7 +963,7 @@ def test_convert_export_folder_already_exists(
 
     # now, subsequent conversion will fail
     with raises(
-        FileExistsError, match=f"Folder '{ tmp_dir}' already exists and is not empty."
+        FileExistsError, match=f"Folder '{tmp_dir}' already exists and is not empty."
     ):
         convert(
             fixtures_dir / "simple.xyz",
@@ -893,7 +986,7 @@ def test_convert_export_folder_already_exists(
     tmp_dir.touch()
     with raises(
         FileExistsError,
-        match=f"'{ tmp_dir}' already exists and is not a directory. Not deleting it.",
+        match=f"'{tmp_dir}' already exists and is not a directory. Not deleting it.",
     ):
         convert(
             fixtures_dir / "simple.xyz",
@@ -941,7 +1034,7 @@ def test_convert_rgb_classif(
     extra_fields = ["classification"] if classif_bool else []
     convert(input_filepath, rgb=rgb_bool, extra_fields=extra_fields, outfolder=tmp_dir)
 
-    assert Path(tmp_dir, "r.pnts").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
 
     ply_data = plyfile.PlyData.read(input_filepath)
     ply_point_count = ply_data.elements[0].count
@@ -970,10 +1063,13 @@ def test_convert_without_threadpool(tmp_dir: Path, ripple_filepath: Path) -> Non
         tileset = json.load(f)
 
     expecting_box = [5.0, 5.0, 0.8832, 5.0, 0, 0, 0, 5.0, 0, 0, 0, 0.8832]
-    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    box = [
+        round(value, 4)
+        for value in tileset["root"]["children"][0]["boundingVolume"]["box"]
+    ]
     assert box == expecting_box
 
-    assert Path(tmp_dir, "r0.pnts").exists()
+    assert Path(tmp_dir, "points", "r0.pnts").exists()
 
     with laspy.open(ripple_filepath) as f:
         las_point_count = f.header.point_count
@@ -995,7 +1091,7 @@ def test_convert_crs_definition_ordering(
     tileset = TileSet.from_file(tileset_path)
     # we assert on the offset of transform, it's the easiest really
     assert_array_almost_equal(
-        tileset.root_tile.transform[:-1, 3], [12706441.9, 2544660, 530], decimal=0
+        tileset.root_tile.transform[:-1, 3], [12706529.0, 2544677.0, 536.0], decimal=0
     )
 
 
@@ -1005,6 +1101,7 @@ def test_convert_crs_traditional_ordering(
     convert(
         easting_northing_ordering_2326_xyz,
         outfolder=tmp_dir,
+        rgb=False,
         crs_in=CRS(2326),
         crs_out=CRS(3857),
         pyproj_always_xy=True,
@@ -1013,8 +1110,9 @@ def test_convert_crs_traditional_ordering(
     assert number_of_points_in_tileset(tileset_path) == 2
     tileset = TileSet.from_file(tileset_path)
     # we assert on the offset of transform, it's the easiest really
+    np.set_printoptions(suppress=True)
     assert_array_almost_equal(
-        tileset.root_tile.transform[:-1, 3], [12706441.9, 2544660, 530], decimal=0
+        tileset.root_tile.transform[:-1, 3], [12706529.0, 2544677.0, 536.0], decimal=0
     )
 
 
@@ -1030,7 +1128,7 @@ class Worker(TilerWorker[Metadata]):
 
 
 class Tiler1(Tiler[Metadata, Worker]):
-    name = b"tiler1"
+    name = "tiler1"
 
     def initialize(
         self, files: list[Path], working_dir: Path, out_folder: Path
@@ -1052,16 +1150,16 @@ class Tiler1(Tiler[Metadata, Worker]):
     def get_worker(self) -> Worker:
         return Worker(Metadata())
 
-    def get_tileset(self, use_process_pool: bool = True) -> TileSet:
-        tileset = TileSet()
-        tileset.root_tile.bounding_volume = BoundingVolumeBox.from_points(
+    def get_root_tile(self, use_process_pool: bool = True) -> Tile:
+        root_tile = Tile()
+        root_tile.bounding_volume = BoundingVolumeBox.from_points(
             [np.array([0, 0, 0]), np.array([1, 1, 1])]
         )
-        return tileset
+        return root_tile
 
 
 class Tiler2(Tiler[Metadata, Worker]):
-    name = b"tiler2"
+    name = "tiler2"
 
     def initialize(
         self, files: list[Path], working_dir: Path, out_folder: Path
@@ -1083,19 +1181,19 @@ class Tiler2(Tiler[Metadata, Worker]):
     def get_worker(self) -> Worker:
         return Worker(Metadata())
 
-    def get_tileset(self, use_process_pool: bool = True) -> TileSet:
-        tileset = TileSet()
-        tileset.root_tile.bounding_volume = BoundingVolumeBox.from_points(
+    def get_root_tile(self, use_process_pool: bool = True) -> Tile:
+        root_tile = Tile()
+        root_tile.bounding_volume = BoundingVolumeBox.from_points(
             [np.array([0, 0, 0]), np.array([2, 2, 2])]
         )
-        return tileset
+        return root_tile
 
 
 def test_assign_file_to_tilers() -> None:
     converter = Converter([Tiler1(), Tiler2()])
     assert converter._assign_file_to_tilers(
         [Path("file.1"), Path("file.2"), Path("file2.2")]
-    ) == {b"tiler1": [Path("file.1")], b"tiler2": [Path("file.2"), Path("file2.2")]}
+    ) == {"tiler1": [Path("file.1")], "tiler2": [Path("file.2"), Path("file2.2")]}
 
     with raises(TilerNotFoundException):
         converter._assign_file_to_tilers(

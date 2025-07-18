@@ -31,7 +31,7 @@ class TestTileContentManagement:
         assert tile.content_uri is None
 
     def test_with_path_content(self, tmp_dir_with_content: Path) -> None:
-        tile_path = Path("r.pnts")
+        tile_path = Path("points", "r.pnts")
         tile = Tile(content_uri=tile_path)
 
         assert tile.tile_content is None

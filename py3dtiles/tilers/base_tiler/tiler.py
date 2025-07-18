@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
-from py3dtiles.tileset.tileset import TileSet
+from py3dtiles.tileset.tile import Tile
 
 from .shared_metadata import SharedMetadata
 from .tiler_worker import TilerWorker
@@ -26,7 +26,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
 
     **Implementation notice**:
 
-    - the `name` class attribute should be changed by each subclass
+    - the `name` class attribute should be overwritten by subclasses and should be unique
     - `__init__` should not read any files on the disk, `initialize` on the
       other hand is expected to gather metadata for input files
     - as this class is generic over the type of SharedMetadata and TilerWorker,
@@ -37,12 +37,35 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
     - all mutable data and parameters **must** be passed as messages between tilers and workers. Workers will send messages by using ``yield`` (see :class:`py3dtiles.tilers.base_tiler.tiler_worker.TilerWorker`)
     - the constructor of a Tiler is not expected to do any real work. The ``initialize`` method on the other hand, should gather metadata from input files
 
+    **important note about `out_folder`**
+
+    `out_folder` will be given as parameter when the base process calls
+    `initialize`. This folder should contain all the written tiles by this tiler. How this folder is organized is left to the tiler's
+    implementor. The only constraint is that all the `content_uri` should be
+    relative to the **parent** folder of this folder. `out_folder` given to each tiler
+    is actually a subfolder (of the name self.name) of `out_folder` given to
+    the main process. The latter will actually contain the tileset.json, that's
+    why all the content_uri should be relative to the parent folder of the
+    given out_folder.
+
+    For instance, if the `out_folder` given to the convert process is `.`, and self.name is "points", the parameter `out_folder` given to `initialize` would be `./points`, and the hierarchy at the end of the process should be::
+
+        .
+        ├── points
+        │   ├── r0.pnts
+        │   ├── r2.pnts
+        │   ├── ...
+        │   ├── r6.pnts
+        └── tileset.json
+
+    The `content_uri` of the different tiles should therefore be relative to `.` and not `./points`.
+
     This class will organize the different tasks and their order of dispatch to
     the TilerWorker instances. When creating a subclass of Tiler, you're
     supposed to subclass SharedMetadata and TilerWorker as well.
     """
 
-    name = b""
+    name = ""
     shared_metadata: _SharedMetadataT
 
     @abstractmethod
@@ -71,6 +94,9 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
 
         This method is probably a good place to init the SharedMetadata
         subclass instance as well.
+
+        :param working_dir: a temporary directory where this tiler can store intermediate result
+        :param out_folder: the output folder for this tiler. Please see the note about this folder in the general documentation for this class.
         """
 
     @abstractmethod
@@ -100,7 +126,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def process_message(self, message_type: bytes, content: list[bytes]) -> None:
+    def process_message(self, message_type: bytes, message: list[bytes]) -> None:
         """
         This method is called with each message sent by workers. Its role is to process those
         messages, to update the internal state of the tiler, so that new tasks or a tileset writing
@@ -108,12 +134,14 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def get_tileset(self, use_process_pool: bool = True) -> TileSet:
+    def get_root_tile(self, use_process_pool: bool = True) -> Tile:
         """
         Get the tileset file once the binary data are written.
 
         This function will be called once by convert after this tiler has stopped generating tasks and all
         the workers are idle.
+
+        Tilers are expected to returns one root tile which will be the root of all their hierarchy. Tilers are expected to set the `content_uri` of every tile
 
         :param use_process_pool: allow the use of a process pool. Process pools can cause issues in
         environment lacking shared memory.

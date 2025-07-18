@@ -76,3 +76,23 @@ class BoundingVolumeMissingException(InvalidTilesetError):
     """
     This exception will be thrown when a bounding volume is needed but not present.
     """
+
+
+class TileContentMissingException(Py3dtilesException):
+    """
+    This exception will be thrown when py3dtiles expects a tile with content loaded, but found a tile with a content uri, but no content.
+
+    This exception is raised when py3dtiles cannot load it itself. Indeed, to load a tile content, py3dtiles needs the full url, and often tiles only have the relative url to the tileset path. If you encounter this exception in your own code, load the tile when you can with ``tile.get_or_fetch_content``.
+
+
+    .. property:: content_uri
+       :type: Path
+
+       the uri of the content that wasn't loaded
+    """
+
+    def __init__(self, tile_content_uri: Path):
+        super().__init__(
+            f"Content with uri {tile_content_uri} wasn't loaded. Please load it first with `Tile.get_or_fetch_content`."
+        )
+        self.content_uri: Path = tile_content_uri

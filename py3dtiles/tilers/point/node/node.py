@@ -39,10 +39,10 @@ if TYPE_CHECKING:
     _T = TypeVar("_T", bound=npt.NBitBase)
 
 
-def node_to_tileset(
+def node_to_tile(
     args: tuple[Node, Path, npt.NDArray[np.float32], Node | None, int],
 ) -> Tile | None:
-    return args[0].to_tileset(args[1], args[2], args[3], args[4], None)
+    return args[0].to_tile(args[1], args[2], args[3], args[4], None)
 
 
 class DummyNodeDictType(TypedDict):
@@ -67,7 +67,7 @@ class DummyNode:
             points = self.points
             if len(points) == 0:
                 return None
-            xyz = np.concatenate(tuple([pt.positions for pt in points]))
+            xyz = np.concatenate(tuple(pt.positions for pt in points))
 
             if points[0].colors is None:
                 # assume we don't have color
@@ -75,13 +75,13 @@ class DummyNode:
             else:
                 # is not none only to make mypy happy
                 rgb = np.concatenate(
-                    tuple([pt.colors for pt in points if pt.colors is not None])
+                    tuple(pt.colors for pt in points if pt.colors is not None)
                 )
 
             extra_fields = {}
             for f in self.points[0].extra_fields.keys():
                 extra_fields[f] = np.concatenate(
-                    tuple([pt.extra_fields[f] for pt in points])
+                    tuple(pt.extra_fields[f] for pt in points)
                 )
 
             return Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
@@ -319,12 +319,12 @@ class Node:
         if self.children is None:
             if len(self.points) == 0:
                 return None
-            xyz = np.concatenate(tuple([pt.positions for pt in self.points]))
+            xyz = np.concatenate(tuple(pt.positions for pt in self.points))
 
             if self.points[0].colors is not None:
                 # the "or []" is just to make mypy happy. Normally it shouldn't be None here
                 rgb: npt.NDArray[np.uint8 | np.uint16] | None = np.concatenate(
-                    tuple([pt.colors or [] for pt in self.points])
+                    tuple(pt.colors or [] for pt in self.points)
                 )
             else:
                 rgb = None
@@ -332,7 +332,7 @@ class Node:
             extra_fields = {}
             for f in self.extra_fields:
                 extra_fields[f.name] = np.concatenate(
-                    tuple([pt.extra_fields[f.name] for pt in self.points])
+                    tuple(pt.extra_fields[f.name] for pt in self.points)
                 )
 
             return Points(positions=xyz, colors=rgb, extra_fields=extra_fields)
@@ -343,7 +343,7 @@ class Node:
         for number_child in range(8):
             yield f"{self.name.decode('ascii')}{number_child}".encode("ascii")
 
-    def to_tileset(
+    def to_tile(
         self,
         folder: Path,
         scale: npt.NDArray[np.float32],
@@ -371,7 +371,7 @@ class Node:
                         (child_node, folder, scale, self, depth + 1)
                     )
                 else:
-                    children_tileset_part = child_node.to_tileset(
+                    children_tileset_part = child_node.to_tile(
                         folder, scale, self, depth + 1
                     )
                     if (
@@ -382,7 +382,7 @@ class Node:
         if pool_executor and parent_node is None:
             children_tileset_parts = [
                 t
-                for t in pool_executor.map(node_to_tileset, parameter_to_compute)
+                for t in pool_executor.map(node_to_tile, parameter_to_compute)
                 if t is not None
             ]
 
@@ -464,7 +464,7 @@ class Node:
 
         content_uri = None
         if not prune:
-            content_uri = pnts_path.relative_to(folder)
+            content_uri = pnts_path.relative_to(folder.parent)
             xyz_float = xyz.view(np.float32)
 
             # update aabb based on real values

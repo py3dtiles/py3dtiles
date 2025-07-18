@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 from collections.abc import Generator
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+from py3dtiles import __version__
 from py3dtiles.typing import AssetDictType, GeometricErrorType, TilesetDictType
 
 from .root_property import RootProperty
@@ -56,6 +58,12 @@ class TileSet(RootProperty[TilesetDictType]):
     ) -> None:
         super().__init__()
         self.asset = Asset(version="1.0")
+        # by default, add these metadatas
+        self.asset.extras["created_date"] = datetime.now().isoformat()
+        self.asset.extras["generator"] = {
+            "name": "py3dtiles",
+            "version": __version__,
+        }
         self.geometric_error: GeometricErrorType = geometric_error
         self.root_tile = Tile()
         self.extensions_used: set[str] = set()
@@ -93,7 +101,8 @@ class TileSet(RootProperty[TilesetDictType]):
     ) -> Generator[TileContent | TileSet]:
         tiles = [self.root_tile] + self.root_tile.get_all_children()
         for tile in tiles:
-            yield tile.get_or_fetch_content(self.root_uri)
+            if tile.has_content():
+                yield tile.get_or_fetch_content(self.root_uri)
 
     def delete_on_disk(
         self, tileset_path: Path, delete_sub_tileset: bool = False
