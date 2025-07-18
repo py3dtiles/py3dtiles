@@ -8,9 +8,12 @@ _T = TypeVar("_T", bound=npt.NBitBase)
 
 def make_rotation_matrix(
     z1: "npt.NDArray[np.floating[_T]]", z2: "npt.NDArray[np.floating[_T]]"
-) -> "npt.NDArray[np.floating[_T]]":
+) -> npt.NDArray[np.float64]:
     v0: "npt.NDArray[np.floating[_T]]" = z1 / np.linalg.norm(z1)
     v1: "npt.NDArray[np.floating[_T]]" = z2 / np.linalg.norm(z2)
+
+    if (v0 == v1).all():
+        return np.identity(4, dtype=np.float64)
 
     angle = np.arccos(np.clip(np.dot(v0, v1), -1.0, 1.0))
     direction = np.cross(v0, v1)
@@ -29,7 +32,7 @@ def make_rotation_matrix(
             [-direction[1], direction[0], 0.0],
         ]
     )
-    final_rotation_matrix = np.identity(4, dtype=z1.dtype)
+    final_rotation_matrix = np.identity(4, dtype=np.float64)
     final_rotation_matrix[:3, :3] = rotation_matrix
 
     return final_rotation_matrix
