@@ -170,6 +170,7 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         if tile_metadata.transform is not None:
             root_tile.transform = tile_metadata.transform
         root_tile.extras["id"] = tile_metadata.tile_id
+        root_tile.extras["properties"] = tile_metadata.properties
         return root_tile
 
     def process_message(self, message_type: bytes, message: list[bytes]) -> None:
@@ -220,7 +221,10 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
                 )
                 # init child tile
                 child_tile = Tile(content_uri=content_uri, bounding_volume=child.box)
-                child_tile.extras["id"] = child.tile_id
+                child_tile.extras = {
+                    "id": child.tile_id,
+                    "properties": child.properties,
+                }
                 # then recurse before adding bounding volume to current_tile
                 self.add_children_to_tile(child_tile)
                 # now the child bounding volume and geometric error is up-to-date
