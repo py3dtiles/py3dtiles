@@ -47,18 +47,49 @@ def _get_children(element: entity_instance) -> list[entity_instance]:
     return children
 
 
+def convert_deg_min_sec_to_float(
+    coord: tuple[int, int, int] | tuple[int, int, int, int],
+) -> float:
+    """
+    Convert ifcsite lon or lat to float
+
+    see https://standards.buildingsmart.org/IFC/RELEASE/IFC4_1/FINAL/HTML/schema/ifcmeasureresource/lexical/ifccompoundplaneanglemeasure.htm
+    """
+    float_coord = coord[0] + coord[1] / 60.0 + coord[2] / 3600.0
+    # do we have the fourth component (millionth of seconds)?
+    if len(coord) == 4:
+        float_coord = float_coord + coord[3] / 3600.0e6
+    return float_coord
+
+
 def _get_elem_info(
     element: entity_instance, container: entity_instance | None
 ) -> dict[str, Any]:
     infos = element.get_info()
-    return {
+
+    infos_dict = {
         "id": infos["id"],
         "class": infos["type"],
         "name": infos["Name"],
-        "description": infos["Description"],
+        "description": infos.get("Description", ""),
         "containerType": container.is_a() if container is not None else None,
         "containerId": container.id() if container is not None else None,
     }
+    if infos["type"] == "IfcSite" and element.RefLatitude and element.RefLongitude:
+        latitude = convert_deg_min_sec_to_float(element.RefLatitude)
+        longitude = convert_deg_min_sec_to_float(element.RefLongitude)
+        # elevation parsing
+        if element.RefElevation is None:
+            elevation: float = 0
+        else:
+            try:
+                elevation = float(element.RefElevation)
+            except ValueError:
+                elevation = 0
+        infos_dict["latitude"] = latitude
+        infos_dict["longitude"] = longitude
+        infos_dict["elevation"] = elevation
+    return infos_dict
 
 
 class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
@@ -194,6 +225,7 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
             transform=transform,
             has_content=has_content,
             elem_max_size=tile.elem_max_size,
+            properties=tile.properties,
         )
 
         if self.shared_metadata.verbosity >= 1:
@@ -291,5 +323,6 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
             members=members,
             bbox=bbox,
             elem_max_size=float(max_size),
+            properties={"spatialStructure": parent_feature.properties},
         )
         return tile, parents

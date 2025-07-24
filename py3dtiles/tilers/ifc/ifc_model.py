@@ -37,6 +37,7 @@ class IfcTileInfo:
     box: BoundingVolumeBox | None
     elem_max_size: float
     has_content: bool
+    properties: dict[str, str]
 
 
 @dataclass
@@ -115,3 +116,4 @@ class IfcTile:
     members: list[Feature]
     bbox: BoundingVolumeBox
     elem_max_size: float
+    properties: dict[Any, Any]
