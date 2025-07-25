@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
+## v11.0.0 (2025-07-25)
+
+### BREAKING CHANGES
+
+- the parameter `force_universal_merger` of `merger.merge_from_files` has been removed. The merger automatically select the best strategy now.
+- Any other method than `merge` and `merge_from_files` from `merger` are now private.
+
+### Feat
+
+- **merger**: rework it completely. It should now be more relevant and simpler at the same time
+- **tileset**: record which tool and which version generated a tileset
+- **tiler**: allow the use of custom tilers and exposes `Converter`
+- **gltf_utils**: support setting extra properties in gltf
+- **bounding_volume_box**: add BoundingVolumeBox.from_mins_maxs class method
+- **bounding_volume**: add some utility method
+
+### Fix
+
+- **node**: fix some sonarcloud issues
+- **merger**: make some method private
+- **tileset**: don't crash when trying to load tiles without content
+- **tiler**: make sure each tiler has its own working directory
+- **matrix_manipulation**: don't return garbage when making rotation matrix between 2 parallel vectors
+- **point_tiler**: bypass transformation when crs_out and crs_in are the same
+- **convert.py**: when using several tilers, make sure we merge the resulting tilesets
+- **convert.py**: skip some actions for a tiler when it has not been used
+- **Tiler**: rename Tiler.initialization to Tiler.initialize
+- give tilers a way to tell convert which files they support
+- **merger**: supports tilesets when root_tile doesn't have content
+- **tile**: init bounding_volume_box when needed
+- **bounding_volume_box**: stop imposing the printoptions in py3dtiles
+- **bounding_volume_box**: relax a bit the types for construction/operations
+- use non buggy pyzmq version
+
+### Refactor
+
+- **pyproject.toml**: put the version in a more standard way
+- **node**: rename to_tileset to to_tile, as it returns a Tile
+- **base_tiler**: rename a parameter
+- **tiler**: change the name to str instead of b-string
+- **tiler**: rename return_type param to message_type of process_message
+- **tiler_worker**: untie it from zmq, make it easier to implement
+- make it simpler to implement a tiler by removing useless code
+- **bounding_volume_box**: remove redundant validity tests
+- **bounding_volume**: remove dependency to Tile
+
 ## v10.0.0 (2025-05-06)
 
 ### BREAKING CHANGES
