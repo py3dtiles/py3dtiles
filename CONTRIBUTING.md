@@ -35,7 +35,9 @@ Each MR will execute a CI pipeline. The CI will check:
  - that the tests pass with all versions of python supported
  - that the commands `convert` et `merge` produce valid 3DTiles.
 
-In order for a MR to be reviewed, the CI must pass completely. Through the following sections, **we will see how to check and correct them beforehand**.
+In order for a MR to be merged, the CI must pass completely. However, it is possible to ask for a broad review before the CI passes (but an in-depth review will need everything to be green beforehand).
+
+Through the following sections, **we will see how to check and correct them beforehand**.
 
 ### Check and correct automatically CI issues with pre-commit
 
@@ -68,7 +70,7 @@ There are no automatic checks yet, so if your modifications change the API, reme
 
 ### Commit linter
 
-We use the linter [commitizen](https://github.com/commitizen-tools/commitizen) with the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) configuration (the default one).
+We use the linter [commitizen](https://github.com/commitizen-tools/commitizen) with the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) configuration (the default one). Please refer to the [quick summary](https://www.conventionalcommits.org/en/v1.0.0/#summary) to grasp what is an accepted commit format.
 
 ### Code linters
 
