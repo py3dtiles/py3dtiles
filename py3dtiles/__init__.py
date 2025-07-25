@@ -12,4 +12,6 @@ All client applications should use the :py:mod:`py3dtiles.exceptions` module, wh
 
 """
 
-__version__ = "10.0.0"
+import importlib.metadata
+
+__version__ = importlib.metadata.version("py3dtiles")
