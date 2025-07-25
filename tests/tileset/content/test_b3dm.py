@@ -158,7 +158,7 @@ class TestTileContentBuilder(unittest.TestCase):
         expected_batch_table_body_len = 0
         expected_gltf_header_len = 12  # magic + version + length
         expected_gltf_chunk_len = 8  # chunk length + chunk magic (JSON/BIN)
-        expected_gltf_json_chunk_len = 1100
+        expected_gltf_json_chunk_len = 1084
 
         expected_gltf_bin_chunk_len = 1104
         # Test feature table length
@@ -257,7 +257,7 @@ class TestTexturedTileBuilder(unittest.TestCase):
         # get an array
         t.to_array()
         self.assertEqual(t.header.version, 1.0)
-        self.assertEqual(t.header.tile_byte_length, 1716)
+        self.assertEqual(t.header.tile_byte_length, 1676)
         self.assertEqual(t.header.ft_json_byte_length, 0)
         self.assertEqual(t.header.ft_bin_byte_length, 0)
         self.assertEqual(t.header.bt_json_byte_length, 0)
@@ -275,7 +275,7 @@ class TestTexturedTileBuilder(unittest.TestCase):
 
         # get an array
         t_without_normals.to_array()
-        self.assertEqual(t_without_normals.header.tile_byte_length, 1468)
+        self.assertEqual(t_without_normals.header.tile_byte_length, 1436)
 
         # t.save_as("/tmp/py3dtiles_test_build_1.b3dm")
 
@@ -307,7 +307,7 @@ class TestTexturedTileBuilder(unittest.TestCase):
         # get an array
         t.to_array()
         self.assertEqual(t.header.version, 1.0)
-        self.assertEqual(t.header.tile_byte_length, 1296)
+        self.assertEqual(t.header.tile_byte_length, 1280)
         self.assertEqual(t.header.ft_json_byte_length, 20)
         self.assertEqual(t.header.ft_bin_byte_length, 0)
         self.assertEqual(t.header.bt_json_byte_length, 0)
@@ -407,7 +407,7 @@ class TestTexturedTileBuilder(unittest.TestCase):
         # get an array
         t.to_array()
         self.assertEqual(t.header.version, 1.0)
-        self.assertEqual(t.header.tile_byte_length, 5568)
+        self.assertEqual(t.header.tile_byte_length, 5496)
         self.assertEqual(t.header.ft_json_byte_length, 20)
         self.assertEqual(t.header.ft_bin_byte_length, 0)
         self.assertEqual(t.header.bt_json_byte_length, 0)

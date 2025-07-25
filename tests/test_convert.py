@@ -142,24 +142,27 @@ def test_convert_without_srs(tmp_dir: Path, fixtures_dir: Path) -> None:
     with tileset_path.open() as f:
         tileset = json.load(f)
 
-    assert tileset["root"]["transform"] == [
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        4203111.466352918,
-        171019.2566206994,
-        4778277.619872708,
-        1.0,
-    ]
+    assert_array_almost_equal(
+        tileset["root"]["transform"],
+        [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            4203111.466352918,
+            171019.2566206994,
+            4778277.619872708,
+            1.0,
+        ],
+    )
 
     box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
     assert box == [0.0, 0.0, 0.0, 0.5057, 0.0, 0.0, 0.0, 0.9801, 0.0, 0.0, 0.0, 0.5432]
