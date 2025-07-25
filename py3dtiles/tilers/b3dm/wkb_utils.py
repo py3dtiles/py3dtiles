@@ -3,9 +3,9 @@ from __future__ import annotations
 import math
 import struct
 
+import mapbox_earcut as earcut
 import numpy as np
 import numpy.typing as npt
-from earcut.earcut import earcut
 
 CoordinateType = npt.NDArray[np.float32]
 LineType = list[CoordinateType]
@@ -222,7 +222,7 @@ def triangulate(
     polygon_2d = []
     holes = []
     delta = 0
-    for p in polygon[:-1]:
+    for p in polygon:
         holes.append(delta + len(p))
         delta += len(p)
     # triangulation of the polygon projected on planes (xy) (zx) or (yz)
@@ -244,7 +244,9 @@ def triangulate(
             for point in linestring:
                 polygon_2d.extend([point[0], point[1]])
 
-    triangles_idx = earcut(polygon_2d, holes, 2)
+    polygon_2d_numpy = np.array(polygon_2d).reshape(-1, 2)
+    holes_numpy = np.array(holes)
+    triangles_idx = earcut.triangulate_float32(polygon_2d_numpy, holes_numpy)
 
     arrays: list[PolygonAsTriangleType] = [
         [] for _ in range(len(additional_polygons) + 1)
