@@ -3,14 +3,17 @@
 - before doing anything, just check if the CI is still passing on main ;-)
 - edit the CHANGELOG.md. The best way is to start with commitizen for that:
 ```bash
-cz changelog --incremental --unreleased-version v4.0.0
+cz bump --changelog
 ```
-and then edit it to make it more user readable. Especially, the `BREAKING
+If commit messages have been correctly crafted, this will auto-detect which
+type of upgrade (patch, minor or major) is necessary. If not, use the parameter
+`--increment`. it's a good moment to quickly check the logs to see if a breaking change may have been forgotten.
+- then edit the changelog to make it more user readable. Especially, the `BREAKING
 CHANGE` needs to be reviewed carefully and often to be rewritten, including
 migration guide for instance.
-- edit the version in [py3dtiles/\_\_init\_\_.py](py3dtiles/__init__.py)
+- edit the version in [pyproject.toml](pyproject.toml) if not done by `cz bump`
 - edit the version in [sonar-project.properties](sonar-project.properties) (field `sonar.projectVersion`)
-- create a merge request with these changes
+- create a merge request with these changes. Don't push the tag created with `cz bump`
 - once it is merged, create a tagged release on gitlab.
 - wait for the execution of the automatic deploy jobs:
     - `pages`: will update the documentation

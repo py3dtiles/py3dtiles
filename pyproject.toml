@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "py3dtiles"
+version = "10.0.0"
 authors = [
     {name = "The Py3DTiles team", email = "contact@oslandia.com"},
 ]
@@ -20,8 +21,6 @@ classifiers=[
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-
-dynamic = ["version"]
 
 requires-python = ">=3.9,<3.14"
 
@@ -48,8 +47,9 @@ Changelog = "https://gitlab.com/py3dtiles/py3dtiles/-/blob/main/CHANGELOG.md"
 [tool.setuptools.packages.find]
 include = ["py3dtiles*"]
 
-[tool.setuptools.dynamic]
-version = {attr = "py3dtiles.__version__"}
+[tool.commitizen]
+tag_format = "v$version"
+version_provider = "pep621"
 
 [project.optional-dependencies]
 postgres = ["psycopg2-binary"]
