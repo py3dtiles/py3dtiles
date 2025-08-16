@@ -78,4 +78,4 @@ the object's ID. Usage example:
 
 .. code-block:: shell
 
-    $ py3dtiles export -D "dbame=mydb user=me host=localhost port=5432" -t table -c geometry_column -i id
+    $ py3dtiles export -D "dbname=mydb user=me host=localhost port=5432" -t table -c geometry_column -i id
