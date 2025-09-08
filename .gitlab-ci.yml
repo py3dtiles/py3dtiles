@@ -4,8 +4,10 @@ stages:
   - 🚀 deploy
 
 default:
-    tags:
-        - saas-linux-large-amd64
+  image:
+    name: python:3.10
+  tags:
+    - saas-linux-large-amd64
 
 variables:
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
@@ -13,8 +15,6 @@ variables:
   GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
 
 .pre-commit-check:
-  image:
-    name: python:3.9
   variables:
     PRE_COMMIT_HOME: ${CI_PROJECT_DIR}/.cache/pre-commit
   cache:
@@ -35,8 +35,6 @@ variables:
 # -- LINT JOBS --------------------------------------------------------------------------
 flake8:
   extends: .pre-commit-check
-  image:
-    name: python:3.9
   stage: 🐍 lint
   script:
     - pre-commit run --show-diff-on-failure --all-files flake8
@@ -101,7 +99,7 @@ typing-check:
   stage: 🐍 lint
   image:
     # this should always be the oldest python we support
-    name: python:3.9-slim
+    name: python:3.10-slim
   cache:
     - key: $CI_COMMIT_REF_NAME
       paths:
@@ -125,8 +123,6 @@ typing-check:
 
 lint-commit:
   stage: 🐍 lint
-  image:
-    name: python:3.9
   cache:
     - paths:
       - ${PIP_CACHE_DIR}
@@ -176,7 +172,7 @@ test:
       - pyproject.toml
   parallel:
     matrix:
-      - PYTHON_VERSION: ['3.9', '3.10', '3.11', '3.12', '3.13']
+      - PYTHON_VERSION: ['3.10', '3.11', '3.12', '3.13']
 
 test-docker-build:
   stage: 🤞 test
@@ -218,7 +214,7 @@ windows-test:
     - Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
     # the current image contains python3.13 already
     - choco uninstall python3
-    - choco install -y python --version=3.9.5
+    - choco install -y python310
     - RefreshEnv
     - python -m pip install --upgrade pip setuptools wheel
     - python -m pip install .[postgres,ply,las,dev]
@@ -286,8 +282,6 @@ windows-test:
 
 test-cli:
   stage: 🤞 test
-  image:
-    name: python:3.9-slim
   cache:
     - paths:
       - ${PIP_CACHE_DIR}
@@ -372,7 +366,6 @@ docker-build:
 
 pages:
   stage: 🚀 deploy
-  image: python:3.9
   script:
     - pip install .[doc]
     # sphinx-multiversion needs to have all the branches
@@ -391,7 +384,6 @@ pages:
 # see https://docs.pypi.org/trusted-publishers/
 publish-to-pypi:
   stage: 🚀 deploy
-  image: python:3.9
   id_tokens:
     PYPI_ID_TOKEN:
       # Use "pypi" if uploading to PyPI directly

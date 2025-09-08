@@ -26,7 +26,7 @@ import math
 from collections.abc import Iterator
 from io import TextIOBase
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -57,9 +57,9 @@ def get_csv_infos(f: TextIOBase) -> tuple[bool, int, str]:
 def get_colors(
     points: npt.NDArray[np.float32],
     feature_nb: int,
-    color_scale: Optional[float],
+    color_scale: float | None,
     with_rgb: bool,
-) -> Optional[npt.NDArray[np.uint8]]:
+) -> npt.NDArray[np.uint8] | None:
     if with_rgb and feature_nb < 6:
         return np.zeros((len(points), 3), dtype=np.uint8)
     elif with_rgb:
@@ -72,7 +72,7 @@ def get_colors(
         return None
 
 
-def get_metadata(path: Path, color_scale: Optional[float] = None) -> MetadataReaderType:
+def get_metadata(path: Path, color_scale: float | None = None) -> MetadataReaderType:
     aabb = None
     point_count = 0
     seek_values = []
@@ -156,14 +156,14 @@ def run(
     filename: Path,
     offset_scale: OffsetScaleType,
     portion: PortionItemType,
-    transformer: Optional[Transformer],
-    color_scale: Optional[float],
+    transformer: Transformer | None,
+    color_scale: float | None,
     with_rgb: bool,
     extra_fields: list[ExtraFieldsDescription],
 ) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
-        Optional[npt.NDArray[np.uint8]],
+        npt.NDArray[np.uint8] | None,
         dict[str, npt.NDArray[Any]],
     ],
 ]:

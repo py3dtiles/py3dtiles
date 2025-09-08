@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from enum import Enum
 from io import StringIO
 from pathlib import Path, PurePath
-from typing import TYPE_CHECKING, Callable, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
 import numpy.typing as npt

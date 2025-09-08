@@ -4,7 +4,7 @@ import struct
 import time
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -49,7 +49,7 @@ def is_ancestor(node_name: bytes, ancestor: bytes) -> bool:
 
 
 def is_ancestor_in_list(
-    node_name: bytes, ancestors: Union[set[bytes], dict[bytes, Any]]
+    node_name: bytes, ancestors: set[bytes] | dict[bytes, Any]
 ) -> bool:
     return any(
         not ancestor or is_ancestor(node_name, ancestor) for ancestor in ancestors
@@ -91,11 +91,11 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
     files_info: dict[str, Any]
     out_folder: Path
-    crs_in: Optional[CRS]
-    crs_out: Optional[CRS]
+    crs_in: CRS | None
+    crs_out: CRS | None
     force_crs_in: bool
     rgb: bool
-    color_scale: Optional[float]
+    color_scale: float | None
     cache_size: int
     verbosity: int
     file_info: dict[str, Any]
@@ -105,22 +105,22 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
     node_store: SharedNodeStore
     state: PointState
     extra_fields_to_include: list[str]
-    transformer: Optional[Transformer]
+    transformer: Transformer | None
     number_of_jobs: int
     shared_metadata: PointSharedMetadata
 
     def __init__(
         self,
-        crs_in: Optional[CRS] = None,
-        crs_out: Optional[CRS] = None,
+        crs_in: CRS | None = None,
+        crs_out: CRS | None = None,
         force_crs_in: bool = False,
         pyproj_always_xy: bool = False,
         rgb: bool = True,
-        color_scale: Optional[float] = None,
+        color_scale: float | None = None,
         cache_size: int = DEFAULT_CACHE_SIZE,
         verbosity: int = 0,
         number_of_jobs: int = CPU_COUNT,
-        extra_fields: Optional[list[str]] = None,
+        extra_fields: list[str] | None = None,
     ):
         """
         Constructs a PointTiler
@@ -195,7 +195,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
     def get_files_info(
         self,
-        crs_in: Optional[CRS],
+        crs_in: CRS | None,
         force_crs_in: bool = False,
     ) -> dict[str, Any]:
 
@@ -271,7 +271,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             "extra_fields": list(extra_fields_dict.values()),
         }
 
-    def get_transformer(self) -> Optional[Transformer]:
+    def get_transformer(self) -> Transformer | None:
         if self.crs_out:
             if self.files_info["crs_in"] is None:
                 raise SrsInMissingException(
@@ -292,7 +292,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         return transformer
 
     def get_rotation_matrix(
-        self, crs_out: Optional[CRS], transformer: Optional[Transformer]
+        self, crs_out: CRS | None, transformer: Transformer | None
     ) -> tuple[
         npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]
     ]:

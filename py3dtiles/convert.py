@@ -9,7 +9,7 @@ import traceback
 from multiprocessing import Process
 from pathlib import Path
 from time import sleep
-from typing import Any, Optional, Union
+from typing import Any
 
 import zmq
 from pyproj import CRS
@@ -233,19 +233,19 @@ class _ZmqManager:
 
 
 def convert(
-    files: Union[list[Union[str, Path]], str, Path],
-    outfolder: Union[str, Path] = "./3dtiles",
+    files: list[str | Path] | str | Path,
+    outfolder: str | Path = "./3dtiles",
     overwrite: bool = False,
     jobs: int = CPU_COUNT,
     cache_size: int = DEFAULT_CACHE_SIZE,
-    crs_out: Optional[CRS] = None,
-    crs_in: Optional[CRS] = None,
+    crs_out: CRS | None = None,
+    crs_in: CRS | None = None,
     force_crs_in: bool = False,
     pyproj_always_xy: bool = False,
-    benchmark: Optional[str] = None,
+    benchmark: str | None = None,
     rgb: bool = True,
-    extra_fields: Optional[list[str]] = None,
-    color_scale: Optional[float] = None,
+    extra_fields: list[str] | None = None,
+    color_scale: float | None = None,
     use_process_pool: bool = True,
     verbose: int = False,
 ) -> None:
@@ -334,11 +334,11 @@ class Converter:
         overwrite: bool = False,
         jobs: int = CPU_COUNT,
         cache_size: int = DEFAULT_CACHE_SIZE,
-        crs_out: Optional[CRS] = None,
-        crs_in: Optional[CRS] = None,
+        crs_out: CRS | None = None,
+        crs_in: CRS | None = None,
         force_crs_in: bool = False,
         pyproj_always_xy: bool = False,
-        benchmark: Optional[str] = None,
+        benchmark: str | None = None,
         use_process_pool: bool = True,
         verbose: int = False,
     ) -> None:
@@ -371,7 +371,7 @@ class Converter:
 
     def convert(
         self,
-        files: Union[Path, list[Path]],
+        files: Path | list[Path],
         out_folder: Path,
         overwrite: bool = False,
     ) -> None:

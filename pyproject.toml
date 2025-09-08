@@ -15,14 +15,13 @@ license = {text = "Apache-2.0"}
 classifiers=[
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
 
-requires-python = ">=3.9,<3.14"
+requires-python = ">=3.10,<3.14"
 
 dependencies = [
     "earcut==1.1.5",

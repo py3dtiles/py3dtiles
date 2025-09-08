@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 from numpy import typing as npt
@@ -17,17 +17,17 @@ class Points:
     `extra_fields` should be a dict. The property name is the field name, the values is a flat array of values
     """
 
-    positions: npt.NDArray[Union[np.float32, np.uint16]]
+    positions: npt.NDArray[np.float32 | np.uint16]
     # colors is an array of RGB triplet
-    colors: Optional[npt.NDArray[Union[np.uint8, np.uint16]]]
+    colors: npt.NDArray[np.uint8 | np.uint16] | None
     # etc...
     extra_fields: dict[str, npt.NDArray[Any]]
 
     def __init__(
         self,
-        positions: npt.NDArray[Union[np.float32, np.uint16]],
-        colors: Optional[npt.NDArray[Union[np.uint8, np.uint16]]] = None,
-        extra_fields: Optional[dict[str, npt.NDArray[Any]]] = None,
+        positions: npt.NDArray[np.float32 | np.uint16],
+        colors: npt.NDArray[np.uint8 | np.uint16] | None = None,
+        extra_fields: dict[str, npt.NDArray[Any]] | None = None,
     ):
         if positions.ndim != 2:
             raise ValueError("Positions parameter should have 2 dimensions")

@@ -6,7 +6,6 @@ from collections.abc import Iterator, Sequence
 from contextlib import nullcontext
 from pathlib import Path
 from time import sleep
-from typing import Union
 from unittest.mock import patch
 
 import laspy
@@ -1021,7 +1020,7 @@ def test_convert_many_point_same_location(tmp_dir: Path) -> None:
 def test_convert_rgb_classif(
     rgb_bool: bool, classif_bool: bool, tmp_dir: Path, fixtures_dir: Path
 ) -> None:
-    expected_raise: Union[nullcontext[None], RaisesExc[ValueError]]
+    expected_raise: nullcontext[None] | RaisesExc[ValueError]
     if not classif_bool:
         expected_raise = raises(
             ValueError, match="The property classification is not found"

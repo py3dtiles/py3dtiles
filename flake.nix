@@ -2,7 +2,7 @@
   description = "py3dtiles' flake";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-24.11";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-25.05";
     flakeUtils = {
       type = "github";
       owner = "numtide";
@@ -16,8 +16,8 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        supportedMinorVersions = [ "9" "10" "11" "12" "13" ];
-        defaultMinorVersion = "9";
+        supportedMinorVersions = [ "10" "11" "12" "13" ];
+        defaultMinorVersion = "10";
       in
       rec {
         # generate one devshells per supported python version
