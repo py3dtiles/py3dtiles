@@ -16,7 +16,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        supportedMinorVersions = [ "10" "11" "12" "13" ];
+        supportedMinorVersions = [ "10" "11" "12" "13" "14"];
         defaultMinorVersion = "10";
       in
       rec {
