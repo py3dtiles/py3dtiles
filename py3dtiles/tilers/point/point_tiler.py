@@ -75,7 +75,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
     This tiler is able to reproject pointclouds, and can embed arbitrary fields in the resulting 3dtiles
 
-    :param crs_in: crs to use for files that don't have crs informations in their metadata, or for all files if `force_crs_in` is used
+    :param crs_in: crs to use for files that don't have crs information in their metadata, or for all files if `force_crs_in` is used
     :param crs_out: output crs
     :param force_crs_in: whether or not to apply crs_in for all files.
     :param pyproj_always_xy: some crs defines an axis order, but some dataset still use xy order nonetheless. This boolean allows to support this case.

@@ -80,7 +80,7 @@ class GltfMesh:
 
     This is intended for higher-level usage than pygltflib.Mesh, which are an exact translation of the specification.
 
-    This is intented to be easier to construct by keeping a more hierarchical and logical organization. `GltfMesh` are constructed with all the vertices, normals, uvs and additional attributes, and an optional list of `GltfPrimitive` that contains indices and material informations.
+    This is intented to be easier to construct by keeping a more hierarchical and logical organization. `GltfMesh` are constructed with all the vertices, normals, uvs and additional attributes, and an optional list of `GltfPrimitive` that contains indices and material information.
 
     Use `gltf_from_meshes` or `populate_gltf_from_mesh` to convert it to GLTF format.
 

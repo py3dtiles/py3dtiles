@@ -86,7 +86,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
     ) -> None:
         """
         This method will be called first by convert to initialize the conversion
-        process. Tilers will receive all the paths informations as argument to
+        process. Tilers will receive all the paths information as argument to
         this method. Only files supported by this tiler will be in the files
         argument.  Tilers are expected to gather metadata from those input
         files so that subsequent call to `get_tasks` can generate some
