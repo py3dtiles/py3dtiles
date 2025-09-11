@@ -2,7 +2,7 @@
   description = "py3dtiles' flake";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-24.11";
     flakeUtils = {
       type = "github";
       owner = "numtide";
