@@ -3,6 +3,9 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
+from pyproj import CRS
+
+from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE
 from py3dtiles.tileset.tile import Tile
 
 from .shared_metadata import SharedMetadata
@@ -67,6 +70,34 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
 
     name = ""
     shared_metadata: _SharedMetadataT
+    crs_in: CRS | None
+    crs_out: CRS | None
+    force_crs_in: bool
+    pyproj_always_xy: bool
+    cache_size: int
+    verbosity: int
+    number_of_jobs: int
+
+    def __init__(
+        self,
+        crs_in: CRS | None = None,
+        crs_out: CRS | None = None,
+        force_crs_in: bool = False,
+        pyproj_always_xy: bool = False,
+        cache_size: int = DEFAULT_CACHE_SIZE,
+        verbosity: int = 0,
+        number_of_jobs: int = CPU_COUNT,
+    ):
+        super().__init__()
+        self.crs_in = crs_in
+        self.crs_out = crs_out
+        self.force_crs_in = force_crs_in
+        self.pyproj_always_xy = pyproj_always_xy
+
+        self.cache_size = cache_size
+
+        self.verbosity = verbosity
+        self.number_of_jobs = number_of_jobs
 
     @abstractmethod
     def supports(self, file: Path) -> bool:

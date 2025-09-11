@@ -92,13 +92,8 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
     files_info: dict[str, Any]
     out_folder: Path
-    crs_in: CRS | None
-    crs_out: CRS | None
-    force_crs_in: bool
     rgb: bool
     color_scale: float | None
-    cache_size: int
-    verbosity: int
     file_info: dict[str, Any]
     root_aabb: npt.NDArray[np.float64]
     root_scale: npt.NDArray[np.float32]
@@ -107,7 +102,6 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
     state: PointState
     extra_fields_to_include: list[str]
     transformer: Transformer | None
-    number_of_jobs: int
     shared_metadata: PointSharedMetadata
 
     def __init__(
@@ -116,32 +110,30 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         crs_out: CRS | None = None,
         force_crs_in: bool = False,
         pyproj_always_xy: bool = False,
-        rgb: bool = True,
-        color_scale: float | None = None,
         cache_size: int = DEFAULT_CACHE_SIZE,
         verbosity: int = 0,
         number_of_jobs: int = CPU_COUNT,
+        rgb: bool = True,
+        color_scale: float | None = None,
         extra_fields: list[str] | None = None,
     ):
         """
         Constructs a PointTiler
 
         """
-        super().__init__()
+        super().__init__(
+            crs_in=crs_in,
+            crs_out=crs_out,
+            force_crs_in=force_crs_in,
+            pyproj_always_xy=pyproj_always_xy,
+            cache_size=cache_size,
+            verbosity=verbosity,
+            number_of_jobs=number_of_jobs,
+        )
 
         self.rgb = rgb
         self.extra_fields_to_include = [] if extra_fields is None else extra_fields
         self.color_scale = color_scale
-
-        self.crs_in = crs_in
-        self.crs_out = crs_out
-        self.force_crs_in = force_crs_in
-        self.pyproj_always_xy = pyproj_always_xy
-
-        self.cache_size = cache_size
-
-        self.verbosity = verbosity
-        self.number_of_jobs = number_of_jobs
 
     def get_worker(self) -> PointTilerWorker:
         return PointTilerWorker(self.shared_metadata)
