@@ -143,7 +143,9 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
                         yield [
                             IfcWorkerMessage.METADATA_READ.value,
                             str(filename).encode(),
-                            pickle.dumps(FileMetadata(offset=offset)),
+                            # sending offset and crs_in
+                            # TODO currently no support for per-file crs_in
+                            pickle.dumps((offset, None)),
                         ]
                         break
 
@@ -162,15 +164,29 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
 
     def write_tile_content(self, content: list[bytes]) -> Iterator[Sequence[bytes]]:
         tile: IfcTile = pickle.loads(gzip.decompress(content[0]))
-        offset: tuple[float] = pickle.loads(content[1])
-        # TODO relevant transform
+        file_metadata: FileMetadata = pickle.loads(content[1])
+        offset = file_metadata.offset
+        assert offset is not None  # at this point, offset *must* have been initialized
+        transformer = file_metadata.transformer
 
         # build b3dm, write it
         meshes: list[GltfMesh] = []
+        bbox = BoundingVolumeBox()
+        elem_max_size = 0.0
         for f in tile.members:
             if f.mesh is not None:
-                points = np.array(f.mesh.geom.verts).reshape((-1, 3))
-                points = (points - offset).astype(np.float32)
+                pts = np.array(f.mesh.geom.verts, dtype=np.float64).reshape((-1, 3))
+                if transformer is not None:
+                    xx, yy, zz = transformer.transform(pts[:, 0], pts[:, 1], pts[:, 2])
+                    pts = np.vstack((xx, yy, zz)).transpose()
+                points = (pts - offset).astype(np.float32)
+
+                # extend the bounding box
+                this_bbox = BoundingVolumeBox.from_points(points)
+                bbox.add(this_bbox)
+                elem_max_size = max(
+                    elem_max_size, float(np.max(this_bbox.get_half_size()))
+                )
                 if f.mesh.geom.faces:
                     triangles = np.array(f.mesh.geom.faces, dtype=np.uint32).reshape(
                         (-1, 3)
@@ -210,8 +226,6 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
         # then create a tile of a tileset
         # TODO transform ?
 
-        if tile.bbox.is_valid():
-            tile.bbox.translate(0.0 - np.array(offset))
         transform = None
         if tile.parent_id is None:
             # this is the root tile, set global transform
@@ -221,10 +235,10 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
         tile_metadata = IfcTileInfo(
             tile_id=tile.tile_id,
             parent_id=tile.parent_id,
-            box=tile.bbox,
+            box=bbox,
             transform=transform,
             has_content=has_content,
-            elem_max_size=tile.elem_max_size,
+            elem_max_size=elem_max_size,
             properties=tile.properties,
         )
 
@@ -303,27 +317,11 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
                 members.append(new_feat)
                 stack.extend(_get_children(current))
 
-        max_size: float = 0
-        bbox = BoundingVolumeBox()
-        if parent_feature.mesh is not None:
-            bbox = parent_feature.mesh.geom.compute_bounding_volume_box()
-            max_size = float(np.max(bbox.get_half_size()))
-        for member in members:
-            if member.mesh is not None:
-                m_bbox: BoundingVolumeBox = (
-                    member.mesh.geom.compute_bounding_volume_box()
-                )
-                bbox.add(m_bbox)
-                half_size = float(np.max(m_bbox.get_half_size()))
-                max_size = max(max_size, half_size)
-
         tile = IfcTile(
             tile_id=tile_id,
             filename=filename,
             parent_id=parent_tile_id,
             members=members,
-            bbox=bbox,
-            elem_max_size=float(max_size),
             properties={"spatialStructure": parent_feature.properties},
         )
         return tile, parents

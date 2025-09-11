@@ -67,7 +67,12 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
     @classmethod
     def from_points(
-        cls, points: Sequence[npt.NDArray[np.float64] | list[float]]
+        cls,
+        points: (
+            Sequence[npt.NDArray[np.float64] | list[float]]
+            | npt.NDArray[np.float64]
+            | npt.NDArray[np.float32]
+        ),
     ) -> BoundingVolumeBox:
         """
         Construct a bounding box enclosing all the points.
@@ -181,7 +186,12 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         self._box = box
 
     def set_from_points(
-        self, points: Sequence[npt.NDArray[np.float64] | list[float]]
+        self,
+        points: (
+            Sequence[npt.NDArray[np.float64] | list[float]]
+            | npt.NDArray[np.float64]
+            | npt.NDArray[np.float32]
+        ),
     ) -> None:
         """
         Make the current box only include a list of points. Note: the box limits are replaced, not extended.
@@ -287,7 +297,11 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
     @staticmethod
     def get_box_array_from_point(
-        points: Sequence[npt.NDArray[np.float64] | list[float]],
+        points: (
+            Sequence[npt.NDArray[np.float64] | list[float]]
+            | npt.NDArray[np.float64]
+            | npt.NDArray[np.float32]
+        ),
     ) -> npt.NDArray[np.float64]:
         """
         :param points: a list of 3D points

@@ -8,7 +8,7 @@ from typing import Optional, cast
 import numpy as np
 import numpy.typing as npt
 from ifcopenshell import entity_instance
-from pyproj import CRS
+from pyproj import CRS, Transformer
 
 from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE
 from py3dtiles.tilers.base_tiler import Tiler
@@ -101,10 +101,6 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         # that's what we're going to build folks!
         self.root_tile = Tile()
 
-        if crs_out is not None and crs_in is None:
-            raise ValueError(
-                "Currently, it's not possible to read crs information from ifc file. Please provide the crs_in argument or omit the crs_out argument."
-            )
         self.force_crs_in = True
 
     def supports(self, file: Path) -> bool:
@@ -123,6 +119,10 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         self.shared_metadata = IfcSharedMetadata(
             out_folder=self.out_folder, verbosity=self.verbosity
         )
+        if self.crs_out is not None and self.crs_in is None:
+            raise ValueError(
+                "Currently, it's not possible to read crs information from ifc file. Please provide the crs_in argument or omit the crs_out argument."
+            )
 
     def get_worker(self) -> IfcTilerWorker:
         return IfcTilerWorker(self.shared_metadata)
@@ -153,7 +153,7 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         self, tile_id: bytes, metadata: FileMetadata
     ) -> tuple[bytes, list[bytes]]:
         tile = self.node_store.get(tile_id)
-        return IfcTilerMessage.WRITE_TILE.value, [tile, pickle.dumps(metadata.offset)]
+        return IfcTilerMessage.WRITE_TILE.value, [tile, pickle.dumps(metadata)]
 
     def send_file_to_read(self, filename: Path) -> tuple[bytes, list[bytes]]:
         if self.verbosity >= 1:
@@ -215,8 +215,24 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
                 print("File has been read", filename)
         elif message_type == IfcWorkerMessage.METADATA_READ.value:
             filename = message[0].decode()
-            metadata: FileMetadata = pickle.loads(message[1])
-            self.files_metadata[filename] = metadata
+            offset, crs_in = pickle.loads(message[1])
+            crs_in = None
+            transformer = None
+            if self.crs_in is not None and (self.force_crs_in or crs_in is None):
+                crs_in = CRS(self.crs_in)
+            elif crs_in:
+                crs_in = CRS(crs_in)
+            if crs_in is not None and self.crs_out is not None:
+                transformer = Transformer.from_crs(
+                    self.crs_in, self.crs_out, always_xy=self.pyproj_always_xy
+                )
+                if offset is not None:
+                    offset = list(
+                        transformer.transform(offset[0], offset[1], offset[2])
+                    )
+            self.files_metadata[filename] = FileMetadata(
+                offset=offset, crs_in=crs_in, transformer=transformer
+            )
         else:
             raise NotImplementedError(
                 f"The command {message_type!r} is not implemented"
