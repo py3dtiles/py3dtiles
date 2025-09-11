@@ -8,7 +8,9 @@ from typing import Optional, cast
 import numpy as np
 import numpy.typing as npt
 from ifcopenshell import entity_instance
+from pyproj import CRS
 
+from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE
 from py3dtiles.tilers.base_tiler import Tiler
 from py3dtiles.tilers.point.node.shared_node_store import SharedNodeStore
 from py3dtiles.tileset import Tile
@@ -67,14 +69,25 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
     verbosity: int
     cache_size: int
 
-    # TODO some options might go to BaseTiler?
     def __init__(
         self,
-        cache_size: int,
-        verbosity: int,
-        number_of_jobs: int,
+        crs_in: Optional[CRS] = None,
+        crs_out: Optional[CRS] = None,
+        force_crs_in: bool = False,
+        pyproj_always_xy: bool = False,
+        cache_size: int = DEFAULT_CACHE_SIZE,
+        verbosity: int = 0,
+        number_of_jobs: int = CPU_COUNT,
     ):
-        super().__init__()
+        super().__init__(
+            crs_in=crs_in,
+            crs_out=crs_out,
+            force_crs_in=force_crs_in,
+            pyproj_always_xy=pyproj_always_xy,
+            cache_size=cache_size,
+            verbosity=verbosity,
+            number_of_jobs=number_of_jobs,
+        )
 
         self.files_being_read: list[Path] = []
         self.tiles_to_write: list[FilenameAndTilePath] = []
@@ -87,6 +100,12 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         self.files_metadata: dict[str, FileMetadata] = {}
         # that's what we're going to build folks!
         self.root_tile = Tile()
+
+        if crs_out is not None and crs_in is None:
+            raise ValueError(
+                "Currently, it's not possible to read crs information from ifc file. Please provide the crs_in argument or omit the crs_out argument."
+            )
+        self.force_crs_in = True
 
     def supports(self, file: Path) -> bool:
         # ifcopenshell advertises to support xml, json, hdf5, but the only files I manage to work with are STEP files
