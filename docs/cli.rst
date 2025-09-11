@@ -4,7 +4,7 @@ Command line usage
 info
 ~~~~
 
-The info sub-command outputs informations from a 3DTiles file in the .pnts or .b3dm format.
+The info sub-command outputs information from a 3DTiles file in the .pnts or .b3dm format.
 
 Here is an example on how to retrieve basic information about a tile binary content, in this
 case *pointCloudRGB.pnts*:
@@ -72,7 +72,7 @@ correctly placed. Usage example:
 
     $ export_tileset -d my_directory -o 10000 10000 0
 
-The database export requires a connexion info string, the name of the table and its
+The database export requires a connection info string, the name of the table and its
 column that contains the geometry and (optionally) the name of the column that contains
 the object's ID. Usage example:
 

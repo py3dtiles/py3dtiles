@@ -266,7 +266,7 @@ def wkbs_to_tileset(
 
 
 def build_secure_conn(db_conn_info: str) -> psycopg2.extensions.connection:
-    """Get a psycopg2 connexion securely, e.g. without writing the password explicitely
+    """Get a psycopg2 connection securely, e.g. without writing the password explicitely
     in the terminal
 
     Parameters
@@ -370,7 +370,7 @@ def _init_parser(
     parser.add_argument("-o", nargs=3, metavar=("X", "Y", "Z"), type=float, help=o_help)
 
     D_help = """
-    Database connexion info (e.g. 'service=py3dtiles' or \
+    Database connection info (e.g. 'service=py3dtiles' or \
     'dbname=py3dtiles host=localhost port=5432 user=yourname password=yourpwd')
     """
     group.add_argument("-D", metavar="DB_CONNINFO", type=str, help=D_help)

@@ -266,7 +266,7 @@ def convert(
     :param extra_fields: Extra fields names to include in this conversion. These field names should be present in each input files. Currently vlrs and evlrs are not supported for las files.
     :param color_scale: Scale the color with the specified amount. Useful to lighten or darken black pointclouds with only intensity.
 
-    :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
+    :raises SrsInMissingException: if py3dtiles couldn't find srs information in input files and srs_in is not specified
     :raises SrsInMixinException: if the input files have different CRS
 
     """
@@ -382,7 +382,7 @@ class Converter:
         :param outfolder: The folder where the resulting tileset will be written.
         :param overwrite: Overwrite the ouput folder if it already exists.
 
-        :raises SrsInMissingException: if py3dtiles couldn't find srs informations in input files and srs_in is not specified
+        :raises SrsInMissingException: if py3dtiles couldn't find srs information in input files and srs_in is not specified
         :raises SrsInMixinException: if the input files have different CRS
 
         """
