@@ -1,6 +1,6 @@
 import argparse
 
-from py3dtiles import convert, export, info, merger
+from py3dtiles import convert, export, info, merger, viewer
 
 
 def main() -> None:
@@ -16,6 +16,7 @@ def main() -> None:
         info._init_parser(sub_parsers),
         merger._init_parser(sub_parsers),
         export._init_parser(sub_parsers),
+        viewer._init_parser(sub_parsers),
     ]
     # add the verbose argument for all sub-parsers so that it is after the command.
     for command_parser in command_parsers:
@@ -31,6 +32,8 @@ def main() -> None:
         merger._main(args)
     elif args.command == "export":
         export._main(args)
+    elif args.command == "view":
+        viewer._main(args)
     else:
         parser.print_help()
 

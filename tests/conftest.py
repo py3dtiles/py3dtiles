@@ -1,7 +1,10 @@
 import copy
 import json
 import shutil
+import threading
 from collections.abc import Iterator
+from dataclasses import dataclass
+from http.server import HTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +24,7 @@ from py3dtiles.tileset.extension.batch_table_hierarchy_extension import (
 )
 from py3dtiles.typing import ExtraFieldsDescription
 from py3dtiles.utils import compute_spacing
+from py3dtiles.viewer import _get_handler_class
 
 from .fixtures.mock_extension import MockExtension
 
@@ -487,3 +491,55 @@ def complex_bounding_volume_box() -> BoundingVolumeBox:
         0, 0, 5
     ])
     # fmt: on
+
+
+@dataclass()
+class HttpInfo:
+    host: str
+    port: str
+
+
+class TestServerThread(threading.Thread):
+
+    def __init__(
+        self,
+        test_object: HttpInfo,
+        server_started: threading.Event,
+        request_handler: Any,
+    ):
+        threading.Thread.__init__(self)
+        self.request_handler = request_handler
+        self.test_object = test_object
+        self.server_started = server_started
+
+    def run(self) -> None:
+        self.server = HTTPServer(("localhost", 0), self.request_handler)
+        self.test_object.host, self.test_object.port = self.server.socket.getsockname()
+        self.server_started.set()
+        try:
+            self.server.serve_forever(0.05)
+        finally:
+            self.server.server_close()
+
+    def stop(self) -> None:
+        self.server.shutdown()
+        self.join()
+
+
+@fixture
+def test_viewer_server(
+    tileset_pnts_path_1: Path, tileset_ifc_path_1: Path
+) -> Iterator[HttpInfo]:
+    test_object = HttpInfo(host="", port="")
+    server_started = threading.Event()
+    test_server = TestServerThread(
+        test_object=test_object,
+        server_started=server_started,
+        request_handler=_get_handler_class(
+            [tileset_ifc_path_1.parent, tileset_pnts_path_1.parent]
+        ),
+    )
+    test_server.start()
+    server_started.wait()
+    yield test_server.test_object
+    test_server.stop()
