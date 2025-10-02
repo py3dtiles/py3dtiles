@@ -12,7 +12,9 @@ excluded_versions = ["v0.0.9", "v1.0.2"]
 
 
 def main(builddir: Path):
-    result = subprocess.run(["git", "tag", "--list"], capture_output=True, text=True)
+    result = subprocess.run(
+        ["git", "tag", "--list", "--sort=v:refname"], capture_output=True, text=True
+    )
     if result.returncode != 0:
         raise Exception(
             f"git tag --list returned {result.returncode} with an error: {result.stderr}"

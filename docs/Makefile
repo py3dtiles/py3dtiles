@@ -6,7 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
-current_version = $(shell git tag --list | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | tail -n1)
+current_version = $(shell git tag --list --sort=v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | tail -n1)
 
 "$(BUILDDIR)":
 	mkdir -p "$(BUILDDIR)"
