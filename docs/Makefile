@@ -14,6 +14,10 @@ current_version = $(shell git tag --list --sort=v:refname | grep -E "^v[0-9]+\.[
 apidoc: $(BUILDDIR)/version_switcher.json
 	sphinx-multiversion "$(SOURCEDIR)" "$(BUILDDIR)"
 
+lastapidoc: "$(BUILDDIR)"
+	sphinx-build -A current_version=HEAD -b html . "$(BUILDDIR)/main"
+
+
 static-site: "$(BUILDDIR)"
 	mkdir -p "$(BUILDDIR)"
 	cp -rv "../site/index.html" "$(BUILDDIR)/"
