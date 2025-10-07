@@ -1,6 +1,7 @@
 # How to release
 
 - before doing anything, just check if the CI is still passing on main ;-)
+- it is a good idea to update `./docker/requirements.txt` before releasing, in order to have a docker image more up-to-date
 - edit the CHANGELOG.md. The best way is to start with commitizen for that:
 ```bash
 cz bump --changelog
