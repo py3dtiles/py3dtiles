@@ -5,6 +5,7 @@ stages:
 
 default:
   image:
+    # this should always be the oldest python we support
     name: python:3.10
   tags:
     - saas-linux-large-amd64
@@ -97,9 +98,6 @@ pre-commit-built-in:
 
 typing-check:
   stage: 🐍 lint
-  image:
-    # this should always be the oldest python we support
-    name: python:3.10-slim
   cache:
     - key: $CI_COMMIT_REF_NAME
       paths:
