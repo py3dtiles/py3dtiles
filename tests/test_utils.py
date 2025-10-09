@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 from pytest import raises
 
-from py3dtiles.utils import make_aabb_valid, mkdir_or_raise
+from py3dtiles.utils import make_aabb_valid, mkdir_or_raise, safe_relative_path
 
 
 def test_make_aabb_valid() -> None:
@@ -57,3 +57,16 @@ def test_mkdir_or_raise(tmp_dir: Path) -> None:
     ):
         mkdir_or_raise(tmp_dir)
     tmp_dir.unlink()
+
+
+def test_safe_relative_path() -> None:
+    assert safe_relative_path("/", "/") == Path(".")
+    assert safe_relative_path("/", "/foo") == Path("./foo")
+    assert safe_relative_path("/", "/foo/bar") == Path("./foo/bar")
+    assert safe_relative_path("/foo", "/") == Path("..")
+    assert safe_relative_path("/foo/bar", "/") == Path("../..")
+    assert safe_relative_path("/foo/bar/baz", "/") == Path("../../..")
+    assert safe_relative_path("/foo/bar/baz", "/foo") == Path("../..")
+    assert safe_relative_path("/foo/bar/baz", "/foo/bar/test") == Path("../test")
+    assert safe_relative_path("/etc", "/etc/common") == Path("./common")
+    assert safe_relative_path("/etc", "/etc/common/foo") == Path("./common/foo")
