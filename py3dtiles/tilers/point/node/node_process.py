@@ -1,7 +1,7 @@
 import pickle
 import time
 from collections.abc import Generator
-from typing import Optional, TextIO
+from typing import TextIO
 
 from py3dtiles.points import Points
 from py3dtiles.tilers.point.node.node import Node
@@ -16,7 +16,7 @@ class NodeProcess:
         name: bytes,
         tasks: list[bytes],
         begin: float,
-        log_file: Optional[TextIO],
+        log_file: TextIO | None,
     ):
         self.node_catalog = node_catalog
         self.scale = scale

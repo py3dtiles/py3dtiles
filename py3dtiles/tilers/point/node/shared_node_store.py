@@ -2,7 +2,6 @@ import gc
 import time
 from pathlib import Path
 from sys import getsizeof
-from typing import Optional
 
 import lz4.frame as gzip
 
@@ -24,8 +23,8 @@ class SharedNodeStore:
         :param folder: where to store the piece of data that go over the limit
 
         """
-        self.metadata: dict[bytes, Optional[tuple[float, int]]] = {}
-        self.data: list[Optional[bytes]] = []
+        self.metadata: dict[bytes, tuple[float, int] | None] = {}
+        self.data: list[bytes | None] = []
         self.folder = folder
         self.stats = {
             "hit": 0,

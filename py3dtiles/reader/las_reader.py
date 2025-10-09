@@ -1,7 +1,7 @@
 import math
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import laspy
 import numpy as np
@@ -17,7 +17,7 @@ from py3dtiles.typing import (
 
 
 def get_metadata(
-    filename: Path, color_scale: Optional[float] = None
+    filename: Path, color_scale: float | None = None
 ) -> MetadataReaderType:
     pointcloud_file_portions = []
 
@@ -78,14 +78,14 @@ def run(
     filename: str,
     offset_scale: OffsetScaleType,
     portion: PortionItemType,
-    transformer: Optional[Transformer],
-    color_scale: Optional[float],
+    transformer: Transformer | None,
+    color_scale: float | None,
     with_rgb: bool,
     extra_fields: list[ExtraFieldsDescription],
 ) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
-        Optional[npt.NDArray[np.uint8]],
+        npt.NDArray[np.uint8] | None,
         dict[str, npt.NDArray[Any]],
     ],
 ]:

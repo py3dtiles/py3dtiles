@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import numpy as np
 import numpy.typing as npt
@@ -24,7 +24,7 @@ _MAX_POINTS_IN_PREVIEW = 50_000
 def _get_preview_tile_from_tiles(
     tiles: list[Tile],
     inv_transform: npt.NDArray[np.float64],
-) -> Optional[tuple[TileContent, float]]:
+) -> tuple[TileContent, float] | None:
     """
     Get a preview of all the tilesets.
 
@@ -175,7 +175,7 @@ def create_tileset_from_root_tiles(root_tiles: list[Tile]) -> TileSet:
 
 
 def merge(
-    tilesets: list[TileSet], tileset_paths: Optional[dict[TileSet, Path]] = None
+    tilesets: list[TileSet], tileset_paths: dict[TileSet, Path] | None = None
 ) -> TileSet:
     """
     Create a tileset that include all input tilesets. The tilesets don't need to be written.

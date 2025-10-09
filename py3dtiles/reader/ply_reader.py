@@ -1,7 +1,7 @@
 import math
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -17,7 +17,7 @@ from py3dtiles.typing import (
 )
 
 
-def get_metadata(path: Path, color_scale: Optional[float] = None) -> MetadataReaderType:
+def get_metadata(path: Path, color_scale: float | None = None) -> MetadataReaderType:
     """Get metadata in case of a input ply file."""
     ply_point_cloud = PlyData.read(path)
     if "vertex" not in [e.name for e in ply_point_cloud.elements]:
@@ -66,14 +66,14 @@ def run(
     filename: str,
     offset_scale: OffsetScaleType,
     portion: PortionItemType,
-    transformer: Optional[Transformer],
-    color_scale: Optional[float],
+    transformer: Transformer | None,
+    color_scale: float | None,
     with_rgb: bool,
     extra_fields: list[ExtraFieldsDescription],
 ) -> Iterator[
     tuple[
         npt.NDArray[np.float32],
-        Optional[npt.NDArray[np.uint8]],
+        npt.NDArray[np.uint8] | None,
         dict[str, npt.NDArray[Any]],
     ],
 ]:

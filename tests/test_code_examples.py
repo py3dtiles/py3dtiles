@@ -1,8 +1,7 @@
 import doctest
 import shutil
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Callable, Optional
 
 import pytest
 
@@ -18,7 +17,7 @@ def clean_test_artifacts() -> None:
     shutil.rmtree("./my3dtiles2", ignore_errors=True)
 
 
-def identify_module(filepath: Path) -> Optional[str]:
+def identify_module(filepath: Path) -> str | None:
     """Build an identifier for the provided filepath, given that it is a module stored into the
     py3dtiles library source code folder.
 
