@@ -14,6 +14,7 @@ from py3dtiles.exceptions import (
     TilerException,
 )
 from py3dtiles.typing import RefineType, TileDictType
+from py3dtiles.utils import safe_relative_path
 
 from .bounding_volume import BoundingVolume
 from .bounding_volume_box import BoundingVolumeBox
@@ -40,7 +41,7 @@ class Tile(RootProperty[TileDictType]):
         bounding_volume: BoundingVolume[Any] | None = None,
         transform: npt.NDArray[np.float64] = DEFAULT_TRANSFORMATION,
         refine_mode: RefineType = "ADD",
-        content_uri: Path | None = None,
+        content_uri: Path | str | None = None,
     ) -> None:
         super().__init__()
         self.bounding_volume = bounding_volume
@@ -48,7 +49,9 @@ class Tile(RootProperty[TileDictType]):
         self._refine: RefineType = "ADD"
         self.set_refine_mode(refine_mode)
         self.tile_content: TileContent | TileSet | None = None
-        self.content_uri: Path | None = content_uri
+        self.content_uri: Path | None = (
+            Path(content_uri) if content_uri is not None else None
+        )
         self.children: list[Tile] = []
         # Some possible valid properties left un-delt with viewerRequestVolume
         self.transform = transform
@@ -341,3 +344,26 @@ class Tile(RootProperty[TileDictType]):
             self.tile_content = TileSet.from_file(uri)
         else:
             self.tile_content = read_binary_tile_content(uri)
+
+    def _add_prefix_path(self, prefix_path: Path) -> None:
+        """
+        Add a prefix to all content uri in this tile or children
+        """
+        if self.content_uri is not None:
+            self.content_uri = prefix_path / self.content_uri
+        for child in self.children:
+            child._add_prefix_path(prefix_path)
+
+    def change_base(self, from_path: Path, to_path: Path) -> None:
+        """
+        Change the base for all the relative tile content uri. For instance, calling
+        `tile.change_base(Path("outfolder/points"), Path("outfolder/"))` would
+        change the content uri to `points/path/to/content.pnts`.
+
+        It's useful to transfer a tile to another tileset. For instance, let's say tile t has been loaded from the on disk tileset1 and you want to use this tile in tileset2. If you want to keep the binary tile contents in the same place in the file hierarchy, you can just do:
+
+        ```python
+        t.change_base(tileset1.root_uri, tileset2.root_uri)
+        ```
+        """
+        self._add_prefix_path(safe_relative_path(to_path, from_path))

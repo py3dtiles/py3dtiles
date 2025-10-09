@@ -267,3 +267,27 @@ class TestTile:
         assert tile.bounding_volume.is_valid()
         assert_array_equal(tile.bounding_volume.get_center(), [0, 0, 0])
         assert_array_equal(tile.bounding_volume.get_half_size(), [4, 4, 4])
+
+    def test_change_base(self) -> None:
+        tile = Tile(content_uri="foo.pnts")
+
+        child1 = Tile(content_uri="bar.pnts")
+        child2 = Tile(content_uri=None)
+        child3 = Tile(content_uri="baz/bazz.pnts")
+        child4 = Tile(content_uri="/absolute/path.pnts")
+        child11 = Tile(content_uri="child/bar.pnts")
+
+        tile.add_child(child1)
+        tile.add_child(child2)
+        tile.add_child(child3)
+        tile.add_child(child4)
+        child1.add_child(child11)
+
+        tile.change_base(Path("folder/old_path"), Path("folder"))
+
+        assert tile.content_uri == Path("old_path/foo.pnts")
+        assert child1.content_uri == Path("old_path/bar.pnts")
+        assert child2.content_uri is None
+        assert child3.content_uri == Path("old_path/baz/bazz.pnts")
+        assert child4.content_uri == Path("/absolute/path.pnts")
+        assert child11.content_uri == Path("old_path/child/bar.pnts")
