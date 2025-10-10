@@ -57,6 +57,14 @@ class Pnts(TileContent):
             + self.header.bt_bin_byte_length
         )
 
+    def get_points(self, transform: npt.NDArray[np.float64] | None) -> Points:
+        """
+        Get the points optionally transformed by `transform`.
+
+        Internally forward to `self.body.get_points`
+        """
+        return self.body.get_points(transform)
+
     @staticmethod
     def from_features(
         feature_table_header: PntsFeatureTableHeader,
@@ -257,6 +265,9 @@ class PntsBody(TileContentBody):
         return np.concatenate((feature_table_array, batch_table_array))
 
     def get_points(self, transform: npt.NDArray[np.float64] | None) -> Points:
+        """
+        Get the points inside this instance, optionally transformed by `transform`.
+        """
         fth = self.feature_table.header
 
         xyz = self.feature_table.body.position.view(np.float32).reshape(
