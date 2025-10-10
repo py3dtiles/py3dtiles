@@ -6,13 +6,17 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 SOURCEDIR     = .
 BUILDDIR      = _build
-current_version = $(shell git tag --list | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | tail -n1)
+current_version = $(shell git tag --list --sort=v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | tail -n1)
 
 "$(BUILDDIR)":
 	mkdir -p "$(BUILDDIR)"
 
 apidoc: $(BUILDDIR)/version_switcher.json
 	sphinx-multiversion "$(SOURCEDIR)" "$(BUILDDIR)"
+
+lastapidoc: "$(BUILDDIR)"
+	sphinx-build -A current_version=HEAD -b html . "$(BUILDDIR)/main"
+
 
 static-site: "$(BUILDDIR)"
 	mkdir -p "$(BUILDDIR)"

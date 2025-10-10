@@ -32,15 +32,15 @@ case *pointCloudRGB.pnts*:
 convert
 ~~~~~~~
 
-The convert sub-command can be used to convert one or several .las file to a 3dtiles tileset.
+The convert sub-command can be used to convert one or several pointcloud files to a 3dtiles tileset.
 
-It also support crs reprojection of the points (see py3dtiles convert --help for all the options).
-
+It also support crs reprojection of the points (see ``py3dtiles convert --help`` for all the options).
 
 .. code-block:: shell
 
     py3dtiles convert mypointcloud.las --out /tmp/destination
 
+For each format documentation and the assumptions made for them (csv/xyz format, ply property names etc.), please see `the documentation of the corresponding reader <./api/py3dtiles.reader.html>`_.
 
 merge
 ~~~~~

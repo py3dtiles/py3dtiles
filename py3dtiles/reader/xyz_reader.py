@@ -9,6 +9,7 @@ following hypothesis and enhancements:
   reader. This is generally fail safe. It will not harm to use commonly
   accepted separators like space, tab, colon, semi-colon.
 - The order of columns is fixed. The reader does the following assumptions:
+
   - 3 columns mean XYZ
   - 4 columns mean XYZI
   - 6 columns mean XYZRGB
