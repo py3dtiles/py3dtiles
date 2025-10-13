@@ -227,7 +227,7 @@ windows-test:
 3d-tiles-validator:
   stage: 🤞 test
   image:
-    name: node:18-bullseye
+    name: node:lts-trixie
   cache:
     - key: 3d-tiles-validator
       paths:
@@ -236,8 +236,9 @@ windows-test:
       - ${PIP_CACHE_DIR}
   before_script:
     - apt update
-    - apt install -y python3-pip liblaszip8
-    - pip install -U pip setuptools
+    - apt install -y python3-venv liblaszip8 jq
+    - python3 -m venv .venv
+    - source .venv/bin/activate
     - pip install .[las]
     - pip install laspy[laszip]
     - wget -nv -N -P laz https://download.data.grandlyon.com/files/grandlyon/imagerie/mnt2018/lidar/laz/1843_5175.laz
@@ -254,16 +255,15 @@ windows-test:
     - py3dtiles merge tilesets/1/tileset.json tilesets/2/tileset.json --output-tileset tilesets/tileset.json
     # Validate all the tilesets
     - npx ts-node src/main.ts --writeReports --tilesetsDirectory tilesets
-    # no errors
     - |
-      for file in $(find ~/workspace/py3dtiles_clean/tilesets -name "tileset*\.report\.json"); do
+      for file in $(find tilesets -name "tileset*\.report\.json"); do
         echo "Report for $file:"
         cat "$file"
+        # no errors
+        echo "- checking errors"
         [ $(jq '.numErrors' "$file") = '0' ]
-      done
-    # no warnings
-    - |
-      for file in $(find ~/workspace/py3dtiles_clean/tilesets -name "tileset*\.report\.json"); do
+        # no warnings
+        echo "- checking warnings"
         [ $(jq '.numWarnings' "$file") = '0' ]
       done
   # we depend on external data that are not always available
