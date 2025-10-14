@@ -141,7 +141,8 @@ def run(
         for field in extra_fields:
             if field.name in ply_vertices:
                 extra_fields_data[field.name] = np.array(
-                    ply_vertices[field.name], dtype=field.dtype
+                    ply_vertices[field.name][start_offset : (start_offset + num)],
+                    dtype=field.dtype,
                 )
             else:
                 extra_fields_data[field.name] = np.zeros(len(coords), dtype=field.dtype)

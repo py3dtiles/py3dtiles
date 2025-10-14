@@ -35,6 +35,12 @@ class TileContent(ABC):
             + (str(self.body) if self.body is not None else "")
         )
 
+    def get_batch_table_binary_property(self, name: str) -> npt.NDArray[Any]:
+        """
+        Get a binary property from a batch table. Internally forward to `self.body.batch_table.get_binary_property(name)`.
+        """
+        return self.body.batch_table.get_binary_property(name)
+
     @abstractmethod
     def sync(self) -> None:
         """

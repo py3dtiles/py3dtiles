@@ -1,6 +1,7 @@
 import copy
 import json
 import shutil
+import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,7 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 import plyfile
+from plyfile import PlyData, PlyElement
 from pyproj import CRS
 from pytest import fixture
 
@@ -111,6 +113,21 @@ def ply_with_intensity_filepath(fixtures_dir: Path) -> Path:
 @fixture
 def ply_with_classification_filepath(fixtures_dir: Path) -> Path:
     return fixtures_dir / "simple_with_classification.ply"
+
+
+@fixture(scope="session")
+def ply_big_with_one_additional_field_filepath() -> Iterator[Path]:
+    with tempfile.NamedTemporaryFile(suffix=".ply") as f:
+        # with a non-trivial amount of vertices
+        vertex_array = []
+        for i in range(100_001):
+            vertex_array.append((i / 10_000, -i / 10_000, 0, i / 1000))
+        vertex = np.array(
+            vertex_array, dtype=[("x", "f4"), ("y", "f4"), ("z", "f4"), ("field", "f4")]
+        )
+        el = PlyElement.describe(vertex, "vertex")
+        PlyData([el]).write(f)
+        yield Path(f.name)
 
 
 @fixture

@@ -807,6 +807,48 @@ def test_convert_ply_with_classification_and_intensity_f4(
     assert "intensity" not in tile_content.body.batch_table.header.data
 
 
+def test_convert_ply_big(
+    tmp_dir: Path, ply_big_with_one_additional_field_filepath: Path
+) -> None:
+    # without anything
+    convert(
+        ply_big_with_one_additional_field_filepath,
+        outfolder=tmp_dir,
+        jobs=1,
+    )
+    assert Path(tmp_dir, "tileset.json").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
+    tileset = TileSet.from_file(tmp_dir / "tileset.json")
+    tile_content = tileset.root_tile.get_or_fetch_content(tileset.root_uri)
+    assert isinstance(tile_content, Pnts)
+    # assert field is not present
+    with raises(ValueError):
+        tile_content.get_batch_table_binary_property("field")
+
+    # with one additional field
+    convert(
+        ply_big_with_one_additional_field_filepath,
+        outfolder=tmp_dir,
+        jobs=1,
+        overwrite=True,
+        extra_fields=["field"],
+    )
+    assert Path(tmp_dir, "tileset.json").exists()
+    assert Path(tmp_dir, "points", "r.pnts").exists()
+    tileset = TileSet.from_file(tmp_dir / "tileset.json")
+    tile_content = tileset.root_tile.get_or_fetch_content(tileset.root_uri)
+    assert isinstance(tile_content, Pnts)
+    # get world coords
+    points = tile_content.get_points(tileset.root_tile.transform)
+
+    # we constructed the ply so that there's a x10 factor between x and field
+    fields = tile_content.get_batch_table_binary_property("field")
+    assert fields is not None
+
+    # fields = tile_content.body.batch_table.header.data['field']
+    assert_array_almost_equal(points.positions[:, 0], fields / 10)
+
+
 def test_convert_mix_las_xyz(tmp_dir: Path, fixtures_dir: Path) -> None:
     convert(
         [fixtures_dir / "simple.xyz", fixtures_dir / "with_srs_3857.las"],
