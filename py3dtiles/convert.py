@@ -468,9 +468,9 @@ class Converter:
                 if self.verbose >= 1:
                     print("Writing 3dtiles")
 
-                root_tiles.append(
-                    tiler.get_root_tile(use_process_pool=self.use_process_pool)
-                )
+                root_tile = tiler.get_root_tile(use_process_pool=self.use_process_pool)
+                root_tile.change_base(out_folder / tiler.name, out_folder)
+                root_tiles.append(root_tile)
 
                 if self.verbose >= 1:
                     print(f"Tiler {tiler.name!r} done")

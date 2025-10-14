@@ -266,8 +266,6 @@ windows-test:
         echo "- checking warnings"
         [ $(jq '.numWarnings' "$file") = '0' ]
       done
-  # we depend on external data that are not always available
-  allow_failure: true
   only:
     refs:
       - merge_requests

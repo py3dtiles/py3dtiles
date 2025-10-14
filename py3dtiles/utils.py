@@ -193,3 +193,33 @@ def mkdir_or_raise(folder: Path, overwrite: bool = False) -> None:
             )
     else:
         folder.mkdir()
+
+
+def safe_relative_path(from_path: str | Path, to_path: str | Path) -> Path:
+    """
+    Compute the relative path from `from_path` to `to_path`,
+    even if they are on different root drives or not subpaths of each other.
+    """
+    from_path = Path(from_path).resolve()
+    to_path = Path(to_path).resolve()
+
+    try:
+        # Try the normal relative path first
+        return to_path.relative_to(from_path)
+    except ValueError:
+        # Fallback: compute a generic relative path
+        from_parts = from_path.parts
+        to_parts = to_path.parts
+
+        # Find common prefix
+        common_length = 0
+        for step, (from_part, to_part) in enumerate(zip(from_parts, to_parts)):
+            if from_part != to_part:
+                break
+            common_length = step + 1
+
+        # Build the relative path: go up for each remaining part in from_path
+        rel_parts = [Path("..")] * (len(from_parts) - common_length) + list(
+            to_parts[common_length:]
+        )
+        return Path(*rel_parts)
