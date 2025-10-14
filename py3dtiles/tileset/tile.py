@@ -366,4 +366,7 @@ class Tile(RootProperty[TileDictType]):
         t.change_base(tileset1.root_uri, tileset2.root_uri)
         ```
         """
+        # We are transferring a tile from one base to another, so to keep
+        # referencing the same pnts, b3dm... files, we need to append to them
+        # the inverse relative path, hence the order of the arguments
         self._add_prefix_path(safe_relative_path(to_path, from_path))
