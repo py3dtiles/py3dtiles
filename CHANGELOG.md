@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## v11.1.0 (2025-10-28)
+
+### Feat
+
+- **tile_content**: add a get_batch_table_binary_property method
+- **pnts**: add a Pnts.get_points method that forward to Pnts.body.get_points
+
+### Fix
+
+- correctly handle content.uri in the root tile (#262)
+- **ply_reader**: fix extra field extraction from ply files (#265)
+
 ## v11.0.0 (2025-07-25)
 
 ### BREAKING CHANGES
