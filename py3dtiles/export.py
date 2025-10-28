@@ -172,7 +172,7 @@ def arrays2tileset(
                 tree.add(node)
                 divide(
                     tile,
-                    geoms[features_per_tile: len(geoms)],
+                    geoms[features_per_tile : len(geoms)],
                     i * 2,
                     j * 2,
                     max_tile_size / 2.0,
@@ -243,7 +243,7 @@ def divide(
                 parent.add(node)
                 divide(
                     tile,
-                    geoms[features_per_tile: len(geoms)],
+                    geoms[features_per_tile : len(geoms)],
                     (x_offset + i) * 2,
                     (y_offset + j) * 2,
                     tile_size / 2.0,
