@@ -1,7 +1,6 @@
 import copy
 import json
 import shutil
-import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -36,6 +35,19 @@ def tmp_dir() -> Iterator[Path]:
             shutil.rmtree(tmp_dir, ignore_errors=True)
         else:
             tmp_dir.unlink()
+
+
+# It can be tempting to replace that with python API about temporary file, but please test on gitlab ci:
+# last time (2025-10) I checked, we couldn't write on the temp folder of the gitlab.com windows runner...
+@fixture(scope="session")
+def tmp_fixture_dir() -> Iterator[Path]:
+    """
+    Create a folder for all the on-the-fly generated fixtures
+    """
+    tmp_fixture_dir = Path("tmp_fixtures/")
+    tmp_fixture_dir.mkdir()
+    yield tmp_fixture_dir
+    shutil.rmtree(tmp_fixture_dir, ignore_errors=True)
 
 
 @fixture()
@@ -116,18 +128,19 @@ def ply_with_classification_filepath(fixtures_dir: Path) -> Path:
 
 
 @fixture(scope="session")
-def ply_big_with_one_additional_field_filepath() -> Iterator[Path]:
-    with tempfile.NamedTemporaryFile(suffix=".ply") as f:
-        # with a non-trivial amount of vertices
-        vertex_array = []
-        for i in range(100_001):
-            vertex_array.append((i / 10_000, -i / 10_000, 0, i / 1000))
-        vertex = np.array(
-            vertex_array, dtype=[("x", "f4"), ("y", "f4"), ("z", "f4"), ("field", "f4")]
-        )
-        el = PlyElement.describe(vertex, "vertex")
-        PlyData([el]).write(f)
-        yield Path(f.name)
+def ply_big_with_one_additional_field_filepath(tmp_fixture_dir: Path) -> Iterator[Path]:
+    f = tmp_fixture_dir / "big_with_one_additional_field.ply"
+    # with a non-trivial amount of vertices
+    vertex_array = []
+    for i in range(100_001):
+        vertex_array.append((i / 10_000, -i / 10_000, 0, i / 1000))
+    vertex = np.array(
+        vertex_array, dtype=[("x", "f4"), ("y", "f4"), ("z", "f4"), ("field", "f4")]
+    )
+    el = PlyElement.describe(vertex, "vertex")
+    PlyData([el]).write(f)
+    yield f
+    # tmp_fixture_dir will get removed entirely at the end of the test session
 
 
 @fixture
