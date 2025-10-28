@@ -65,11 +65,18 @@ class IfcMaterial:
 
 @dataclass
 class Geometry:
+    """
+    A collection of vertices and associated faces.
+    """
+
     verts: list[float]
+    """
+    List of vertices
+    """
+    faces: list[int]
     """
     List of face ids, to be matched with material ids
     """
-    faces: list[int]
 
     def compute_bounding_volume_box(self) -> BoundingVolumeBox:
         """
