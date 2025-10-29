@@ -24,7 +24,7 @@ classifiers=[
 requires-python = ">=3.10,<3.14"
 
 dependencies = [
-    "earcut==1.1.5",
+    "mapbox_earcut==1.0.3",
     "lz4",
     # NOTE: 0.61 is the first supporting python 3.13 and it also drops support for python 3.9
     "numba>=0.59,<0.62.0",
@@ -127,6 +127,8 @@ files = [
     "py3dtiles/",
     "tests/"
 ]
+# generated using stubgen
+mypy_path = "./typestubs"
 
 plugins = [
     "numpy.typing.mypy_plugin",
@@ -152,7 +154,6 @@ warn_unused_ignores = false
 
 [[tool.mypy.overrides]]
 module = [
-    "earcut.earcut",
     "laspy",
     "lz4.*", # https://github.com/python-lz4/python-lz4/issues/223
     "numba",
