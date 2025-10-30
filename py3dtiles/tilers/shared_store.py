@@ -9,7 +9,7 @@ from py3dtiles.exceptions import TilerException
 from py3dtiles.utils import node_name_to_path
 
 
-class SharedNodeStore:
+class SharedStore:
     """
     A class that implements a compressed storage for arbitrary data, that is able to limit the amount of ram it uses by temporary storing part of the storage on disk for later retrieval.
 
@@ -18,7 +18,7 @@ class SharedNodeStore:
 
     def __init__(self, folder: Path) -> None:
         """
-        Construct a SharedNodeStore.
+        Construct a SharedStore.
 
         :param folder: where to store the piece of data that go over the limit
 
@@ -154,7 +154,7 @@ class SharedNodeStore:
         )
 
 
-def _remove_all(store: SharedNodeStore) -> tuple[int, int]:
+def _remove_all(store: SharedStore) -> tuple[int, int]:
     # delete the entries
     count = len(store.metadata)
     bytes_written = 0

@@ -17,6 +17,7 @@ from py3dtiles.exceptions import (
     TilerException,
 )
 from py3dtiles.tilers.base_tiler import Tiler
+from py3dtiles.tilers.shared_store import SharedStore
 from py3dtiles.tileset.content import read_binary_tile_content
 from py3dtiles.tileset.tile import Tile
 from py3dtiles.typing import ExtraFieldsDescription
@@ -32,7 +33,7 @@ from .matrix_manipulation import (
     make_scale_matrix,
     make_translation_matrix,
 )
-from .node import Node, SharedNodeStore
+from .node import Node
 from .pnts import MIN_POINT_SIZE, pnts_writer
 from .point_message_type import PointManagerMessage, PointWorkerMessageType
 from .point_shared_metadata import PointSharedMetadata
@@ -102,7 +103,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
     root_aabb: npt.NDArray[np.float64]
     root_scale: npt.NDArray[np.float32]
     root_spacing: float
-    node_store: SharedNodeStore
+    node_store: SharedStore
     state: PointState
     extra_fields_to_include: list[str]
     transformer: Transformer | None
@@ -171,7 +172,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             self.original_aabb
         )
 
-        self.node_store = SharedNodeStore(working_dir)
+        self.node_store = SharedStore(working_dir)
 
         self.state = PointState(
             self.files_info["portions"], max(1, self.number_of_jobs // 2)
@@ -358,7 +359,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         return root_aabb, root_scale, root_spacing
 
     def print_summary(self) -> None:
-        print("Summary:")
+        print("Point tiler - summary:")
         print(f"  - files to process: {self.files}")
         print("  - points to process: {}".format(self.files_info["point_count"]))
         print(f"  - offset to use: {self.avg_min}")
