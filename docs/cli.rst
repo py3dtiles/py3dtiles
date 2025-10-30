@@ -70,7 +70,7 @@ correctly placed. Usage example:
 
 .. code-block:: shell
 
-    $ export_tileset -d my_directory -o 10000 10000 0
+    $ py3dtiles export -d my_directory -o 10000 10000 0
 
 The database export requires a connection info string, the name of the table and its
 column that contains the geometry and (optionally) the name of the column that contains
@@ -79,3 +79,15 @@ the object's ID. Usage example:
 .. code-block:: shell
 
     $ py3dtiles export -D "dbname=mydb user=me host=localhost port=5432" -t table -c geometry_column -i id
+
+
+view
+~~~~
+
+Py3dtiles has a view subcommand, allowing to preview the results of your conversions.
+
+.. code-block:: shell
+
+    $ py3dtiles view 3dtiles/tileset.json
+
+This command will launch a local webserver and opens an online demo pointing to that local url.
