@@ -224,6 +224,22 @@ windows-test:
       - tags
       - main
 
+macos-test:
+  stage: 🤞 test
+  image: macos-15-xcode-16
+  tags:
+    - saas-macos-large-m2pro
+  before_script:
+    - pip install -U pip setuptools
+    - pip install .[postgres,ply,las,ifc,dev]
+  script:
+    - pytest
+    - py3dtiles info tests/fixtures/pointCloudRGB.pnts
+  only:
+    refs:
+      - tags
+      - main
+
 3d-tiles-validator:
   stage: 🤞 test
   image:
