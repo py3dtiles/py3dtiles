@@ -61,6 +61,18 @@ def test_convert(tmp_dir: Path, fixtures_dir: Path) -> None:
         0.2167949676513672,
         1.0,
     ]
+    # the preview in on the root of outfolder
+    assert tileset["root"]["content"]["uri"] == "preview.pnts"
+    assert Path(tmp_dir, tileset["root"]["content"]["uri"]).exists()
+    # but all the others are inside the "points" folder
+    assert tileset["root"]["children"][0]["content"]["uri"] == "points/r.pnts"
+    assert Path(tmp_dir, tileset["root"]["children"][0]["content"]["uri"]).exists()
+    children = tileset["root"]["children"][0]["children"]
+    for child in children:
+        pnts_path = child["content"]["uri"]
+        assert pnts_path.startswith("points/")
+        assert pnts_path.endswith(".pnts")
+        assert Path(tmp_dir, pnts_path).exists()
 
     assert Path(tmp_dir, "points", "r.pnts").exists()
     assert Path(tmp_dir, "points", "r0.pnts").exists()
@@ -69,6 +81,51 @@ def test_convert(tmp_dir: Path, fixtures_dir: Path) -> None:
         las_point_count = f.header.point_count
 
     assert las_point_count == number_of_points_in_tileset(tileset_path)
+
+
+def test_convert_ifc(tmp_dir: Path, tileset_ifc_1: TileSet) -> None:
+    # basic asserts
+    assert tileset_ifc_1.root_uri is not None
+    tileset_path = tileset_ifc_1.root_uri / "tileset.json"
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    expecting_box = [0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 3.5434]
+    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    assert box == expecting_box
+    assert tileset["root"]["transform"] == [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        6.0,
+        5.0,
+        2.5433756729750003,
+        1.0,
+    ]
+
+    # the preview in on the root of outfolder
+    # at the moment, there is no preview tiles for ifc tilesets
+    assert "content" not in tileset["root"]
+
+    # the root tile is the IfcProject, no content as well at the moment
+    assert "content" not in tileset["root"]["children"][0]
+
+    # assert the other tiles
+    children = tileset["root"]["children"][0]["children"]
+    for child in children:
+        content_path = child["content"]["uri"]
+        assert content_path.startswith("ifc/")
+        assert content_path.endswith(".b3dm")
+        assert Path(tileset_ifc_1.root_uri, content_path).exists()
 
 
 def test_convert_with_prune(tmp_dir: Path, fixtures_dir: Path) -> None:

@@ -132,9 +132,7 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
 
     def create_root_tile(self, tile_metadata: IfcTileInfo) -> Tile:
         if tile_metadata.has_content:
-            content_uri = (
-                self.out_folder / Path(f"{tile_metadata.tile_id}.b3dm")
-            ).relative_to(self.out_folder.parent)
+            content_uri = Path(f"{tile_metadata.tile_id}.b3dm")
         else:
             content_uri = None
         root_tile = Tile(content_uri=content_uri)
@@ -180,13 +178,7 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
     def create_child_tile_and_recurse(
         self, current_tile: Tile, child: IfcTileInfo
     ) -> float | None:
-        content_uri = (
-            Path(self.out_folder, f"{child.tile_id}.b3dm").relative_to(
-                self.out_folder.parent
-            )
-            if child.has_content
-            else None
-        )
+        content_uri = Path(f"{child.tile_id}.b3dm") if child.has_content else None
         # init child tile
         child_tile = Tile(content_uri=content_uri, bounding_volume=child.box)
         child_tile.extras["id"] = child.tile_id
