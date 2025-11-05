@@ -109,7 +109,7 @@ include = [
 
 # The 3 lines below are used to get the coverage of the code executed inside a process (issue #126)
 # https://github.com/pytest-dev/pytest-cov/blob/master/CHANGELOG.rst#400-2022-09-28
-concurrency = ["multiprocessing"]
+concurrency = ["multiprocessing", "thread"]
 parallel = true
 sigterm = true
 
