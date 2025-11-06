@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -8,13 +9,13 @@ import pygltflib
 
 from py3dtiles.exceptions import InvalidB3dmError
 
+from . import gltf_utils as gu
 from .b3dm_feature_table import B3dmFeatureTable
 from .batch_table import BatchTable
-from .gltf_utils import GltfMesh, GltfPrimitive, gltf_from_meshes
-from .tile_content import TileContent, TileContentBody, TileContentHeader
+from .tile_content import LegacyTileContent, TileContentBody, TileContentHeader
 
 
-class B3dm(TileContent):
+class B3dm(LegacyTileContent):
     def __init__(self, header: B3dmHeader, body: B3dmBody) -> None:
         super().__init__()
 
@@ -79,10 +80,10 @@ class B3dm(TileContent):
         """
         return B3dm.from_meshes(
             [
-                GltfMesh(
+                gu.GltfMesh(
                     points,
                     primitives=[
-                        GltfPrimitive(
+                        gu.GltfPrimitive(
                             triangles=triangles,
                             material=material,
                             texture_uri=texture_uri,
@@ -100,7 +101,7 @@ class B3dm(TileContent):
 
     @staticmethod
     def from_meshes(
-        meshes: list[GltfMesh],
+        meshes: list[gu.GltfMesh],
         batch_table: BatchTable | None = None,
         feature_table: B3dmFeatureTable | None = None,
         transform: npt.NDArray[np.float32] | None = None,
@@ -141,7 +142,12 @@ class B3dm(TileContent):
         return b3dm
 
     @staticmethod
-    def from_array(array: npt.NDArray[np.uint8]) -> B3dm:
+    def from_bytes(data: bytes) -> B3dm:
+        arr = np.frombuffer(data, dtype=np.uint8)
+        return B3dm.from_array(arr)
+
+    @classmethod
+    def from_array(cls, array: npt.NDArray[np.uint8]) -> B3dm:
         # build tile header
         h_arr = array[: B3dmHeader.BYTE_LENGTH]
         b3dm_header = B3dmHeader.from_array(h_arr)
@@ -155,10 +161,23 @@ class B3dm(TileContent):
         # build tile body
         b_arr = array[B3dmHeader.BYTE_LENGTH :]
         b3dm_body = B3dmBody.from_array(b3dm_header, b_arr)
-        b3dm = B3dm(b3dm_header, b3dm_body)
+        b3dm = cls(b3dm_header, b3dm_body)
         b3dm.sync()
 
         return b3dm
+
+    def get_vertex_count(self) -> int:
+        return gu.get_vertex_count(self.body.gltf)
+
+    def get_vertices(self) -> npt.NDArray[np.float32 | np.uint16] | None:
+        return gu.get_attribute(self.body.gltf, "POSITION")
+
+    def get_colors(self) -> npt.NDArray[np.uint8 | np.uint16 | np.float32] | None:
+        return gu.get_attribute(self.body.gltf, "COLOR_0")
+
+    def get_extra_field(self, fieldname: str) -> npt.NDArray[Any] | None:
+        accessor_name = f"_{fieldname.upper()}"
+        return gu.get_attribute(self.body.gltf, accessor_name)
 
 
 class B3dmHeader(TileContentHeader):
@@ -246,10 +265,10 @@ class B3dmBody(TileContentBody):
 
     @staticmethod
     def from_meshes(
-        meshes: list[GltfMesh],
+        meshes: list[gu.GltfMesh],
         transform: npt.NDArray[np.float32] | None = None,
     ) -> B3dmBody:
-        gltf = gltf_from_meshes(meshes, transform=transform)
+        gltf = gu.gltf_from_meshes(meshes, transform=transform)
         return B3dmBody.from_gltf(gltf)
 
     @staticmethod

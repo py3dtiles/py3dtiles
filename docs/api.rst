@@ -534,7 +534,7 @@ Instead of using the `convert` function, create an instance of the :class:`py3dt
     ...         print("Custom initialization")
     ...         super().initialize(*args, **kwargs)
     >>>
-    >>> my_point_tiler = MyPointTiler(verbosity=-1)
+    >>> my_point_tiler = MyPointTiler(verbose=-1)
     >>> converter = Converter([my_point_tiler])
     >>> # let's check if the tiler is indeed used
     >>> converter.convert(las_path, Path("3dtiles_output/"), overwrite=True)

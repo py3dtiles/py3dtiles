@@ -54,15 +54,27 @@ class Invalid3dtilesError(Py3dtilesException):
     """
 
 
-class InvalidPntsError(Invalid3dtilesError):
+class InvalidTileContentError(Py3dtilesException):
+    """
+    Raised when a tile content is invalid for some reasons
+    """
+
+
+class InvalidPntsError(InvalidTileContentError):
     """
     This exception will be thrown if the point cloud format isn't respected.
     """
 
 
-class InvalidB3dmError(Invalid3dtilesError):
+class InvalidB3dmError(InvalidTileContentError):
     """
     This exception will be thrown if the batched 3D model format isn't respected.
+    """
+
+
+class InvalidBatchTableError(InvalidTileContentError):
+    """
+    This exception will be thrown if a batch table doesn't fit the assumptions
     """
 
 

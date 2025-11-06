@@ -19,14 +19,14 @@ class Points:
 
     positions: npt.NDArray[np.float32 | np.uint16]
     # colors is an array of RGB triplet
-    colors: npt.NDArray[np.uint8 | np.uint16] | None
+    colors: npt.NDArray[np.uint8 | np.uint16 | np.float32] | None
     # etc...
     extra_fields: dict[str, npt.NDArray[Any]]
 
     def __init__(
         self,
         positions: npt.NDArray[np.float32 | np.uint16],
-        colors: npt.NDArray[np.uint8 | np.uint16] | None = None,
+        colors: npt.NDArray[np.uint8 | np.uint16 | np.float32] | None = None,
         extra_fields: dict[str, npt.NDArray[Any]] | None = None,
     ):
         if positions.ndim != 2:

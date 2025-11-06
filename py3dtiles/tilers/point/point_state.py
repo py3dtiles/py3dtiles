@@ -34,7 +34,7 @@ class PointState:
         self.waiting_writing_nodes: list[bytes] = []
         # when the node is writing, its name is moved from waiting_writing_nodes to pnts_to_writing
         # the data to write are stored in a node object.
-        self.pnts_to_writing: list[bytes] = []
+        self.nodes_in_writing: list[bytes] = []
 
     def is_reading_finish(self) -> bool:
         return not self.point_cloud_file_parts and self.number_of_reading_jobs == 0

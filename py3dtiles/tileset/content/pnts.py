@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import struct
-from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -17,11 +16,15 @@ from .pnts_feature_table import (
     PntsFeatureTableHeader,
     SemanticPoint,
 )
-from .tile_content import TileContent, TileContentBody, TileContentHeader
+from .tile_content import (
+    LegacyTileContent,
+    TileContentBody,
+    TileContentHeader,
+)
 
 
 def get_color_semantic(
-    colors: npt.NDArray[np.uint8 | np.uint16] | None,
+    colors: npt.NDArray[Any] | None,
 ) -> Literal[SemanticPoint.RGB, SemanticPoint.RGB565] | None:
     if colors is None:
         return None
@@ -33,7 +36,7 @@ def get_color_semantic(
         raise ValueError(f"dtype {colors.dtype} not supported for colors")
 
 
-class Pnts(TileContent):
+class Pnts(LegacyTileContent):
     def __init__(self, header: PntsHeader, body: PntsBody) -> None:
         super().__init__()
         self.header: PntsHeader = header
@@ -57,14 +60,6 @@ class Pnts(TileContent):
             + self.header.bt_bin_byte_length
         )
 
-    def get_points(self, transform: npt.NDArray[np.float64] | None) -> Points:
-        """
-        Get the points optionally transformed by `transform`.
-
-        Internally forward to `self.body.get_points`
-        """
-        return self.body.get_points(transform)
-
     @staticmethod
     def from_features(
         feature_table_header: PntsFeatureTableHeader,
@@ -85,8 +80,8 @@ class Pnts(TileContent):
 
         return pnts
 
-    @staticmethod
-    def from_array(array: npt.NDArray[np.uint8]) -> Pnts:
+    @classmethod
+    def from_array(cls, array: npt.NDArray[np.uint8]) -> Pnts:
         """
         Creates a Pnts from an array
         """
@@ -112,7 +107,7 @@ class Pnts(TileContent):
         pnts_body = PntsBody.from_array(pnts_header, b_arr)
 
         # build the tile with header and body
-        return Pnts(pnts_header, pnts_body)
+        return cls(pnts_header, pnts_body)
 
     @staticmethod
     def from_points(
@@ -146,6 +141,11 @@ class Pnts(TileContent):
 
         ft = PntsFeatureTable()
         color_semantic = get_color_semantic(points.colors)
+
+        # cast color so that mypy is happy
+        # this is guaranteed by get_color_semantic
+        colors = cast(None | npt.NDArray[np.uint8 | np.uint16], colors)
+
         ft.header = PntsFeatureTableHeader.from_semantic(
             SemanticPoint.POSITION,
             color_semantic,
@@ -172,12 +172,73 @@ class Pnts(TileContent):
 
         return pnts
 
-    @staticmethod
-    def from_file(tile_path: Path) -> Pnts:
-        with tile_path.open("rb") as f:
-            data = f.read()
-            arr = np.frombuffer(data, dtype=np.uint8)
-            return Pnts.from_array(arr)
+    def merge_with(self, other: Pnts) -> None:
+        fth = self.body.feature_table.header
+        ftb = self.body.feature_table.body
+
+        other_ftb = other.body.feature_table.body
+        child_fth = other.body.feature_table.header
+
+        new_point_count = fth.points_length + child_fth.points_length
+
+        if fth.positions != child_fth.positions:
+            raise InvalidPntsError(
+                "Cannot merge 2 pnts with different position semantics"
+            )
+
+        ftb.position = np.concatenate((ftb.position, other_ftb.position))
+
+        if fth.colors != child_fth.colors:
+            raise InvalidPntsError("Cannot merge 2 pnts with different color semantics")
+        elif fth.colors != SemanticPoint.NONE:
+            if ftb.color is None or other_ftb.color is None:
+                raise InvalidPntsError(
+                    "Got a None color buffer in a pnts with color semantics!!!!"
+                )
+            else:
+                # we can merge
+                ftb.color = np.concatenate((ftb.color, other_ftb.color))
+
+        self.body.batch_table = BatchTable.merge(
+            self.body.batch_table, other.body.batch_table
+        )
+        self.body.feature_table.header = PntsFeatureTableHeader.from_semantic(
+            SemanticPoint.POSITION, fth.colors, None, new_point_count  # type: ignore [arg-type] # our typing is not well defined. This should not trigger mypy. We need to separate SemanticPoint in several Enum
+        )
+        self.sync()
+
+    def get_vertices(self) -> npt.NDArray[np.float32 | np.uint16] | None:
+        return self.body.feature_table.body.position.reshape((-1, 3))
+
+    def get_points(self, transform: npt.NDArray[np.float64] | None) -> Points:
+        """
+        Get the points optionally transformed by `transform`.
+
+        Internally forward to `self.body.get_points`
+        """
+        return self.body.get_points(transform)
+
+    def to_points(self, transform: npt.NDArray[np.float64] | None) -> Points:
+        return self.get_points(transform)
+
+    def get_vertex_count(self) -> int:
+        return self.body.feature_table.nb_points()
+
+    def get_colors(self) -> npt.NDArray[np.uint8 | np.uint16] | None:
+        if self.body.feature_table.body.color is None:
+            return None
+        else:
+            return self.body.feature_table.body.color.reshape((-1, 3))
+
+    def get_extra_fields(self) -> dict[str, npt.NDArray[Any]]:
+        extra_fields = {}
+        for item in self.body.batch_table.header.data.keys():
+            arr = self.body.batch_table.get_binary_property(item)
+            extra_fields[item] = arr
+        return extra_fields
+
+    def get_extra_field(self, fieldname: str) -> npt.NDArray[Any]:
+        return self.body.batch_table.get_binary_property(fieldname)
 
 
 class PntsHeader(TileContentHeader):

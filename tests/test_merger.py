@@ -2,9 +2,11 @@ from pathlib import Path
 
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
+from py3dtiles.constants import SpecVersion
 from py3dtiles.merger import merge, merge_from_files
 from py3dtiles.tileset import BoundingVolumeBox, TileSet
 from py3dtiles.tileset.content import Pnts, read_binary_tile_content
+from py3dtiles.tileset.content.gltf import PointsGltf
 
 
 def test_merge_with_memory_tilesets(
@@ -94,6 +96,22 @@ def test_merge_with_pnts_content_with_memory_tilesets(
     assert isinstance(merged_pnts, Pnts)
 
     assert merged_pnts.body.feature_table.nb_points() == 1582
+
+
+def test_merge_with_pnts_content_with_memory_tilesets_v1_1(
+    tmp_dir: Path, tileset_pnts_1: TileSet, tileset_pnts_2: TileSet
+) -> None:
+    tileset_pnts_1.root_tile.get_or_fetch_content(tileset_pnts_1.root_uri)
+    tileset_pnts_2.root_tile.get_or_fetch_content(tileset_pnts_1.root_uri)
+    merged_tileset = merge(
+        [tileset_pnts_1, tileset_pnts_2], spec_version=SpecVersion.V1_1
+    )
+
+    assert len(merged_tileset.root_tile.get_all_children()) == 2
+    assert merged_tileset.root_tile.content_uri == Path("preview.glb")
+
+    merged_pnts = merged_tileset.root_tile.tile_content
+    assert isinstance(merged_pnts, PointsGltf)
 
 
 def test_merge_with_file_tilesets(

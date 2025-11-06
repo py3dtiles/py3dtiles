@@ -73,10 +73,10 @@ def test_unregistered_extension() -> None:
 
     assert "extensions" in batch_table_data
     assert "MockExtension" in batch_table_data["extensions"]
-    assert batch_table_data["extensions"]["MockExtension"] == {  # type: ignore
+    assert batch_table_data["extensions"]["MockExtension"] == {
         "color": ["black", "white"],
         "height": [10, 15],
     }
     assert "extras" in batch_table_data
     assert "description" in batch_table_data["extras"]
-    assert batch_table_data["extras"]["description"] == "tile with mock extension"  # type: ignore
+    assert batch_table_data["extras"]["description"] == "tile with mock extension"

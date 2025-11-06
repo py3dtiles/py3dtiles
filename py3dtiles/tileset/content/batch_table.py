@@ -7,7 +7,10 @@ from typing import TYPE_CHECKING, Any, Literal, Union
 import numpy as np
 import numpy.typing as npt
 
-from py3dtiles.exceptions import Invalid3dtilesError
+from py3dtiles.exceptions import (
+    Invalid3dtilesError,
+    InvalidBatchTableError,
+)
 from py3dtiles.typing import BatchTableHeaderDataType
 
 from .constants import COMPONENT_TYPE_NUMPY_MAPPING, DTYPE_TO_COMPONENT_TYPE_MAPPING
@@ -137,6 +140,51 @@ class BatchTable:
                 binary_property_index += 1
         else:
             raise ValueError(f"The property {property_name_to_fetch} is not found")
+
+    @staticmethod
+    def merge(b1: BatchTable, b2: BatchTable) -> BatchTable:
+        """
+        Merge two batch table into one.
+        """
+        new_bt = BatchTable()
+        for property_name, property_definition in b1.header.data.items():
+            other_property_definition = b2.header.data.get(property_name)
+            if isinstance(property_definition, list) and isinstance(
+                other_property_definition, list
+            ):
+                b1.add_property_as_json(
+                    property_name, [*property_definition, *other_property_definition]
+                )
+            elif isinstance(property_definition, dict) and isinstance(
+                other_property_definition, dict
+            ):
+                ct1 = property_definition["componentType"]
+                ct2 = other_property_definition["componentType"]
+                t1 = property_definition["type"]
+                t2 = other_property_definition["type"]
+                # binary
+                if ct1 != ct2:
+                    raise InvalidBatchTableError(
+                        f"componentType differs for {property_name}. First dtype is {ct1}, second is {ct2}"
+                    )
+                if t1 != t2:
+                    raise InvalidBatchTableError(
+                        f"type differs between the 2 batch_table properties. First type is {t1}, second is {t2}"
+                    )
+                bp1 = b1.get_binary_property(property_name)
+                bp2 = b2.get_binary_property(property_name)
+                bp = np.concatenate((bp1, bp2))
+                new_bt.add_property_as_binary(property_name, bp, t1)
+            else:
+                raise InvalidBatchTableError(
+                    f"Cannot merge batch tables if their property differ. Type of {property_name} is {type(property_definition)} in self, but is {type(other_property_definition)} in other"
+                )
+        for property_name in b2.header.data:
+            if property_name not in new_bt.header.data:
+                raise InvalidBatchTableError(
+                    f"Missing {property_name} in first batch table"
+                )
+        return new_bt
 
     def to_array(self) -> npt.NDArray[np.uint8]:
         batch_table_header_array = self.header.to_array()

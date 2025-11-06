@@ -5,7 +5,7 @@ from typing import Any, Generic, TypeVar
 
 from pyproj import CRS
 
-from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE
+from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE, SpecVersion
 from py3dtiles.tileset.tile import Tile
 
 from .shared_metadata import SharedMetadata
@@ -87,6 +87,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         cache_size: int = DEFAULT_CACHE_SIZE,
         verbosity: int = 0,
         number_of_jobs: int = CPU_COUNT,
+        spec_version: SpecVersion = SpecVersion.V1_0,
     ):
         super().__init__()
         self.crs_in = crs_in
@@ -98,6 +99,8 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
 
         self.verbosity = verbosity
         self.number_of_jobs = number_of_jobs
+
+        self.spec_version = spec_version
 
     @abstractmethod
     def supports(self, file: Path) -> bool:

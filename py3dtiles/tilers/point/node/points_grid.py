@@ -158,7 +158,7 @@ class Grid:
         aabmin: npt.NDArray[np.float32],
         inv_aabb_size: npt.NDArray[np.float32],
         xyz: npt.NDArray[np.float32 | np.uint16],
-        rgb: npt.NDArray[np.uint8 | np.uint16] | None,
+        rgb: npt.NDArray[np.uint8 | np.uint16 | np.float32] | None,
         extra_fields: dict[str, npt.NDArray[T]],
     ) -> tuple[
         npt.NDArray[np.float32],

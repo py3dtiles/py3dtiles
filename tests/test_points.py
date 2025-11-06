@@ -6,6 +6,7 @@ import numpy.typing as npt
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from pytest_benchmark.fixture import BenchmarkFixture
 
+from py3dtiles.constants import SpecVersion
 from py3dtiles.tilers.point.node import Node
 from py3dtiles.tilers.point.node.distance import is_point_far_enough
 from py3dtiles.tilers.point.node.points_grid import Grid
@@ -109,6 +110,7 @@ def test_grid_insert_many_points() -> None:
         bbox,
         compute_spacing(bbox),
         True,
+        SpecVersion.V1_0,
         [
             ExtraFieldsDescription(name="classification", dtype=np.dtype(np.uint16)),
             ExtraFieldsDescription(name="intensity", dtype=np.dtype(np.float32)),

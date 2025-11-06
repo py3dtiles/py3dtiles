@@ -7,6 +7,7 @@ import lz4.frame as gzip
 import numpy as np
 import numpy.typing as npt
 
+from py3dtiles.constants import SpecVersion
 from py3dtiles.tilers.point.node.node import Node
 from py3dtiles.typing import ExtraFieldsDescription
 from py3dtiles.utils import split_aabb
@@ -26,6 +27,7 @@ class NodeCatalog:
         root_aabb: npt.NDArray[np.float64],
         root_spacing: float,
         include_rgb: bool,
+        spec_version: SpecVersion,
         extra_fields: list[ExtraFieldsDescription],
     ) -> None:
         self.nodes: dict[bytes, Node] = {}
@@ -33,6 +35,7 @@ class NodeCatalog:
         self.root_spacing = root_spacing
         self.node_bytes: dict[bytes, bytes] = {}
         self.include_rgb: bool = include_rgb
+        self.spec_version = spec_version
         self.extra_fields: list[ExtraFieldsDescription] = extra_fields
         self._load_from_store(name, nodes)
 
@@ -43,7 +46,14 @@ class NodeCatalog:
             aabb = self.root_aabb
             for i in name:
                 aabb = split_aabb(aabb, int(i))
-            node = Node(name, aabb, spacing, self.include_rgb, self.extra_fields)
+            node = Node(
+                name,
+                aabb,
+                spacing,
+                self.include_rgb,
+                self.spec_version,
+                self.extra_fields,
+            )
             self.nodes[name] = node
         else:
             node = self.nodes[name]
@@ -69,7 +79,14 @@ class NodeCatalog:
                 aabb = self.root_aabb
                 for i in n:
                     aabb = split_aabb(aabb, int(i))
-                node = Node(n, aabb, spacing, self.include_rgb, self.extra_fields)
+                node = Node(
+                    n,
+                    aabb,
+                    spacing,
+                    self.include_rgb,
+                    self.spec_version,
+                    self.extra_fields,
+                )
                 node.load_from_bytes(out[n])
                 self.node_bytes[n] = out[n]
                 self.nodes[n] = node
@@ -78,7 +95,14 @@ class NodeCatalog:
             aabb = self.root_aabb
             for i in name:
                 aabb = split_aabb(aabb, int(i))
-            node = Node(name, aabb, spacing, self.include_rgb, self.extra_fields)
+            node = Node(
+                name,
+                aabb,
+                spacing,
+                self.include_rgb,
+                self.spec_version,
+                self.extra_fields,
+            )
             self.nodes[name] = node
 
         return self.nodes[name]

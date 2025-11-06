@@ -10,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 from pyproj import CRS, Transformer
 
-from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE
+from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE, SpecVersion
 from py3dtiles.tilers.base_tiler import Tiler
 from py3dtiles.tilers.shared_store import SharedStore
 from py3dtiles.tileset import Tile
@@ -56,6 +56,7 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         cache_size: int = DEFAULT_CACHE_SIZE,
         verbosity: int = 0,
         number_of_jobs: int = CPU_COUNT,
+        spec_version: SpecVersion = SpecVersion.V1_0,
     ):
         super().__init__(
             crs_in=crs_in,
@@ -65,14 +66,11 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
             cache_size=cache_size,
             verbosity=verbosity,
             number_of_jobs=number_of_jobs,
+            spec_version=spec_version,
         )
 
         self.files_being_read: list[Path] = []
         self.tiles_to_write: list[FilenameAndTileId] = []
-        self.cache_size = cache_size
-
-        self.verbosity = verbosity
-        self.number_of_jobs = number_of_jobs
 
         self.written_tiles_by_parent_id: dict[int, list[IfcTileInfo]] = {}
         self.files_metadata: dict[str, FileMetadata] = {}
@@ -95,7 +93,9 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         self.out_folder = out_folder
         self.store = SharedStore(working_dir)
         self.shared_metadata = IfcSharedMetadata(
-            out_folder=self.out_folder, verbosity=self.verbosity
+            spec_version=self.spec_version,
+            out_folder=self.out_folder,
+            verbosity=self.verbosity,
         )
         if self.crs_out is not None and self.crs_in is None:
             raise ValueError(
@@ -151,11 +151,7 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         self.written_tiles_by_parent_id[parent_id].append(tile)
 
     def create_root_tile(self, tile_metadata: IfcTileInfo) -> Tile:
-        if tile_metadata.has_content:
-            content_uri = Path(f"{tile_metadata.tile_id}.b3dm")
-        else:
-            content_uri = None
-        root_tile = Tile(content_uri=content_uri)
+        root_tile = Tile()
         if tile_metadata.box is None:
             root_tile.bounding_volume = BoundingVolumeBox()
         else:
@@ -221,7 +217,10 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
     def create_child_tile_and_recurse(
         self, current_tile: Tile, child: IfcTileInfo
     ) -> float | None:
-        content_uri = Path(f"{child.tile_id}.b3dm") if child.has_content else None
+        if self.spec_version == SpecVersion.V1_0:
+            content_uri = Path(f"{child.tile_id}.b3dm") if child.has_content else None
+        else:
+            content_uri = Path(f"{child.tile_id}.glb") if child.has_content else None
         # init child tile
         child_tile = Tile(content_uri=content_uri, bounding_volume=child.box)
         child_tile.extras = {
