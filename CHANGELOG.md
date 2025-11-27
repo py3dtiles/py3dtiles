@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## v12.0.0 (2025-11-27)
+
+### BREAKING CHANGE
+
+- The SharedNodeStore has been moved up in the hierarchy, as it is not
+specific to points.
+Change your imports like so:
+```diff
+-from py3dtiles.tilers.point.node import SharedNodeStore
++from py3dtiles.tilers.shared_store import SharedStore
+```
+- python 3.9 is EOL, and has been dropped from supported python versions
+- some common properties has moved from `PointTiler` up to `BaseTiler`. Subclasses and usage should be updated accordingly.
+
+### Feat
+
+The big feature in this v12 is the support for IFC conversion. This works by creating tiles for each spatial organization level of a IFC file (site, building, storey, space). At the moment, no other subdivision is made, even though it's certainly something we'll look into in the future. Reprojection is supported.
+
+In more details:
+
+- **ifc_tiler**: supports reprojection (only global and not per-file)
+- **bounding_volume_box**: also accepts list[float] in some methods
+- **ifc**: add some metadatas in tiles
+- add a tiler for ifc data
+- **shared_store**: rename it and move it outside of point folder
+- change earcut library to mapbox_earcut
+- **tile_content**: add a get_batch_table_binary_property method
+- **pnts**: add a Pnts.get_points method that forward to Pnts.body.get_points
+- drop python3.9 support
+
+### Fix
+
+- **ifc_tiler**: fix url of ifc contents
+- correctly handle content.uri in the root tile
+- **ply_reader**: fix extra field extraction from ply files
+- **export.py**: use black on this file
+
+### Refactor
+
+- **base_tiler**: move some common properties from tilers up to base_tilers
+
 ## v11.1.0 (2025-10-28)
 
 ### Feat
