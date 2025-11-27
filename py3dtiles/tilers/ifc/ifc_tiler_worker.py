@@ -21,6 +21,7 @@ from .ifc_model import (
     Color,
     Feature,
     FileMetadata,
+    FilenameAndOffset,
     Geometry,
     IfcMaterial,
     IfcMesh,
@@ -47,18 +48,49 @@ def _get_children(element: entity_instance) -> list[entity_instance]:
     return children
 
 
+def convert_deg_min_sec_to_float(
+    coord: tuple[int, int, int] | tuple[int, int, int, int],
+) -> float:
+    """
+    Convert ifcsite lon or lat to float
+
+    see https://standards.buildingsmart.org/IFC/RELEASE/IFC4_1/FINAL/HTML/schema/ifcmeasureresource/lexical/ifccompoundplaneanglemeasure.htm
+    """
+    float_coord = coord[0] + coord[1] / 60.0 + coord[2] / 3600.0
+    # do we have the fourth component (millionth of seconds)?
+    if len(coord) == 4:
+        float_coord = float_coord + coord[3] / 3600.0e6
+    return float_coord
+
+
 def _get_elem_info(
     element: entity_instance, container: entity_instance | None
 ) -> dict[str, Any]:
     infos = element.get_info()
-    return {
+
+    infos_dict = {
         "id": infos["id"],
         "class": infos["type"],
         "name": infos["Name"],
-        "description": infos["Description"],
+        "description": infos.get("Description", ""),
         "containerType": container.is_a() if container is not None else None,
         "containerId": container.id() if container is not None else None,
     }
+    if infos["type"] == "IfcSite" and element.RefLatitude and element.RefLongitude:
+        latitude = convert_deg_min_sec_to_float(element.RefLatitude)
+        longitude = convert_deg_min_sec_to_float(element.RefLongitude)
+        # elevation parsing
+        if element.RefElevation is None:
+            elevation: float = 0
+        else:
+            try:
+                elevation = float(element.RefElevation)
+            except ValueError:
+                elevation = 0
+        infos_dict["latitude"] = latitude
+        infos_dict["longitude"] = longitude
+        infos_dict["elevation"] = elevation
+    return infos_dict
 
 
 class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
@@ -86,8 +118,7 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
 
     def execute_read_file(self, content: list[bytes]) -> Iterator[Sequence[bytes]]:
         current_tile_id = 0
-        parameters = pickle.loads(content[0])
-        filename: Path = parameters["filename"]
+        filename: Path = pickle.loads(content[0])
         model = ifcopenshell.open(filename)
         projects = model.by_type("IfcProject")
         if len(projects) == 0:
@@ -113,8 +144,9 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
                         offset = m.mesh.geom.verts[0:3]
                         yield [
                             IfcWorkerMessage.METADATA_READ.value,
-                            str(filename).encode(),
-                            pickle.dumps(FileMetadata(offset=offset)),
+                            pickle.dumps(
+                                FilenameAndOffset(filename=str(filename), offset=offset)
+                            ),
                         ]
                         break
 
@@ -133,14 +165,29 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
 
     def write_tile_content(self, content: list[bytes]) -> Iterator[Sequence[bytes]]:
         tile: IfcTile = pickle.loads(gzip.decompress(content[0]))
-        offset: tuple[float] = pickle.loads(content[1])
+        file_metadata: FileMetadata = pickle.loads(content[1])
+        offset = file_metadata.offset
+        assert offset is not None  # at this point, offset *must* have been initialized
+        transformer = file_metadata.transformer
 
         # build b3dm, write it
         meshes: list[GltfMesh] = []
+        bbox = BoundingVolumeBox()
+        elem_max_size = 0.0
         for f in tile.members:
             if f.mesh is not None:
-                points = np.array(f.mesh.geom.verts).reshape((-1, 3))
-                points = (points - offset).astype(np.float32)
+                pts = np.array(f.mesh.geom.verts, dtype=np.float64).reshape((-1, 3))
+                if transformer is not None:
+                    xx, yy, zz = transformer.transform(pts[:, 0], pts[:, 1], pts[:, 2])
+                    pts = np.vstack((xx, yy, zz)).transpose()
+                points = (pts - offset).astype(np.float32)
+
+                # extend the bounding box
+                this_bbox = BoundingVolumeBox.from_points(points)
+                bbox.add(this_bbox)
+                elem_max_size = max(
+                    elem_max_size, float(np.max(this_bbox.get_half_size()))
+                )
                 if f.mesh.geom.faces:
                     triangles = np.array(f.mesh.geom.faces, dtype=np.uint32).reshape(
                         (-1, 3)
@@ -179,8 +226,6 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
 
         # then create a tile of a tileset
 
-        if tile.bbox.is_valid():
-            tile.bbox.translate(0.0 - np.array(offset))
         transform = None
         if tile.parent_id is None:
             # this is the root tile, set global transform
@@ -190,10 +235,11 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
         tile_metadata = IfcTileInfo(
             tile_id=tile.tile_id,
             parent_id=tile.parent_id,
-            box=tile.bbox,
+            box=bbox,
             transform=transform,
             has_content=has_content,
-            elem_max_size=tile.elem_max_size,
+            elem_max_size=elem_max_size,
+            properties=tile.properties,
         )
 
         if self.shared_metadata.verbosity >= 1:
@@ -270,26 +316,11 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
                 members.append(new_feat)
                 stack.extend(_get_children(current))
 
-        max_size: float = 0
-        bbox = BoundingVolumeBox()
-        if parent_feature.mesh is not None:
-            bbox = parent_feature.mesh.geom.compute_bounding_volume_box()
-            max_size = float(np.max(bbox.get_half_size()))
-        for member in members:
-            if member.mesh is not None:
-                m_bbox: BoundingVolumeBox = (
-                    member.mesh.geom.compute_bounding_volume_box()
-                )
-                bbox.add(m_bbox)
-                half_size = float(np.max(m_bbox.get_half_size()))
-                max_size = max(max_size, half_size)
-
         tile = IfcTile(
             tile_id=tile_id,
             filename=filename,
             parent_id=parent_tile_id,
             members=members,
-            bbox=bbox,
-            elem_max_size=float(max_size),
+            properties={"spatialStructure": parent_feature.properties},
         )
         return tile, parents

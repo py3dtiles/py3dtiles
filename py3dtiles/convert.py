@@ -289,16 +289,26 @@ def convert(
             crs_out,
             force_crs_in,
             pyproj_always_xy,
-            rgb,
-            color_scale,
             cache_size,
             verbose,
             jobs,
+            rgb=rgb,
+            color_scale=color_scale,
             extra_fields=extra_fields,
         ),
     ]
     if HAS_IFC_SUPPORT:
-        tilers.append(IfcTiler(cache_size, verbose, jobs))
+        tilers.append(
+            IfcTiler(
+                crs_in,
+                crs_out,
+                force_crs_in,
+                pyproj_always_xy,
+                cache_size,
+                verbose,
+                jobs,
+            )
+        )
 
     converter = Converter(
         tilers,

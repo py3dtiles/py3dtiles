@@ -6,13 +6,22 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 import pygltflib
+from pyproj import Transformer
 
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 
 
 @dataclass
+class FilenameAndOffset:
+    filename: str
+    offset: list[float]
+
+
+@dataclass
 class FileMetadata:
     offset: list[float] | None
+    crs_in: str | None
+    transformer: Transformer | None
 
 
 @dataclass
@@ -37,6 +46,7 @@ class IfcTileInfo:
     box: BoundingVolumeBox | None
     elem_max_size: float
     has_content: bool
+    properties: dict[str, str]
 
 
 @dataclass
@@ -113,5 +123,4 @@ class IfcTile:
     filename: Path  # we need to keep the filename to get the information about metadata
     parent_id: int | None
     members: list[Feature]
-    bbox: BoundingVolumeBox
-    elem_max_size: float
+    properties: dict[Any, Any]

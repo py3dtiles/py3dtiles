@@ -93,24 +93,27 @@ def test_convert_ifc(tmp_dir: Path, tileset_ifc_1: TileSet) -> None:
     expecting_box = [0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 3.5434]
     box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
     assert box == expecting_box
-    assert tileset["root"]["transform"] == [
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        6.0,
-        5.0,
-        2.5433756729750003,
-        1.0,
-    ]
+    assert_array_equal(
+        tileset["root"]["transform"],
+        [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            6.0,
+            5.0,
+            2.543375790119171,
+            1.0,
+        ],
+    )
 
     # the preview in on the root of outfolder
     # at the moment, there is no preview tiles for ifc tilesets

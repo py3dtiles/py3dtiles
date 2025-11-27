@@ -67,7 +67,12 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
     @classmethod
     def from_points(
-        cls, points: Sequence[npt.NDArray[np.float64] | list[float]]
+        cls,
+        points: (
+            Sequence[npt.NDArray[np.float64] | list[float]]
+            | npt.NDArray[np.float64]
+            | npt.NDArray[np.float32]
+        ),
     ) -> BoundingVolumeBox:
         """
         Construct a bounding box enclosing all the points.
@@ -94,7 +99,9 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         return result
 
     @classmethod
-    def from_mins_maxs(cls, mins_maxs: npt.NDArray[np.float64]) -> BoundingVolumeBox:
+    def from_mins_maxs(
+        cls, mins_maxs: npt.NDArray[np.float64] | list[float]
+    ) -> BoundingVolumeBox:
         """
         Build a box from a min and a max.
 
@@ -179,7 +186,12 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         self._box = box
 
     def set_from_points(
-        self, points: Sequence[npt.NDArray[np.float64] | list[float]]
+        self,
+        points: (
+            Sequence[npt.NDArray[np.float64] | list[float]]
+            | npt.NDArray[np.float64]
+            | npt.NDArray[np.float32]
+        ),
     ) -> None:
         """
         Make the current box only include a list of points. Note: the box limits are replaced, not extended.
@@ -188,7 +200,9 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         """
         self._box = BoundingVolumeBox.get_box_array_from_point(points)
 
-    def set_from_mins_maxs(self, mins_maxs: npt.NDArray[np.float64]) -> None:
+    def set_from_mins_maxs(
+        self, mins_maxs: npt.NDArray[np.float64] | list[float]
+    ) -> None:
         """
         Set the box from a min and a max.
 
@@ -283,7 +297,11 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
 
     @staticmethod
     def get_box_array_from_point(
-        points: Sequence[npt.NDArray[np.float64] | list[float]],
+        points: (
+            Sequence[npt.NDArray[np.float64] | list[float]]
+            | npt.NDArray[np.float64]
+            | npt.NDArray[np.float32]
+        ),
     ) -> npt.NDArray[np.float64]:
         """
         :param points: a list of 3D points
