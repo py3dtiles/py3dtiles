@@ -97,6 +97,8 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
 
     def __init__(self, shared_metadata: IfcSharedMetadata):
         super().__init__(shared_metadata)
+
+    def initialize(self) -> None:
         self.ifc_settings = ifcopenshell.geom.settings()  # type: ignore # mypy doesn't like small case classes apparently
         # Leaving this for reference: it does not really work (creates visual artifacts)
         # self.ifc_settings.set(ifcopenshell.geom.settings.INCLUDE_CURVES, True)

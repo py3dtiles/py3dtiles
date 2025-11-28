@@ -12,6 +12,13 @@ class TilerWorker(ABC, Generic[_SharedMetadataT]):
         # The attribute shared_metadata must not be modified by any tiler worker
         self.shared_metadata = shared_metadata
 
+    def initialize(self) -> None:
+        """
+        This method will be called once at the start of the process in the subprocess, not in the main thread
+
+        Useful to initialize non-pickable objects on windows, for instance
+        """
+
     @abstractmethod
     def execute(
         self, command: bytes, content: list[bytes]

@@ -91,6 +91,9 @@ class _WorkerDispatcher:
         startup_time = time.time()
         idle_time = 0.0
 
+        for worker in self.worker_tilers.values():
+            worker.initialize()
+
         # notify we're ready
         self.skt.send_multipart([WorkerMessageType.REGISTER.value])
 
