@@ -6,13 +6,15 @@ from typing import TYPE_CHECKING, Any, Literal, Union
 import numpy as np
 import numpy.typing as npt
 
+from py3dtiles.tileset.constants import (
+    COMPONENT_TYPE_NUMPY_MAPPING,
+    DTYPE_TO_COMPONENT_TYPE_MAPPING,
+)
 from py3dtiles.tileset.content.feature_table import (
     FeatureTable,
     FeatureTableBody,
     FeatureTableHeader,
 )
-
-from .constants import COMPONENT_TYPE_NUMPY_MAPPING, DTYPE_TO_COMPONENT_TYPE_MAPPING
 
 if TYPE_CHECKING:
     from .tile_content import TileContentHeader
