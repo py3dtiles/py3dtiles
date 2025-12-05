@@ -32,7 +32,7 @@ T = TypeVar(
 )
 
 
-@njit(fastmath=True, cache=True)  # type: ignore [misc]
+@njit(fastmath=True, cache=True)  # type: ignore [untyped-decorator]
 def _insert(
     keys: npt.NDArray[np.int32],
     cells_xyz: list[npt.NDArray[np.float32 | np.uint16]],
@@ -78,7 +78,7 @@ def _insert(
     )
 
 
-@njit(fastmath=True, cache=True)  # type: ignore [misc]
+@njit(fastmath=True, cache=True)  # type: ignore [untyped-decorator]
 def _insert_extra_fields(
     keys: npt.NDArray[np.int32],
     inserted: npt.NDArray[np.bool_],
