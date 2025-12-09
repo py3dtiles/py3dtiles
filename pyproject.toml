@@ -63,7 +63,7 @@ dev = [
     "pytest>=8.4.0",
     "pytest-benchmark",
     "pytest-cov",
-    "mypy>=1.19.0",
+    "mypy==1.19.0",  # edit that when python3.10 is EOL
     "typing_extensions",
     "types_psutil",
     "types_psycopg2",
@@ -131,10 +131,6 @@ files = [
 ]
 # generated using stubgen
 mypy_path = "./typestubs"
-
-plugins = [
-    "numpy.typing.mypy_plugin",
-]
 
 strict = true
 

@@ -147,7 +147,7 @@ def test_merge_with_file_tilesets(
             merged_tileset.root_tile.transform @ tile_child.transform
         )
 
-        assert_array_equal(sub_root_bounding_box._box, child_bounding_box._box)  # type: ignore [arg-type]
+        assert_array_equal(sub_root_bounding_box._box, child_bounding_box._box)
 
     assert merged_tileset.root_tile.content_uri is None
     assert merged_tileset.root_tile.tile_content is None
