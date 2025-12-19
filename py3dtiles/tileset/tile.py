@@ -54,7 +54,7 @@ class Tile(RootProperty[TileDictType]):
         )
         self.children: list[Tile] = []
         # Some possible valid properties left un-delt with viewerRequestVolume
-        self.transform = transform
+        self.transform: npt.NDArray[np.float64] = transform
 
     @classmethod
     def from_dict(cls, tile_dict: TileDictType) -> Tile:
@@ -165,7 +165,7 @@ class Tile(RootProperty[TileDictType]):
                 transformed_bounding_volume = copy.deepcopy(tile.bounding_volume)
                 transformed_bounding_volume.transform(tile.transform)
                 parent_inv_transform = np.linalg.inv(self.transform)
-                transformed_bounding_volume.transform(parent_inv_transform)
+                transformed_bounding_volume.transform(parent_inv_transform)  # type: ignore [arg-type] # tracking: https://github.com/numpy/numpy/issues/30405
                 self.bounding_volume.add(transformed_bounding_volume)
 
     def get_all_children(self) -> list[Tile]:

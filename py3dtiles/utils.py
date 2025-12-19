@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec
 
 
-_T = TypeVar("_T", bound=npt.NBitBase)
+Floating = TypeVar("Floating", bound=np.floating)
 
 MIN_AABB_SIZE = 0.00001
 
@@ -110,12 +110,12 @@ def node_name_to_path(
     return full_path
 
 
-def compute_spacing(aabb: npt.NDArray[np.floating[_T]]) -> float:
+def compute_spacing(aabb: npt.NDArray[Floating]) -> float:
     return float(np.linalg.norm(aabb[1] - aabb[0]) / 125)
 
 
 def aabb_size_to_subdivision_type(
-    size: npt.NDArray[np.floating[_T]],
+    size: npt.NDArray[Floating],
 ) -> SubdivisionType:
     if size[2] / min(size[0], size[1]) < 0.5:
         return SubdivisionType.QUADTREE
@@ -124,8 +124,8 @@ def aabb_size_to_subdivision_type(
 
 
 def split_aabb(
-    aabb: npt.NDArray[np.floating[_T]], index: int, force_quadtree: bool = False
-) -> npt.NDArray[np.floating[_T]]:
+    aabb: npt.NDArray[Floating], index: int, force_quadtree: bool = False
+) -> npt.NDArray[Floating]:
     half = (aabb[1] - aabb[0]) * 0.5
     t = aabb_size_to_subdivision_type(half)
 
@@ -146,7 +146,7 @@ def split_aabb(
     return new_aabb
 
 
-def make_aabb_cubic(aabb: npt.NDArray[np.floating[_T]]) -> npt.NDArray[np.floating[_T]]:
+def make_aabb_cubic(aabb: npt.NDArray[Floating]) -> npt.NDArray[Floating]:
     s = max(aabb[1] - aabb[0])
     aabb[1][0] = aabb[0][0] + s
     aabb[1][1] = aabb[0][1] + s

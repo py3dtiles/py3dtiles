@@ -143,6 +143,9 @@ test:
     - paths:
       - ${PIP_CACHE_DIR}
   before_script:
+    # next 2 lines is for deps that don't have python3.14 prebuilt binaries yet
+    - apt update
+    - apt install -y build-essential
     - pip install -U pip setuptools
     - pip install .[postgres,ply,las,ifc,dev]
   script:
@@ -170,7 +173,7 @@ test:
       - pyproject.toml
   parallel:
     matrix:
-      - PYTHON_VERSION: ['3.10', '3.11', '3.12', '3.13']
+      - PYTHON_VERSION: ['3.10', '3.11', '3.12', '3.13', '3.14']
 
 test-docker-build:
   stage: 🤞 test

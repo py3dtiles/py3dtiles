@@ -16,14 +16,14 @@ def test_constructor() -> None:
 def test_from_list(dummy_matrix: list[int]) -> None:
     bounding_volume_box = BoundingVolumeBox.from_list(dummy_matrix)
     box = bounding_volume_box._box
-    assert_array_equal(box, np.array(dummy_matrix))  # type: ignore [arg-type]
+    assert_array_equal(box, np.array(dummy_matrix))
 
 
 def test_set_from_list(dummy_matrix: list[int]) -> None:
     bounding_volume_box = BoundingVolumeBox()
     bounding_volume_box.set_from_list(dummy_matrix)
     box = bounding_volume_box._box
-    assert_array_equal(box, np.array(dummy_matrix))  # type: ignore [arg-type]
+    assert_array_equal(box, np.array(dummy_matrix))
 
     with pytest.raises(ValueError):
         m2 = np.array(dummy_matrix).reshape((3, 4))
@@ -128,7 +128,7 @@ def test_translate(bounding_volume_box_sample: BoundingVolumeBox) -> None:
     ]
     # fmt: on
     box = bounding_volume_box_sample._box
-    assert_array_equal(box, expected_result)  # type: ignore [arg-type]
+    assert_array_equal(box, expected_result)
 
 
 def test_transform(

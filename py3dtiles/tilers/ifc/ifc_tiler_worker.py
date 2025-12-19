@@ -8,6 +8,7 @@ import ifcopenshell.geom
 import ifcopenshell.util.element
 import lz4.frame as gzip
 import numpy as np
+import numpy.typing as npt
 from ifcopenshell import entity_instance
 
 from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
@@ -178,7 +179,9 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
         elem_max_size = 0.0
         for f in tile.members:
             if f.mesh is not None:
-                pts = np.array(f.mesh.geom.verts, dtype=np.float64).reshape((-1, 3))
+                pts: npt.NDArray[np.float64] = np.array(
+                    f.mesh.geom.verts, dtype=np.float64
+                ).reshape((-1, 3))
                 if transformer is not None:
                     xx, yy, zz = transformer.transform(pts[:, 0], pts[:, 1], pts[:, 2])
                     pts = np.vstack((xx, yy, zz)).transpose()

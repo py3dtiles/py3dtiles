@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -15,9 +15,6 @@ from py3dtiles.tileset.content.tile_content import TileContent
 from py3dtiles.tileset.tile import Tile
 from py3dtiles.tileset.tileset import TileSet
 
-_T = TypeVar("_T", bound=npt.NBitBase)
-
-
 _MAX_POINTS_IN_PREVIEW = 50_000
 
 
@@ -31,7 +28,7 @@ def _get_preview_tile_from_tiles(
     At the moment, it returns a Pnts, but later will return directly a Gltf
     """
     # take half points from our children
-    xyz = np.zeros((0, 3), dtype=np.float32)
+    xyz: npt.NDArray[np.float32] = np.zeros((0, 3), dtype=np.float32)
     rgb = None
     extra_fields: dict[str, npt.NDArray[Any]] = {}
 
@@ -152,10 +149,10 @@ def create_tileset_from_root_tiles(root_tiles: list[Tile]) -> TileSet:
     transform = _get_transform_from_root_tile(root_tile)
     inv_transform = np.linalg.inv(transform)
     root_tile.transform = transform
-    root_tile.bounding_volume.transform(inv_transform)
+    root_tile.bounding_volume.transform(inv_transform)  # type: ignore [arg-type] # tracking: https://github.com/numpy/numpy/issues/30405
 
     # preview tile
-    preview = _get_preview_tile_from_tiles(root_tiles, inv_transform)
+    preview = _get_preview_tile_from_tiles(root_tiles, inv_transform)  # type: ignore [arg-type] # tracking: https://github.com/numpy/numpy/issues/30405
     if preview is not None:
         root_tile.tile_content, geometric_error = preview
         root_tile.content_uri = Path("./preview.pnts")
