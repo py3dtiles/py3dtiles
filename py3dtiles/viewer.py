@@ -116,7 +116,7 @@ def calculate_paths_and_url_suffixes(
             tileset_path = path
         elif path.is_dir():
             potential_tileset_path = path / "tileset.json"
-            print(f"WARNING: {path} is a directory, trying {potential_tileset_path}")
+            print(f"INFO: {path} is a directory, trying {potential_tileset_path}")
             if potential_tileset_path.is_file():
                 print(f"-> {potential_tileset_path} found")
                 path_to_serve = path
@@ -146,8 +146,9 @@ def _main(args: argparse.Namespace) -> None:
     paths = [path for (path, _) in paths_and_urls_suffixes]
     handler_cls = _get_handler_class(paths)
     with http.server.HTTPServer(("", 0), handler_cls) as httpd:
+        path_str = "\n".join([f"- {str(p)}" for p in paths])
         print(
-            f"Serving {paths} files at http://{httpd.server_name}:{httpd.server_port}"
+            f"Serving:\n{path_str}\nat http://{httpd.server_name}:{httpd.server_port}"
         )
         print("Now launching your browser!")
         for _, url_suffix in paths_and_urls_suffixes:
