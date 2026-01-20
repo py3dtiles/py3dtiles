@@ -4,6 +4,7 @@ https://docs.ogc.org/cs/22-025r4/22-025r4.html#toc40.
 """
 
 import string
+from dataclasses import dataclass, field
 from typing import Any, Literal, Union
 
 import numpy as np
@@ -99,20 +100,17 @@ def check_identifier_validity(identifier: str) -> str:
     return identifier
 
 
+@dataclass
 class MetadataEnum:
     """Define a 3DTile metadata enum."""
 
-    def __init__(
-        self,
-        identifier: str,
-        values: dict[str, MetadataNumpyEnumType],
-        name: str | None = None,
-        description: str | None = None,
-    ):
-        self.identifier = check_identifier_validity(identifier)
-        self.values = values.copy()
-        self.name = name
-        self.description = description
+    identifier: str
+    values: dict[str, MetadataNumpyEnumType] = field(default_factory=dict)
+    name: str | None = None
+    description: str | None = None
+
+    def __post_init__(self) -> None:
+        self.identifier = check_identifier_validity(self.identifier)
 
     def to_json(self) -> dict[str, Any]:
         """Convert the metadata enum to a JSON-like dictionary.
@@ -130,43 +128,40 @@ class MetadataEnum:
         return enum_as_json
 
 
+@dataclass
 class MetadataProperty:
     """Define a 3DTiles metadata property."""
 
-    def __init__(
-        self,
-        identifier: str,
-        property_type: MetadataPropertyTypeLiteral,
-        name: str | None = None,
-        description: str | None = None,
-        component_type: MetadataComponentTypeLiteral | None = None,
-        enum_type: str | None = None,
-        array: bool = False,
-        required: bool = False,
-        offset: (
-            MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
-        ) = None,
-        scale: (
-            MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
-        ) = None,
-        minimum: (
-            MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
-        ) = None,
-        maximum: (
-            MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
-        ) = None,
-        nodata: (
-            MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
-        ) = None,
-        default: (
-            MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
-        ) = None,
-    ):
-        self.identifier = check_identifier_validity(identifier)
-        self.property_type = property_type
-        self.name = name
-        self.description = description
-        if component_type is None and self.property_type not in (
+    identifier: str
+    property_type: MetadataPropertyTypeLiteral
+    name: str | None = None
+    description: str | None = None
+    component_type: MetadataComponentTypeLiteral | None = None
+    enum_type: str | None = None
+    array: bool = False
+    required: bool = False
+    offset: (
+        MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
+    ) = None
+    scale: (
+        MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
+    ) = None
+    minimum: (
+        MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
+    ) = None
+    maximum: (
+        MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
+    ) = None
+    nodata: (
+        MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
+    ) = None
+    default: (
+        MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
+    ) = None
+
+    def __post_init__(self) -> None:
+        self.identifier = check_identifier_validity(self.identifier)
+        if self.component_type is None and self.property_type not in (
             "STRING",
             "BOOLEAN",
             "ENUM",
@@ -175,21 +170,11 @@ class MetadataProperty:
                 "Missing 1 required positional argument: 'component_type'. "
                 f"Hint: component_type is required when property type is {self.property_type}!"
             )
-        self.component_type = component_type
-        if enum_type is None and self.property_type == "ENUM":
+        if self.enum_type is None and self.property_type == "ENUM":
             raise TypeError(
                 "Missing 1 required positional argument: 'enum_type'. "
                 f"Hint: enum_type is required when property type is {self.property_type}!"
             )
-        self.enum_type = enum_type
-        self.array = array
-        self.required = required
-        self.offset = offset
-        self.scale = scale
-        self.minimum = minimum
-        self.maximum = maximum
-        self.nodata = nodata
-        self.default = default
 
     def to_json(self) -> dict[str, Any]:
         """Convert the property to a JSON-like dictionary.
@@ -222,16 +207,17 @@ class MetadataProperty:
         return property_as_json
 
 
+@dataclass
 class MetadataClass:
     """Define a 3DTiles metadata class, composed of enums and properties."""
 
-    def __init__(
-        self, identifier: str, name: str | None = None, description: str | None = None
-    ):
-        self.identifier = check_identifier_validity(identifier)
-        self.name = name
-        self.description = description
-        self.properties: dict[str, MetadataProperty] = {}
+    identifier: str
+    name: str | None = None
+    description: str | None = None
+    properties: dict[str, MetadataProperty] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self.identifier = check_identifier_validity(self.identifier)
 
     def add_property(self, new_property: MetadataProperty) -> None:
         """Add a new property to the metadata class.
@@ -258,22 +244,19 @@ class MetadataClass:
         return class_as_json
 
 
+@dataclass
 class MetadataSchema:
     """Contient un ensemble de classes et enums."""
 
-    def __init__(
-        self,
-        identifier: str,
-        name: str | None = None,
-        version: str | None = None,
-        description: str | None = None,
-    ):
-        self.identifier = check_identifier_validity(identifier)
-        self.name = name
-        self.version = version
-        self.description = description
-        self.enums: dict[str, MetadataEnum] = {}
-        self.classes: dict[str, MetadataClass] = {}
+    identifier: str
+    name: str | None = None
+    version: str | None = None
+    description: str | None = None
+    enums: dict[str, MetadataEnum] = field(default_factory=dict)
+    classes: dict[str, MetadataClass] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self.identifier = check_identifier_validity(self.identifier)
 
     def add_enum(self, enum: MetadataEnum) -> None:
         self.enums[enum.identifier] = enum
