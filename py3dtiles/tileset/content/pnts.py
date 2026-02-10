@@ -144,7 +144,7 @@ class Pnts(LegacyTileContent):
 
         # cast color so that mypy is happy
         # this is guaranteed by get_color_semantic
-        colors = cast(None | npt.NDArray[np.uint8 | np.uint16], colors)
+        typed_colors = cast(None | npt.NDArray[np.uint8 | np.uint16], colors)
 
         ft.header = PntsFeatureTableHeader.from_semantic(
             SemanticPoint.POSITION,
@@ -152,7 +152,7 @@ class Pnts(LegacyTileContent):
             None,
             count,
         )
-        ft.body = PntsFeatureTableBody(positions=positions, color=colors)
+        ft.body = PntsFeatureTableBody(positions=positions, color=typed_colors)
 
         bt = BatchTable()
         for fieldname, array in points.extra_fields.items():

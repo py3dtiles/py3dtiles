@@ -505,6 +505,7 @@ def complex_bounding_volume_box() -> BoundingVolumeBox:
     ])
     # fmt: on
 
+
 @fixture
 def gltf_simple() -> GLTF2:
     mesh1 = GltfMesh(
