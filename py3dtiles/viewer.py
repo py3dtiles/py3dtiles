@@ -17,7 +17,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def _make_homepage(self) -> bytes:
         links = "".join(
-            f'<li><a href="/{i}">{i} ({path})</a></li>'
+            f'<li><a href="/{i}">{i} ({path.as_posix()})</a></li>'
             for i, path in enumerate(self.paths)
         )
         return f"<h1>Available Files</h1><ul>{links}</ul>".encode()
@@ -41,14 +41,14 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_header("Content-type", "text/html; charset=utf-8")
                     self.end_headers()
                     links = "".join(
-                        f'<li><a href="/{idx}/{path.relative_to(basepath)}">{path}</a></li>'
+                        f'<li><a href="/{idx}/{path.relative_to(basepath)}">{path.as_posix()}</a></li>'
                         for _, path in enumerate(sorted(filepath.iterdir()))
                     )
                     # we have checked that the filepath exists and is_dir() above
                     # let's consider it enough sanitization for this use case
                     # SONAR-IGNORE
                     self.wfile.write(
-                        f"<h1>Available Files in {quote(str(filepath))}</h1><ul>{links}</ul>".encode()
+                        f"<h1>Available Files in {quote(filepath.as_posix())}</h1><ul>{links}</ul>".encode()
                     )
                     # END-SONAR-IGNORE
                 else:
