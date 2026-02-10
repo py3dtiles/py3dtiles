@@ -161,4 +161,7 @@ def _main(args: argparse.Namespace) -> None:
             # takes so much time (opening a browser page through xdg-open, loading the page, javascript executes,
             # then launches the request...), that I think it won't be a problem
             open_giro3d(args.giro3d_base, tileset_url)
-        httpd.serve_forever()
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("Exiting.")
