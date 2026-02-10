@@ -23,7 +23,7 @@ _MAX_POINTS_IN_PREVIEW = 50_000
 def _get_preview_tile_from_tiles(
     tiles: list[Tile],
     inv_transform: npt.NDArray[np.float64],
-    legacy_format: bool = True,
+    spec_version: SpecVersion = SpecVersion.V1_0,
 ) -> tuple[TileContent, float] | None:
     """
     Get a preview of all the tilesets.
@@ -117,7 +117,7 @@ def _get_preview_tile_from_tiles(
     points.transform(inv_transform)
 
     geometric_error = max(geometric_errors_with_ratio)
-    if legacy_format:
+    if spec_version == SpecVersion.V1_0:
         return Pnts.from_points(points), geometric_error
     else:
         return PointsGltf.from_points(points), geometric_error
@@ -163,7 +163,7 @@ def create_tileset_from_root_tiles(
     root_tile.bounding_volume.transform(inv_transform)  # type: ignore [arg-type] # tracking: https://github.com/numpy/numpy/issues/30405
 
     # preview tile
-    preview = _get_preview_tile_from_tiles(root_tiles, inv_transform, legacy_format=(spec_version == SpecVersion.V1_0))  # type: ignore [arg-type] # tracking: https://github.com/numpy/numpy/issues/30405
+    preview = _get_preview_tile_from_tiles(root_tiles, inv_transform, spec_version=spec_version)  # type: ignore [arg-type] # tracking: https://github.com/numpy/numpy/issues/30405
     if preview is not None:
         root_tile.tile_content, geometric_error = preview
         if spec_version == SpecVersion.V1_0:

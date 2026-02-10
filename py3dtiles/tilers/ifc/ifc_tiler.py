@@ -151,7 +151,16 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         self.written_tiles_by_parent_id[parent_id].append(tile)
 
     def create_root_tile(self, tile_metadata: IfcTileInfo) -> Tile:
-        root_tile = Tile()
+        if self.spec_version == SpecVersion.V1_0:
+            extension = "b3dm"
+        else:
+            extension = "glb"
+        content_uri = (
+            Path(f"{tile_metadata.tile_id}.{extension}")
+            if tile_metadata.has_content
+            else None
+        )
+        root_tile = Tile(content_uri=content_uri)
         if tile_metadata.box is None:
             root_tile.bounding_volume = BoundingVolumeBox()
         else:
@@ -218,9 +227,12 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         self, current_tile: Tile, child: IfcTileInfo
     ) -> float | None:
         if self.spec_version == SpecVersion.V1_0:
-            content_uri = Path(f"{child.tile_id}.b3dm") if child.has_content else None
+            extension = "b3dm"
         else:
-            content_uri = Path(f"{child.tile_id}.glb") if child.has_content else None
+            extension = "glb"
+        content_uri = (
+            Path(f"{child.tile_id}.{extension}") if child.has_content else None
+        )
         # init child tile
         child_tile = Tile(content_uri=content_uri, bounding_volume=child.box)
         child_tile.extras = {

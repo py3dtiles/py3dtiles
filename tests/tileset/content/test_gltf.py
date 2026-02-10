@@ -3,6 +3,7 @@ import pygltflib
 from numpy.testing import assert_array_equal
 from pytest import raises
 
+from py3dtiles.exceptions import InvalidGltfError
 from py3dtiles.points import Points
 from py3dtiles.tileset.content.gltf import PointsGltf
 
@@ -30,32 +31,34 @@ def test_points_gltf_from_points() -> None:
 
     generated_points = gltf.to_points(None)
     assert_array_equal(generated_points.positions, points.positions)
-    assert_array_equal(generated_points.colors, points.colors)  # type: ignore [arg-type] # we *know* it's not None
-    assert_array_equal(generated_points.extra_fields.keys(), points.extra_fields.keys())  # type: ignore [arg-type] # we *know* it's not None
+    assert_array_equal(generated_points.colors, points.colors)
+    assert_array_equal(generated_points.extra_fields.keys(), points.extra_fields.keys())
     assert_array_equal(
         generated_points.extra_fields["intensity"], points.extra_fields["intensity"]
     )
 
 
 def test_points_gltf_from_gltf() -> None:
-    with raises(ValueError, match="Input gltf does not have binary blob"):
+    with raises(InvalidGltfError, match="Input gltf does not have binary blob"):
         PointsGltf.from_gltf(pygltflib.GLTF2())
     gltf2 = pygltflib.GLTF2()
     gltf2.set_binary_blob(b"foo")
     gltf2.meshes = [pygltflib.Mesh(), pygltflib.Mesh()]
-    with raises(ValueError, match="This method supports gltf with exactly one mesh"):
+    with raises(
+        InvalidGltfError, match="This method supports gltf with exactly one mesh"
+    ):
         PointsGltf.from_gltf(gltf2)
 
     mesh = pygltflib.Mesh()
     mesh.primitives = [pygltflib.Primitive(), pygltflib.Primitive()]
     gltf2.meshes = [mesh]
     with raises(
-        ValueError, match="This method supports gltf with exactly one primitive"
+        InvalidGltfError, match="This method supports gltf with exactly one primitive"
     ):
         PointsGltf.from_gltf(gltf2)
 
     mesh.primitives.pop()
-    with raises(ValueError, match="This gltf is not a point gltf, mode is 4"):
+    with raises(InvalidGltfError, match="This gltf is not a point gltf, mode is 4"):
         PointsGltf.from_gltf(gltf2)
 
     mesh.primitives[0].mode = pygltflib.POINTS

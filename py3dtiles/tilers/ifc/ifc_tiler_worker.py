@@ -19,7 +19,6 @@ from py3dtiles.tileset.content.gltf import Gltf
 from py3dtiles.tileset.content.gltf_utils import (
     GltfMesh,
     GltfPrimitive,
-    gltf_from_meshes,
 )
 
 from .ifc_exceptions import IfcInvalidFile
@@ -242,7 +241,7 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
                 tile_content = B3dm.from_meshes(meshes, transform=Z_UP_MATRIX_4X4)
 
             else:
-                tile_content = Gltf(gltf_from_meshes(meshes, transform=Z_UP_MATRIX_4X4))
+                tile_content = Gltf.from_meshes(meshes, transform=Z_UP_MATRIX_4X4)
             tile_content.save_as(content_path)
 
         # then create a tile of a tileset

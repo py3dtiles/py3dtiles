@@ -72,6 +72,12 @@ class InvalidB3dmError(InvalidTileContentError):
     """
 
 
+class InvalidGltfError(InvalidTileContentError):
+    """
+    This exception will be thrown if the batched 3D model format isn't respected.
+    """
+
+
 class InvalidBatchTableError(InvalidTileContentError):
     """
     This exception will be thrown if a batch table doesn't fit the assumptions

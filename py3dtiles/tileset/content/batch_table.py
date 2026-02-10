@@ -152,29 +152,33 @@ class BatchTable:
             if isinstance(property_definition, list) and isinstance(
                 other_property_definition, list
             ):
-                b1.add_property_as_json(
+                new_bt.add_property_as_json(
                     property_name, [*property_definition, *other_property_definition]
                 )
             elif isinstance(property_definition, dict) and isinstance(
                 other_property_definition, dict
             ):
-                ct1 = property_definition["componentType"]
-                ct2 = other_property_definition["componentType"]
-                t1 = property_definition["type"]
-                t2 = other_property_definition["type"]
+                component_type_1 = property_definition["componentType"]
+                component_type_2 = other_property_definition["componentType"]
+                type_1 = property_definition["type"]
+                type_2 = other_property_definition["type"]
                 # binary
-                if ct1 != ct2:
+                if component_type_1 != component_type_2:
                     raise InvalidBatchTableError(
-                        f"componentType differs for {property_name}. First dtype is {ct1}, second is {ct2}"
+                        f"componentType differs for {property_name}. First dtype is {component_type_1}, second is {component_type_2}"
                     )
-                if t1 != t2:
+                if type_1 != type_2:
                     raise InvalidBatchTableError(
-                        f"type differs between the 2 batch_table properties. First type is {t1}, second is {t2}"
+                        f"type differs between the 2 batch_table properties. First type is {type_1}, second is {type_2}"
                     )
-                bp1 = b1.get_binary_property(property_name)
-                bp2 = b2.get_binary_property(property_name)
-                bp = np.concatenate((bp1, bp2))
-                new_bt.add_property_as_binary(property_name, bp, t1)
+                binary_property_1 = b1.get_binary_property(property_name)
+                binary_property_2 = b2.get_binary_property(property_name)
+                new_binary_property = np.concatenate(
+                    (binary_property_1, binary_property_2)
+                )
+                new_bt.add_property_as_binary(
+                    property_name, new_binary_property, type_1
+                )
             else:
                 raise InvalidBatchTableError(
                     f"Cannot merge batch tables if their property differ. Type of {property_name} is {type(property_definition)} in self, but is {type(other_property_definition)} in other"

@@ -3,6 +3,7 @@ import unittest
 
 import numpy as np
 import numpy.typing as npt
+from numpy.testing import assert_array_equal
 
 from py3dtiles.exceptions import Invalid3dtilesError
 from py3dtiles.tileset.content import PntsHeader
@@ -251,3 +252,16 @@ class TestBatchTable(unittest.TestCase):
             "The byte offset is 6 but the byte offset computed is 4",
         ):
             BatchTable.from_array(pnts_header, batch_table_array, 4)
+
+
+def test_merge() -> None:
+    bt1 = BatchTable()
+    bt1.add_property_as_json("foo", [2, 4])
+    bt1.add_property_as_binary("bar", np.array([7, 9], dtype=np.int32), "SCALAR")
+    bt2 = BatchTable()
+    bt2.add_property_as_json("foo", [3, 5])
+    bt2.add_property_as_binary("bar", np.array([8, 10], dtype=np.int32), "SCALAR")
+
+    bt = BatchTable.merge(bt1, bt2)
+    assert bt.header.data["foo"] == [2, 4, 3, 5]
+    assert_array_equal(bt.get_binary_property("bar"), [7, 9, 8, 10])

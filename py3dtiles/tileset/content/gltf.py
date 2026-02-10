@@ -7,9 +7,9 @@ from numpy import typing as npt
 from pygltflib import GLTF2, POINTS
 from typing_extensions import Self
 
-import py3dtiles.tileset.content.gltf_utils as gu
-from py3dtiles.exceptions import InvalidTileContentError
+from py3dtiles.exceptions import InvalidGltfError
 from py3dtiles.points import Points
+from py3dtiles.tileset.content import gltf_utils
 from py3dtiles.tileset.content.tile_content import TileContent
 
 
@@ -31,6 +31,14 @@ class Gltf(TileContent):
         _gltf = GLTF2().load_from_bytes(data)
         return cls(_gltf)
 
+    @classmethod
+    def from_meshes(
+        cls,
+        meshes: list[gltf_utils.GltfMesh],
+        transform: npt.NDArray[np.float32] | None = None,
+    ) -> Self:
+        return cls(gltf_utils.gltf_from_meshes(meshes, transform))
+
     def to_array(self) -> npt.NDArray[np.uint8]:
         return np.frombuffer(b"".join(self._gltf.save_to_bytes()), dtype=np.uint8)
 
@@ -46,27 +54,27 @@ class Gltf(TileContent):
         indices. This is therefore different from the total number of vertices
         drawn on-screen.
         """
-        return gu.get_vertex_count(self._gltf)
+        return gltf_utils.get_vertex_count(self._gltf)
 
     def get_vertices(self) -> npt.NDArray[np.float32 | np.uint16] | None:
         """
         Get the vertices in the order they are defined, taking indices into account.
         """
-        attribute = gu.get_attribute(self._gltf, "POSITION")
+        attribute = gltf_utils.get_attribute(self._gltf, "POSITION")
         return cast(npt.NDArray[np.float32 | np.uint16] | None, attribute)
 
     def get_colors(self) -> npt.NDArray[np.uint8 | np.uint16 | np.float32] | None:
         """
         Get the colors in the order they are defined, taking indices into account.
         """
-        return gu.get_attribute(self._gltf, "COLOR_0")
+        return gltf_utils.get_attribute(self._gltf, "COLOR_0")
 
     def get_extra_field(self, fieldname: str) -> npt.NDArray[Any] | None:
         """
         Get an extra field in the order they are defined, taking indices into account.
         """
         accessor_name = f"_{fieldname.upper()}"
-        return gu.get_attribute(self._gltf, accessor_name)
+        return gltf_utils.get_attribute(self._gltf, accessor_name)
 
     def get_extra_field_names(self) -> set[str]:
         """
@@ -81,7 +89,7 @@ class Gltf(TileContent):
         # TODO replace that with the new metadata property
         return {
             att_name[1:].lower()
-            for att_name in gu.get_non_standard_attribute_names(self._gltf)
+            for att_name in gltf_utils.get_non_standard_attribute_names(self._gltf)
         }
 
     def __str__(self) -> str:
@@ -110,7 +118,7 @@ class PointsGltf(Gltf):
     def from_points(cls, points: Points, name: str | None = None) -> Self:
         if len(points.positions) == 0:
             return cls()
-        return cls(gu.gltf_from_points(points, name))
+        return cls(gltf_utils.gltf_from_points(points, name))
 
     @staticmethod
     def can_build_from_gltf(gltf: GLTF2) -> bool:
@@ -128,35 +136,39 @@ class PointsGltf(Gltf):
         Builds a PointsGltf from a pygltflib.GLTF2. This checks that the
         assumptions of PointsGltf are respected before constructing the object.
         """
-        buffer = gltf.binary_blob()
-        if buffer is None:
-            raise ValueError("Input gltf does not have binary blob")
+        binary_blob = gltf.binary_blob()
+        if binary_blob is None:
+            raise InvalidGltfError("Input gltf does not have binary blob.")
         if len(gltf.meshes) != 1:
-            raise ValueError("This method supports gltf with exactly one mesh")
+            raise InvalidGltfError("This method supports gltf with exactly one mesh.")
         mesh = gltf.meshes[0]
 
         if len(mesh.primitives) != 1:
-            raise ValueError("This method supports gltf with exactly one primitive")
+            raise InvalidGltfError(
+                "This method supports gltf with exactly one primitive."
+            )
 
         if mesh.primitives[0].mode != POINTS:
-            raise ValueError(
-                f"This gltf is not a point gltf, mode is {mesh.primitives[0].mode}"
+            raise InvalidGltfError(
+                f"This gltf is not a point gltf, mode is {mesh.primitives[0].mode}."
             )
 
         return cls(gltf)
 
     def to_points(self, transform: npt.NDArray[np.float64] | None) -> Points:
         # positions are always float in gltf
-        xyz = cast(npt.NDArray[np.float32], gu.get_attribute(self._gltf, "POSITION"))
+        xyz = cast(
+            npt.NDArray[np.float32], gltf_utils.get_attribute(self._gltf, "POSITION")
+        )
 
-        rgb = gu.get_attribute(self._gltf, "COLOR_0")
+        rgb = gltf_utils.get_attribute(self._gltf, "COLOR_0")
 
         extract_fields = {}
         for field in self.get_extra_field_names():
             values = self.get_extra_field(field)
             if values is None:
-                raise InvalidTileContentError(
-                    f"Found no value for field {field} for this gltf"
+                raise InvalidGltfError(
+                    f"Found no value for field {field} for this gltf."
                 )
             extract_fields[field] = values
 
@@ -178,52 +190,59 @@ class PointsGltf(Gltf):
         the number of draw call in the viewer, thus making the pointcloud performs better.
         """
 
-        gltf_1 = self._gltf
-        gltf_2 = other._gltf
-        buffer_1 = gltf_1.binary_blob()
-        if buffer_1 is None:
-            raise ValueError("g1 does not have binary blob??")
-        buffer_2 = gltf_2.binary_blob()
-        if buffer_2 is None:
+        gltf = self._gltf
+        other_gltf = other._gltf
+        binary_blob = gltf.binary_blob()
+        if binary_blob is None:
+            raise InvalidGltfError("The current gltf does not have a binary blob??")
+        other_binary_blob = other_gltf.binary_blob()
+        if other_binary_blob is None:
             # nothing to do
             return
-        if len(gltf_1.meshes) != 1 or len(gltf_2.meshes) != 1:
-            raise ValueError("This method supports gltf with exactly one mesh")
-        mesh_1 = gltf_1.meshes[0]
-        mesh_2 = gltf_2.meshes[0]
+        if len(gltf.meshes) != 1 or len(other_gltf.meshes) != 1:
+            raise InvalidGltfError("This method supports gltf with exactly one mesh.")
+        mesh = gltf.meshes[0]
+        other_mesh = other_gltf.meshes[0]
 
-        if len(mesh_1.primitives) != 1 or len(mesh_2.primitives) != 1:
-            raise ValueError("This method supports gltf with exactly one primitive")
-        p1 = mesh_1.primitives[0]
-        p2 = mesh_2.primitives[0]
+        if len(mesh.primitives) != 1 or len(other_mesh.primitives) != 1:
+            raise InvalidGltfError(
+                "This method supports gltf with exactly one primitive."
+            )
+        primitive = mesh.primitives[0]
+        other_primitive = other_mesh.primitives[0]
 
-        for attr in p1.__dict__.keys():
-            if not hasattr(p2, attr):
-                raise ValueError(f"{attr} attribute not found in g2")
+        for attr in primitive.__dict__:
+            if not hasattr(other_primitive, attr):
+                raise InvalidGltfError(f"{attr} attribute not found in other.")
 
-        for attr in p2.__dict__.keys():
-            if not hasattr(p1, attr):
-                raise ValueError(f"{attr} attribute not found in g1")
+        for attr in other_primitive.__dict__:
+            if not hasattr(primitive, attr):
+                raise InvalidGltfError(f"{attr} attribute not found in self.")
 
         current_offset = 0
-        buffer = b""
-        for key, accessor_id in p1.attributes.__dict__.items():
+        merged_buffer = b""
+        for key, accessor_id in primitive.attributes.__dict__.items():
             if accessor_id is None:
                 # GLTF2 includes some default properties, like WEIGHTS_0, None by default
                 continue
-            accessor_1 = gltf_1.accessors[accessor_id]
-            bv_1 = gltf_1.bufferViews[accessor_1.bufferView]
-            buffer1 = buffer_1[bv_1.byteOffset : bv_1.byteOffset + bv_1.byteLength]
+            accessor = gltf.accessors[accessor_id]
+            buffer_view = gltf.bufferViews[accessor.bufferView]
+            this_buffer = binary_blob[
+                buffer_view.byteOffset : buffer_view.byteOffset + buffer_view.byteLength
+            ]
 
-            accessor_id2 = p2.attributes.__dict__[key]
-            accessor_2 = gltf_2.accessors[accessor_id2]
-            bv_2 = gltf_2.bufferViews[accessor_2.bufferView]
-            buffer2 = buffer_2[bv_2.byteOffset : bv_2.byteOffset + bv_2.byteLength]
+            other_accessor_id = getattr(other_primitive.attributes, key)
+            other_accessor = other_gltf.accessors[other_accessor_id]
+            other_buffer_view = other_gltf.bufferViews[other_accessor.bufferView]
+            other_buffer = other_binary_blob[
+                other_buffer_view.byteOffset : other_buffer_view.byteOffset
+                + other_buffer_view.byteLength
+            ]
 
-            buffer += buffer1 + buffer2
-            accessor_1.count += accessor_2.count
-            bv_1.byteLength = len(buffer1) + len(buffer2)
-            bv_1.byteOffset = current_offset
-            current_offset += bv_1.byteLength
+            merged_buffer += this_buffer + other_buffer
+            accessor.count += other_accessor.count
+            buffer_view.byteLength = len(this_buffer) + len(other_buffer)
+            buffer_view.byteOffset = current_offset
+            current_offset += buffer_view.byteLength
 
-        gltf_1.set_binary_blob(buffer)
+        gltf.set_binary_blob(merged_buffer)

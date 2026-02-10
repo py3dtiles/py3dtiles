@@ -445,7 +445,9 @@ def get_non_standard_attribute_names(gltf: pygltflib.GLTF2) -> set[str]:
     all_attrs = []
     for mesh in gltf.meshes:
         for primitive in mesh.primitives:
-            attrs = set(vars(primitive.attributes).keys()) - standard_attributes
+            # note: vars(...) is a dict, iterable on the keys
+            # so this gives a set containing all the keys
+            attrs = set(vars(primitive.attributes)) - standard_attributes
             all_attrs.append(attrs)
 
     return set.intersection(*all_attrs)
@@ -516,8 +518,7 @@ def get_attribute(
         raise ValueError(
             "This method only supports gltf with one buffer in the BINARYBLOB format"
         )
-    blob = gltf.binary_blob()
-    if blob is None:
+    if gltf.binary_blob() is None:
         return None
     values: list[npt.NDArray[Any]] = []
     for mesh in gltf.meshes:

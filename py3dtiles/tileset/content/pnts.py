@@ -177,18 +177,18 @@ class Pnts(LegacyTileContent):
         ftb = self.body.feature_table.body
 
         other_ftb = other.body.feature_table.body
-        child_fth = other.body.feature_table.header
+        other_fth = other.body.feature_table.header
 
-        new_point_count = fth.points_length + child_fth.points_length
+        new_point_count = fth.points_length + other_fth.points_length
 
-        if fth.positions != child_fth.positions:
+        if fth.positions != other_fth.positions:
             raise InvalidPntsError(
                 "Cannot merge 2 pnts with different position semantics"
             )
 
         ftb.position = np.concatenate((ftb.position, other_ftb.position))
 
-        if fth.colors != child_fth.colors:
+        if fth.colors != other_fth.colors:
             raise InvalidPntsError("Cannot merge 2 pnts with different color semantics")
         elif fth.colors != SemanticPoint.NONE:
             if ftb.color is None or other_ftb.color is None:
@@ -233,8 +233,7 @@ class Pnts(LegacyTileContent):
     def get_extra_fields(self) -> dict[str, npt.NDArray[Any]]:
         extra_fields = {}
         for item in self.body.batch_table.header.data.keys():
-            arr = self.body.batch_table.get_binary_property(item)
-            extra_fields[item] = arr
+            extra_fields[item] = self.body.batch_table.get_binary_property(item)
         return extra_fields
 
     def get_extra_field(self, fieldname: str) -> npt.NDArray[Any]:

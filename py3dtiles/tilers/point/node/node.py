@@ -365,7 +365,7 @@ class Node:
         depth: int = 0,
         pool_executor: ProcessPoolExecutor | None = None,
     ) -> Tile | None:
-        legacy_format = self.spec_version == SpecVersion.V1_0
+        extension = PNTS_EXT if self.spec_version == SpecVersion.V1_0 else GLB_EXT
         # create child tileset parts
         # if their size is below of 100 points, they will be merged in this node.
         children_tileset_parts: list[Tile] = []
@@ -381,7 +381,6 @@ class Node:
                 self.spec_version,
                 self.extra_fields,
             )
-            extension = PNTS_EXT if legacy_format else GLB_EXT
             child_path = node_name_to_path(folder, child_name, extension)
 
             if child_path.exists():
@@ -408,11 +407,10 @@ class Node:
             ]
 
         tile_content: Pnts | PointsGltf
-        if legacy_format:
-            tile_path = node_name_to_path(folder, self.name, PNTS_EXT)
+        tile_path = node_name_to_path(folder, self.name, extension)
+        if self.spec_version == SpecVersion.V1_0:
             tile_content = Pnts.from_file(tile_path)
         else:
-            tile_path = node_name_to_path(folder, self.name, GLB_EXT)
             tile_content = PointsGltf.from_file(tile_path)
 
         # check if this node should be merged in the parent.
@@ -425,12 +423,11 @@ class Node:
             and tile_content.get_vertex_count() < 100
         ):
             parent_tile_content: Pnts | PointsGltf
-            if legacy_format:
-                parent_path = node_name_to_path(folder, parent_node.name, PNTS_EXT)
+            parent_path = node_name_to_path(folder, parent_node.name, extension)
+            if self.spec_version == SpecVersion.V1_0:
                 parent_tile_content = Pnts.from_file(parent_path)
                 parent_tile_content.merge_with(cast(Pnts, tile_content))
             else:
-                parent_path = node_name_to_path(folder, parent_node.name, GLB_EXT)
                 parent_tile_content = PointsGltf.from_file(parent_path)
                 parent_tile_content.merge_with(cast(PointsGltf, tile_content))
 
