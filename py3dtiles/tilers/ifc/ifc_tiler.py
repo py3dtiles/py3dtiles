@@ -77,6 +77,8 @@ class IfcTiler(Tiler[SharedMetadata, IfcTilerWorker]):
         # that's what we're going to build folks!
         self.root_tile = Tile()
 
+        # NOTE: crs_in is always None currently because we don't yet support
+        # crs parsing for individual ifc files.
         self.force_crs_in = True
 
     def supports(self, file: Path) -> bool:
@@ -199,8 +201,6 @@ class IfcTiler(Tiler[SharedMetadata, IfcTilerWorker]):
             # Currently no support for per-file crs
             crs_in = None
             transformer = None
-            # Note crs_in is always None currently because we don't yet support
-            # crs parsing for individual ifc files.
             if self.crs_in is not None and (self.force_crs_in or crs_in is None):
                 crs_in = CRS(self.crs_in)
             elif crs_in is not None:
