@@ -12,13 +12,13 @@ from pyproj import CRS, Transformer
 
 from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE, SpecVersion
 from py3dtiles.tilers.base_tiler import Tiler
+from py3dtiles.tilers.base_tiler.shared_metadata import SharedMetadata
 from py3dtiles.tilers.shared_store import SharedStore
 from py3dtiles.tileset import Tile
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 
 from .ifc_message_type import IfcTilerMessage, IfcWorkerMessage
 from .ifc_model import FileMetadata, FilenameAndOffset, IfcTileInfo
-from .ifc_shared_metadata import IfcSharedMetadata
 from .ifc_tiler_worker import IfcTilerWorker
 
 TILE_STOPS = [
@@ -35,12 +35,12 @@ class FilenameAndTileId:
     id_in_bytes: bytes
 
 
-class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
+class IfcTiler(Tiler[SharedMetadata, IfcTilerWorker]):
     name = "ifc"
 
     root_aabb: npt.NDArray[np.float64]
     node_store: SharedStore
-    shared_metadata: IfcSharedMetadata
+    shared_metadata: SharedMetadata
     files_to_read: list[Path]
     tiles_to_write: list[FilenameAndTileId]
     number_of_jobs: int
@@ -92,7 +92,7 @@ class IfcTiler(Tiler[IfcSharedMetadata, IfcTilerWorker]):
         self.files_to_read = files.copy()
         self.out_folder = out_folder
         self.store = SharedStore(working_dir)
-        self.shared_metadata = IfcSharedMetadata(
+        self.shared_metadata = SharedMetadata(
             spec_version=self.spec_version,
             out_folder=self.out_folder,
             verbosity=self.verbosity,

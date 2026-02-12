@@ -12,6 +12,7 @@ import numpy.typing as npt
 from ifcopenshell import entity_instance
 
 from py3dtiles.constants import SpecVersion
+from py3dtiles.tilers.base_tiler.shared_metadata import SharedMetadata
 from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content.b3dm import B3dm
@@ -34,7 +35,6 @@ from .ifc_model import (
     IfcTile,
     IfcTileInfo,
 )
-from .ifc_shared_metadata import IfcSharedMetadata
 
 Z_UP_MATRIX_4X4 = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]])
 
@@ -99,9 +99,9 @@ def _get_elem_info(
     return infos_dict
 
 
-class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
+class IfcTilerWorker(TilerWorker[SharedMetadata]):
 
-    def __init__(self, shared_metadata: IfcSharedMetadata):
+    def __init__(self, shared_metadata: SharedMetadata):
         super().__init__(shared_metadata)
 
     def initialize(self) -> None:

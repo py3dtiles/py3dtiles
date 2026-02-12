@@ -1381,7 +1381,9 @@ def test_convert_crs_traditional_ordering(
 class Metadata(SharedMetadata):
 
     def __init__(self) -> None:
-        super().__init__(spec_version=SpecVersion.V1_0)
+        super().__init__(
+            spec_version=SpecVersion.V1_0, verbosity=0, out_folder=Path("dummy")
+        )
 
 
 class Worker(TilerWorker[Metadata]):
