@@ -72,7 +72,7 @@ def can_pnts_be_written(
     )
 
 
-class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
+class PointTiler(Tiler[PointSharedMetadata]):
     """
     Tiler that split pointclouds.
 

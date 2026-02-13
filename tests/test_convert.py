@@ -1393,7 +1393,7 @@ class Worker(TilerWorker[Metadata]):
         yield [b"WORK"]
 
 
-class Tiler1(Tiler[Metadata, Worker]):
+class Tiler1(Tiler[Metadata]):
     name = "tiler1"
 
     def initialize(
@@ -1424,7 +1424,7 @@ class Tiler1(Tiler[Metadata, Worker]):
         return root_tile
 
 
-class Tiler2(Tiler[Metadata, Worker]):
+class Tiler2(Tiler[Metadata]):
     name = "tiler2"
 
     def initialize(

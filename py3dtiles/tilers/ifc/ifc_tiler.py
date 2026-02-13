@@ -35,7 +35,7 @@ class FilenameAndTileId:
     id_in_bytes: bytes
 
 
-class IfcTiler(Tiler[SharedMetadata, IfcTilerWorker]):
+class IfcTiler(Tiler[SharedMetadata]):
     name = "ifc"
 
     root_aabb: npt.NDArray[np.float64]
