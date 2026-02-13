@@ -1,9 +1,11 @@
 :root {
   --py3dtiles-blue: #3f7bad;
   --py3dtiles-light-blue: #d7e5f0;
+  --py3dtiles-dark-blue: #172e3f;
   --py3dtiles-orange: #ff6500;
   --py3dtiles-light-orange: #ffe0cc;
   /* from darker to lighter */
-  --py3dtiles-grey1: #fafafa;
-  --py3dtiles-grey2: #f2f2f2;
+  --py3dtiles-light-grey: #f0f0f0;
+  --py3dtiles-grey: #252525;
+  --py3dtiles-dark-grey: #121212;
 }
