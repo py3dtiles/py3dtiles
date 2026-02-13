@@ -22,18 +22,18 @@ from py3dtiles.tileset.content.gltf_utils import (
     GltfPrimitive,
 )
 
+from ..geometry.geometry_message_type import GeometryTilerMessage, GeometryWorkerMessage
 from .ifc_exceptions import IfcInvalidFile
-from .ifc_message_type import IfcTilerMessage, IfcWorkerMessage
 from .ifc_model import (
     Color,
     Feature,
+    FeatureGroup,
     FileMetadata,
     FilenameAndOffset,
     Geometry,
     IfcMaterial,
     IfcMesh,
-    IfcTile,
-    IfcTileInfo,
+    TileInfo,
 )
 
 Z_UP_MATRIX_4X4 = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]])
@@ -117,9 +117,9 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
     def execute(
         self, command: bytes, content: list[bytes]
     ) -> Iterator[Sequence[bytes]]:
-        if command == IfcTilerMessage.READ_FILE.value:
+        if command == GeometryTilerMessage.READ_FILE.value:
             yield from self.execute_read_file(content)
-        elif command == IfcTilerMessage.WRITE_TILE.value:
+        elif command == GeometryTilerMessage.WRITE_TILE.value:
             yield from self.write_tile_content(content)
         else:
             raise NotImplementedError(f"Unkown command {command!r}")
@@ -151,7 +151,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
                         found_offset = True
                         offset = m.mesh.geom.verts[0:3]
                         yield [
-                            IfcWorkerMessage.METADATA_READ.value,
+                            GeometryWorkerMessage.METADATA_READ.value,
                             pickle.dumps(
                                 FilenameAndOffset(filename=str(filename), offset=offset)
                             ),
@@ -161,7 +161,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
             current_tile_id += 1
             # send the tile to main process
             yield [
-                IfcWorkerMessage.TILE_PARSED.value,
+                GeometryWorkerMessage.TILE_PARSED.value,
                 # we send tile.id separately to avoid having to unpickle data too soon on the receiver side
                 str(tile.filename).encode(),
                 struct.pack(">I", tile.tile_id),
@@ -169,10 +169,10 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
             ]
             for p in new_parents:
                 parents.append((tile.tile_id, p))
-        yield [IfcWorkerMessage.FILE_READ.value, str(filename).encode()]
+        yield [GeometryWorkerMessage.FILE_READ.value, str(filename).encode()]
 
     def write_tile_content(self, content: list[bytes]) -> Iterator[Sequence[bytes]]:
-        tile: IfcTile = pickle.loads(gzip.decompress(content[0]))
+        tile: FeatureGroup = pickle.loads(gzip.decompress(content[0]))
         file_metadata: FileMetadata = pickle.loads(content[1])
         offset = file_metadata.offset
         assert offset is not None  # at this point, offset *must* have been initialized
@@ -252,7 +252,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
             transform = np.identity(4, dtype=np.float64)
             transform[0:3, 3] = offset
 
-        tile_metadata = IfcTileInfo(
+        tile_metadata = TileInfo(
             tile_id=tile.tile_id,
             parent_id=tile.parent_id,
             box=bbox,
@@ -264,7 +264,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
 
         if self.shared_metadata.verbosity >= 1:
             print("sending tile ready with metadata", tile_metadata)
-        yield [IfcWorkerMessage.TILE_READY.value, pickle.dumps(tile_metadata)]
+        yield [GeometryWorkerMessage.TILE_READY.value, pickle.dumps(tile_metadata)]
 
     def parse_elem(self, elem: entity_instance) -> IfcMesh | None:
         if hasattr(elem, "Representation") and elem.Representation is not None:
@@ -313,7 +313,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
         tile_id: int,
         parent_tile_id: int | None,
         parent_elem: entity_instance,
-    ) -> tuple[IfcTile, list[entity_instance]]:
+    ) -> tuple[FeatureGroup, list[entity_instance]]:
         # now breadth first traversal
         # queue objects with their parent
         # each time we encounter a IfcSpatialStructureElement, this creates a new tile
@@ -340,7 +340,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
                 members.append(new_feat)
                 stack.extend(_get_children(current))
 
-        tile = IfcTile(
+        tile = FeatureGroup(
             tile_id=tile_id,
             filename=filename,
             parent_id=parent_tile_id,
