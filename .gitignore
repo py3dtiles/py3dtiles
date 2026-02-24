@@ -98,3 +98,7 @@ ENV/
 .ropeproject
 .pytest
 public
+.benchmarks
+.direnv
+.envrc
+.gitlab-ci-local
