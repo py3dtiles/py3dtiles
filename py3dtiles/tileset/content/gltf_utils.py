@@ -6,20 +6,7 @@ import numpy as np
 import numpy.typing as npt
 import pygltflib
 
-
-class GltfAttribute(NamedTuple):
-    """
-    A high level representation of a gltf attribute
-
-    `accessor_type` can only take `values autorized by the spec <https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_accessor_type>`_.
-
-    `component_type` should take `these values <https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_accessor_componenttype>`_.
-    """
-
-    name: str
-    accessor_type: str  # Literal["SCALAR", "VEC2", "VEC3"] # pygltflib.SCALAR | pygltflib.VEC2 | pygltflib.VEC3
-    component_type: pygltflib.UNSIGNED_BYTE | pygltflib.UNSIGNED_INT | pygltflib.FLOAT
-    array: npt.NDArray[np.uint8 | np.uint16 | np.uint32 | np.float32]
+from py3dtiles.points import Points
 
 
 def get_component_type_from_dtype(dt: np.dtype[Any]) -> int:
@@ -41,6 +28,60 @@ def get_component_type_from_dtype(dt: np.dtype[Any]) -> int:
     return cast(int, val)
 
 
+def get_dtype_from_component_type(component_type: int) -> np.dtype[Any]:
+    if component_type == pygltflib.BYTE:
+        return np.dtype(np.int8)
+    elif component_type == pygltflib.UNSIGNED_BYTE:
+        return np.dtype(np.uint8)
+    elif component_type == pygltflib.SHORT:
+        return np.dtype(np.int16)
+    elif component_type == pygltflib.UNSIGNED_SHORT:
+        return np.dtype(np.uint16)
+    elif component_type == pygltflib.UNSIGNED_INT:
+        return np.dtype(np.uint32)
+    elif component_type == pygltflib.FLOAT:
+        return np.dtype(np.float32)
+    else:
+        raise ValueError(f"Invalid value given for component_type: {component_type}")
+
+
+def get_num_components_from_type(accessor_type: str) -> int:
+    if accessor_type == pygltflib.SCALAR:
+        return 1
+    elif accessor_type == pygltflib.VEC2:
+        return 2
+    elif accessor_type == pygltflib.VEC3:
+        return 3
+    # the noqa because I just find it easier to read that way
+    elif accessor_type == pygltflib.VEC4:  # noqa: SIM114
+        return 4
+    elif accessor_type == pygltflib.MAT2:
+        return 4
+    elif accessor_type == pygltflib.MAT3:
+        return 9
+    elif accessor_type == pygltflib.MAT4:
+        return 16
+    else:
+        raise ValueError(f"Unknown accessor type: {accessor_type}")
+
+
+class GltfAttribute(NamedTuple):
+    """
+    A high level representation of a gltf attribute
+
+    `accessor_type` can only take `values autorized by the spec <https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_accessor_type>`_.
+
+    `component_type` should take `these values <https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#_accessor_componenttype>`_.
+    """
+
+    name: str
+    accessor_type: str  # Literal["SCALAR", "VEC2", "VEC3"] # pygltflib.SCALAR | pygltflib.VEC2 | pygltflib.VEC3
+    component_type: (
+        int  # pygltflib.UNSIGNED_BYTE | pygltflib.UNSIGNED_INT | pygltflib.FLOAT
+    )
+    array: npt.NDArray[np.uint8 | np.uint16 | np.uint32 | np.float32]
+
+
 class GltfPrimitive:
     """
     A data structure storing all information to create a glTF mesh's primitive.
@@ -52,6 +93,9 @@ class GltfPrimitive:
     :param triangles: array of triangle indices, must have a (n, 3) shape.
     :param material: a glTF material. If not set, a default material is created.
     :param texture_uri: the URI of the texture image if the primitive is textured.
+    :param mode: the draw mode, one of the constants exposed by pygltflib:
+        POINT, LINES, LINE_LOOP, LINE_STRIP, TRIANGLES, TRIANGLE_STRIP or
+        TRIANGLE_FAN.
     """
 
     def __init__(
@@ -59,6 +103,7 @@ class GltfPrimitive:
         triangles: npt.NDArray[np.uint8 | np.uint16 | np.uint32] | None = None,
         material: pygltflib.Material | None = None,
         texture_uri: str | None = None,
+        mode: int = pygltflib.TRIANGLES,
     ) -> None:
         self.triangles: GltfAttribute | None = (
             GltfAttribute(
@@ -72,6 +117,7 @@ class GltfPrimitive:
         )
         self.material: pygltflib.Material | None = material
         self.texture_uri: str | None = texture_uri
+        self.mode = mode
 
 
 class GltfMesh:
@@ -94,7 +140,7 @@ class GltfMesh:
 
     def __init__(
         self,
-        points: npt.NDArray[np.float32],
+        points: npt.NDArray[np.float32 | np.uint16],
         name: str | None = None,
         normals: npt.NDArray[np.float32] | None = None,
         primitives: list[GltfPrimitive] | None = None,
@@ -139,6 +185,44 @@ class GltfMesh:
             additional_attributes if additional_attributes is not None else []
         )
         self.properties = properties
+
+
+def gltf_from_points(points: Points, name: str | None = None) -> pygltflib.GLTF2:
+    attributes = []
+    if points.colors is not None:
+        attributes.append(
+            GltfAttribute(
+                "COLOR_0",
+                pygltflib.VEC3,
+                get_component_type_from_dtype(points.colors.dtype),
+                points.colors,
+            )
+        )
+    for field, array in points.extra_fields.items():
+        component_type = get_component_type_from_dtype(array.dtype)
+        if component_type == pygltflib.UNSIGNED_INT:
+            # The spec says "Application-specific attribute semantics MUST NOT use unsigned int component type."
+            # so upgrading to float in this case
+            component_type = pygltflib.FLOAT
+            array = array.astype(np.float32)
+
+        attributes.append(
+            GltfAttribute(
+                f"_{field.upper()}",
+                pygltflib.SCALAR,
+                component_type,
+                array,
+            )
+        )
+
+    primitive = GltfPrimitive(mode=pygltflib.POINTS)
+    mesh = GltfMesh(
+        name=name,
+        points=points.positions,
+        primitives=[primitive],
+        additional_attributes=attributes,
+    )
+    return gltf_from_meshes(meshes=[mesh])
 
 
 def gltf_from_meshes(
@@ -221,6 +305,7 @@ def _create_gltf_primitive(
     return pygltflib.Primitive(
         attributes=pygltflib.Attributes(),
         material=material_id,
+        mode=primitive.mode,
     )
 
 
@@ -329,3 +414,119 @@ def prepare_gltf_component(
 
     gltf.accessors.append(accessor)
     return array_blob
+
+
+def get_vertex_count(gltf: pygltflib.GLTF2) -> int:
+    vertex_count = 0
+    # it's not correct to simply count the accessor of type VEC3 (because they might not all be positions).
+    # Also, because you can reuse accessors with different index, you cannot just sum accessors count
+    # we need to sum the *unique* accessors
+    # please note that this will *not* give you the number of necessary draw calls, because of indices as well.
+    accessor_ids: list[int] = []
+    for mesh in gltf.meshes:
+        for primitive in mesh.primitives:
+            accessor_ids.append(primitive.attributes.POSITION)
+    for acc_id in set(accessor_ids):
+        vertex_count += gltf.accessors[acc_id].count
+    return vertex_count
+
+
+def get_non_standard_attribute_names(gltf: pygltflib.GLTF2) -> set[str]:
+    standard_attributes = {
+        "POSITION",
+        "NORMAL",
+        "TANGENT",
+        "TEXCOORD_0",
+        "TEXCOORD_1",
+        "COLOR_0",
+        "JOINTS_0",
+        "WEIGHTS_0",
+    }
+    all_attrs = []
+    for mesh in gltf.meshes:
+        for primitive in mesh.primitives:
+            # note: vars(...) is a dict, iterable on the keys
+            # so this gives a set containing all the keys
+            attrs = set(vars(primitive.attributes)) - standard_attributes
+            all_attrs.append(attrs)
+
+    return set.intersection(*all_attrs)
+
+
+def get_array_from_accessor(
+    accessor: pygltflib.Accessor, buffer_view: pygltflib.BufferView, data: bytes
+) -> npt.NDArray[Any]:
+    num_element = get_num_components_from_type(accessor.type)
+    bv_byte_offset = 0 if buffer_view.byteOffset is None else buffer_view.byteOffset
+    acc_byte_offset = 0 if accessor.byteOffset is None else accessor.byteOffset
+
+    arr = np.frombuffer(
+        data,
+        dtype=get_dtype_from_component_type(accessor.componentType),
+        count=accessor.count * num_element,
+        offset=bv_byte_offset + acc_byte_offset,
+    )
+    if num_element > 1:
+        arr = arr.reshape((-1, num_element))
+    return arr
+
+
+def _get_attribute_from_primitive(
+    attribute_name: str, gltf: pygltflib.GLTF2, primitive: pygltflib.Primitive
+) -> npt.NDArray[Any] | None:
+    blob = gltf.binary_blob()
+    if not hasattr(primitive.attributes, attribute_name):
+        return None
+    accessor_id = getattr(primitive.attributes, attribute_name)
+    if accessor_id is None:
+        return None
+    attr_accessor = gltf.accessors[accessor_id]
+    # is there an index ?
+    arr = get_array_from_accessor(
+        attr_accessor, gltf.bufferViews[attr_accessor.bufferView], blob
+    )
+    if primitive.indices is not None:
+        # get index
+        indices_accessor = gltf.accessors[primitive.indices]
+        if indices_accessor.bufferView is None:
+            raise ValueError(
+                "Accessor without bufferView! Please note that sparse accessors are not yet supported"
+            )
+        buffer_view = gltf.bufferViews[indices_accessor.bufferView]
+        indices = get_array_from_accessor(indices_accessor, buffer_view, blob)
+        arr = arr[indices]
+    return arr
+
+
+def get_attribute(
+    gltf: pygltflib.GLTF2, attribute_name: str
+) -> npt.NDArray[Any] | None:
+    """
+    Get all the values having this attribute_name in this gltf, respecting the indices if there are some.
+
+    The returning array contains all the value in a structured manner: `get_attribute(gltf, 'POSITION')` will give back an array of 3-elements arrays.
+
+    Note: this method guarantees to walk the meshes and primitives always in the same order, but there is no guarantee that each mesh has this particular attribute.
+
+    Warning: this method only supports gltf with a buffer format of BINARYBLOB (see pygltflib BufferFormat enum)
+    """
+    if len(gltf.buffers) == 0:
+        raise ValueError("This gltf has no buffers")
+    if len(gltf.buffers) > 1:
+        raise ValueError("This method doesn't support gltf with several buffers yet")
+    if gltf.identify_uri(gltf.buffers[0].uri) != pygltflib.BufferFormat.BINARYBLOB:
+        raise ValueError(
+            "This method only supports gltf with one buffer in the BINARYBLOB format"
+        )
+    if gltf.binary_blob() is None:
+        return None
+    values: list[npt.NDArray[Any]] = []
+    for mesh in gltf.meshes:
+        for primitive in mesh.primitives:
+            arr = _get_attribute_from_primitive(attribute_name, gltf, primitive)
+            if arr is not None:
+                values.append(arr)
+    if len(values) == 0:
+        return None
+    else:
+        return np.concatenate(values)  # type: ignore [no-any-return] # for some reason mypy doesn't infer the type correctly here

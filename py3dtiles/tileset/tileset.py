@@ -4,9 +4,10 @@ import json
 from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from py3dtiles import __version__
+from py3dtiles.constants import SpecVersion
 from py3dtiles.typing import AssetDictType, GeometricErrorType, TilesetDictType
 
 from .root_property import RootProperty
@@ -20,7 +21,9 @@ if TYPE_CHECKING:
 
 class Asset(RootProperty[AssetDictType]):
     def __init__(
-        self, version: Literal["1.0", "1.1"] = "1.0", tileset_version: str | None = None
+        self,
+        version: SpecVersion = SpecVersion.V1_0,
+        tileset_version: str | None = None,
     ) -> None:
         super().__init__()
         self.version = version
@@ -28,7 +31,7 @@ class Asset(RootProperty[AssetDictType]):
 
     @classmethod
     def from_dict(cls, asset_dict: AssetDictType) -> Self:
-        asset = cls(asset_dict["version"])
+        asset = cls(SpecVersion(asset_dict["version"]))
         if "tilesetVersion" in asset_dict:
             asset.tileset_version = asset_dict["tilesetVersion"]
 
@@ -37,7 +40,7 @@ class Asset(RootProperty[AssetDictType]):
         return asset
 
     def to_dict(self) -> AssetDictType:
-        asset_dict: AssetDictType = {"version": self.version}
+        asset_dict: AssetDictType = {"version": self.version.value}
 
         asset_dict = self.add_root_properties_to_dict(asset_dict)
 
@@ -55,9 +58,10 @@ class TileSet(RootProperty[TilesetDictType]):
     def __init__(
         self,
         geometric_error: float = 500,
+        spec_version: SpecVersion = SpecVersion.V1_0,
     ) -> None:
         super().__init__()
-        self.asset = Asset(version="1.0")
+        self.asset = Asset(version=spec_version)
         # by default, add these metadatas
         self.asset.extras["created_date"] = datetime.now().isoformat()
         self.asset.extras["generator"] = {

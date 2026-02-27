@@ -68,11 +68,7 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
     @classmethod
     def from_points(
         cls,
-        points: (
-            Sequence[npt.NDArray[np.float64] | list[float]]
-            | npt.NDArray[np.float64]
-            | npt.NDArray[np.float32]
-        ),
+        points: Sequence[npt.NDArray[np.float64] | list[float]] | npt.NDArray[Any],
     ) -> BoundingVolumeBox:
         """
         Construct a bounding box enclosing all the points.

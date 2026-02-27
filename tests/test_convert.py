@@ -15,6 +15,7 @@ from numpy.testing import assert_array_almost_equal, assert_array_equal
 from pyproj import CRS
 from pytest import RaisesExc, mark, raises
 
+from py3dtiles.constants import SpecVersion
 from py3dtiles.convert import Converter, convert
 from py3dtiles.exceptions import (
     SrsInMissingException,
@@ -28,6 +29,7 @@ from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
 from py3dtiles.tileset import TileSet, number_of_points_in_tileset
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content import Pnts
+from py3dtiles.tileset.content.gltf import PointsGltf
 from py3dtiles.tileset.tile import Tile
 
 
@@ -131,6 +133,63 @@ def test_convert_ifc(tmp_dir: Path, tileset_ifc_1: TileSet) -> None:
         assert Path(tileset_ifc_1.root_uri, content_path).exists()
 
 
+def test_convert_ifc_new_format(fixtures_dir: Path, tmp_dir: Path) -> None:
+    tileset_folder = tmp_dir / "simple1_ifc_new_format"
+    convert(
+        fixtures_dir / "simple1.ifc",
+        outfolder=tileset_folder,
+        overwrite=True,
+        spec_version=SpecVersion.V1_1,
+        verbose=1,
+    )
+    tileset_ifc = TileSet.from_file(tileset_folder / "tileset.json")
+    # basic asserts
+    assert tileset_ifc.root_uri is not None
+    tileset_path = tileset_ifc.root_uri / "tileset.json"
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    expecting_box = [0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 3.5434]
+    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    assert box == expecting_box
+    assert_array_equal(
+        tileset["root"]["transform"],
+        [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            6.0,
+            5.0,
+            2.543375790119171,
+            1.0,
+        ],
+    )
+
+    # the preview in on the root of outfolder
+    # at the moment, there is no preview tiles for ifc tilesets
+    assert "content" not in tileset["root"]
+
+    # the root tile is the IfcProject, no content as well at the moment
+    assert "content" not in tileset["root"]["children"][0]
+
+    # assert the other tiles
+    children = tileset["root"]["children"][0]["children"]
+    for child in children:
+        content_path = child["content"]["uri"]
+        assert content_path.startswith("ifc/")
+        assert content_path.endswith(".glb")
+        assert Path(tileset_ifc.root_uri, content_path).exists()
+
+
 def test_convert_with_prune(tmp_dir: Path, fixtures_dir: Path) -> None:
     # This file has 1 point at (-2, -2, -2) and 20001 at (1, 1, 1)
     # like this, it triggers the prune mechanism
@@ -172,6 +231,55 @@ def test_convert_with_prune(tmp_dir: Path, fixtures_dir: Path) -> None:
 
     assert Path(tmp_dir, "points", "r.pnts").exists()
     assert Path(tmp_dir, "points", "r0.pnts").exists()
+
+    with laspy.open(laz_path) as f:
+        las_point_count = f.header.point_count
+
+    assert las_point_count == number_of_points_in_tileset(tileset_path)
+
+
+def test_convert_with_prune_glb(tmp_dir: Path, fixtures_dir: Path) -> None:
+    # This file has 1 point at (-2, -2, -2) and 20001 at (1, 1, 1)
+    # like this, it triggers the prune mechanism
+    laz_path = fixtures_dir / "stacked_points.las"
+
+    convert(
+        laz_path,
+        outfolder=tmp_dir,
+        jobs=1,
+        rgb=False,  # search bound cases by disabling rgb export
+        spec_version=SpecVersion.V1_1,
+    )
+
+    # basic asserts
+    tileset_path = tmp_dir / "tileset.json"
+    with tileset_path.open() as f:
+        tileset = json.load(f)
+
+    assert tileset["root"]["transform"] == [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        -0.5,
+        -0.5,
+        -0.5,
+        1.0,
+    ]
+    expecting_box = [0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5]
+    box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+    assert box == expecting_box
+
+    assert Path(tmp_dir, "points", "r.glb").exists()
+    assert Path(tmp_dir, "points", "r0.glb").exists()
 
     with laspy.open(laz_path) as f:
         las_point_count = f.header.point_count
@@ -441,6 +549,55 @@ def test_convert_xyz_rgb_i_c(tmp_dir: Path, fixtures_dir: Path) -> None:
     bt = tile_content.body.batch_table
     assert_array_equal(bt.get_binary_property("intensity"), [3, 1, 2])
     assert_array_equal(bt.get_binary_property("classification"), [22, 21, 22])
+
+
+def test_convert_xyz_rgb_i_c_new_format(tmp_dir: Path, fixtures_dir: Path) -> None:
+    convert(
+        fixtures_dir / "simple_with_irgb_and_classification.csv",
+        outfolder=tmp_dir,
+        jobs=1,
+        extra_fields=["intensity", "classification"],
+        spec_version=SpecVersion.V1_1,
+    )
+    assert Path(tmp_dir, "points", "r.glb").exists()
+
+    xyz_point_count = -1  # compensate for header line
+    with open(fixtures_dir / "simple_with_irgb_and_classification.csv") as f:
+        while line := f.readline():
+            xyz_point_count += 1 if line != "" else 0
+
+    tileset_path = tmp_dir / "tileset.json"
+    assert xyz_point_count == number_of_points_in_tileset(tileset_path)
+
+    tileset = TileSet.from_file(tileset_path)
+    tile_content = PointsGltf.from_file(tmp_dir / "points" / "r.glb")
+    # assert position
+    vertices = tile_content.get_vertices()
+    assert vertices is not None
+    local_coords = tileset.root_tile.children[0].transform_coords(vertices)
+    world_coords = tileset.root_tile.transform_coords(local_coords)
+
+    assert_array_equal(
+        world_coords,
+        np.array(
+            [
+                [281345.9, 369123.25, 0.0],
+                [281345.12, 369123.47, 0.0],
+                [281345.56, 369123.88, 0.0],
+            ],
+            dtype=np.float32,
+        ),
+    )
+    colors = tile_content.get_colors()
+    assert colors is not None
+    assert_array_equal(colors, [[0, 0, 200], [10, 0, 0], [0, 10, 0]])
+    # extra fields
+    intensities = tile_content.get_extra_field("intensity")
+    assert intensities is not None
+    assert_array_equal(intensities, [3, 1, 2])
+    classifications = tile_content.get_extra_field("classification")
+    assert classifications is not None
+    assert_array_equal(classifications, [22, 21, 22])
 
 
 def test_convert_xyz_rgb_i_c_with_srs(tmp_dir: Path, fixtures_dir: Path) -> None:
@@ -1150,6 +1307,7 @@ def test_convert_rgb_classif(
         if isinstance(tile_content, TileSet):
             continue
 
+        assert isinstance(tile_content, Pnts)
         assert rgb_bool ^ (tile_content.body.feature_table.body.color is None)
         with expected_raise:
             bt_prop = tile_content.body.batch_table.get_binary_property(
@@ -1221,7 +1379,9 @@ def test_convert_crs_traditional_ordering(
 
 
 class Metadata(SharedMetadata):
-    pass
+
+    def __init__(self) -> None:
+        super().__init__(spec_version=SpecVersion.V1_0)
 
 
 class Worker(TilerWorker[Metadata]):

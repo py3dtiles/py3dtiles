@@ -6,18 +6,18 @@ import pickle
 from collections.abc import Generator, Iterator
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
 
 import numpy as np
 import numpy.typing as npt
 
+from py3dtiles.constants import SpecVersion
 from py3dtiles.exceptions import TilerException
 from py3dtiles.points import Points
-from py3dtiles.tilers.point.pnts import MIN_POINT_SIZE
-from py3dtiles.tilers.point.pnts.pnts_writer import points_to_pnts_file
+from py3dtiles.tilers.point.constants import MIN_POINT_SIZE
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
-from py3dtiles.tileset.content import read_binary_tile_content
-from py3dtiles.tileset.content.pnts_feature_table import SemanticPoint
+from py3dtiles.tileset.content.gltf import PointsGltf
+from py3dtiles.tileset.content.pnts import Pnts
 from py3dtiles.tileset.tile import Tile
 from py3dtiles.tileset.tileset import TileSet
 from py3dtiles.typing import ExtraFieldsDescription
@@ -37,6 +37,9 @@ if TYPE_CHECKING:
     from .node_catalog import NodeCatalog
 
     _T = TypeVar("_T", bound=npt.NBitBase)
+
+PNTS_EXT = ".pnts"
+GLB_EXT = ".glb"
 
 
 def node_to_tile(
@@ -98,6 +101,7 @@ class Node:
         "aabb_center",
         "spacing",
         "include_rgb",
+        "spec_version",
         "extra_fields",
         "pending_points",
         "children",
@@ -112,6 +116,7 @@ class Node:
         aabb: npt.NDArray[np.float64 | np.float32],
         spacing: float,
         include_rgb: bool,
+        spec_version: SpecVersion,
         extra_fields: list[ExtraFieldsDescription],
     ) -> None:
         super().__init__()
@@ -124,6 +129,7 @@ class Node:
         self.aabb_center = (self.aabb[0] + self.aabb[1]) * 0.5
         self.spacing = spacing
         self.include_rgb = include_rgb
+        self.spec_version = spec_version
         self.extra_fields = extra_fields
         self.pending_points: list[Points] = []
         self.children: list[bytes] | None = None
@@ -137,12 +143,20 @@ class Node:
         parent_aabb: npt.NDArray[np.floating[_T]],
         parent_spacing: float,
         include_rgb: bool,
+        spec_version: SpecVersion,
         extra_fields: list[ExtraFieldsDescription],
     ) -> Node:
         spacing = parent_spacing * 0.5
         aabb = split_aabb(parent_aabb, int(name[-1])) if len(name) > 0 else parent_aabb
         # let's build a new Node
-        return Node(name, aabb.astype(np.float64), spacing, include_rgb, extra_fields)
+        return Node(
+            name,
+            aabb.astype(np.float64),
+            spacing,
+            include_rgb,
+            spec_version,
+            extra_fields,
+        )
 
     def save_to_bytes(self) -> bytes:
         sub_pickle: dict[str, Any] = {}
@@ -351,6 +365,7 @@ class Node:
         depth: int = 0,
         pool_executor: ProcessPoolExecutor | None = None,
     ) -> Tile | None:
+        extension = PNTS_EXT if self.spec_version == SpecVersion.V1_0 else GLB_EXT
         # create child tileset parts
         # if their size is below of 100 points, they will be merged in this node.
         children_tileset_parts: list[Tile] = []
@@ -359,11 +374,16 @@ class Node:
         ] = []
         for child_name in self.get_child_names():
             child_node = Node.create_child_node_from_parent(
-                child_name, self.aabb, self.spacing, self.include_rgb, self.extra_fields
+                child_name,
+                self.aabb,
+                self.spacing,
+                self.include_rgb,
+                self.spec_version,
+                self.extra_fields,
             )
-            child_pnts_path = node_name_to_path(folder, child_name, ".pnts")
+            child_path = node_name_to_path(folder, child_name, extension)
 
-            if child_pnts_path.exists():
+            if child_path.exists():
                 # multi thread is only allowed on nodes where there are no prune
                 # a simple rule is: only is there is not a parent node
                 if pool_executor and parent_node is None:
@@ -386,89 +406,41 @@ class Node:
                 if t is not None
             ]
 
-        pnts_path = node_name_to_path(folder, self.name, ".pnts")
-        tile_content = read_binary_tile_content(pnts_path)
-        fth = tile_content.body.feature_table.header
-        xyz = tile_content.body.feature_table.body.position.reshape((-1, 3))
+        tile_content: Pnts | PointsGltf
+        tile_path = node_name_to_path(folder, self.name, extension)
+        if self.spec_version == SpecVersion.V1_0:
+            tile_content = Pnts.from_file(tile_path)
+        else:
+            tile_content = PointsGltf.from_file(tile_path)
 
         # check if this node should be merged in the parent.
         prune = False  # prune only if the node is a leaf
 
         # If this child is small enough, merge in the current tile
-        if parent_node is not None and depth > 1 and fth.points_length < 100:
-            parent_pnts_path = node_name_to_path(folder, parent_node.name, ".pnts")
-            parent_tile = read_binary_tile_content(parent_pnts_path)
-            parent_fth = parent_tile.body.feature_table.header
-
-            parent_xyz = parent_tile.body.feature_table.body.position.reshape(
-                (parent_fth.points_length, 3)
-            )
-
-            if (
-                parent_fth.colors != SemanticPoint.NONE
-                and parent_tile.body.feature_table.body.color is not None
-            ):
-                parent_rgb = parent_tile.body.feature_table.body.color.reshape((-1, 3))
+        if (
+            parent_node is not None
+            and depth > 1
+            and tile_content.get_vertex_count() < 100
+        ):
+            parent_tile_content: Pnts | PointsGltf
+            parent_path = node_name_to_path(folder, parent_node.name, extension)
+            if self.spec_version == SpecVersion.V1_0:
+                parent_tile_content = Pnts.from_file(parent_path)
+                parent_tile_content.merge_with(cast(Pnts, tile_content))
             else:
-                parent_rgb = None
+                parent_tile_content = PointsGltf.from_file(parent_path)
+                parent_tile_content.merge_with(cast(PointsGltf, tile_content))
 
-            parent_extra_fields = {}
-            for field in parent_tile.body.batch_table.header.data:
-                parent_extra_fields[field] = (
-                    parent_tile.body.batch_table.get_binary_property(field)
-                )
-
-            # update aabb based on real values
-            parent_bounding_volume = BoundingVolumeBox.from_points(parent_xyz)
-
-            parent_xyz = np.concatenate((parent_xyz, xyz))
-
-            if fth.colors != SemanticPoint.NONE:
-                if tile_content.body.feature_table.body.color is None:
-                    raise TilerException(
-                        "If the parent has color data, the children must also have color data."
-                    )
-                parent_rgb = np.concatenate(
-                    (
-                        parent_rgb,
-                        tile_content.body.feature_table.body.color.reshape((-1, 3)),
-                    )
-                )
-
-            for field in tile_content.body.batch_table.header.data:
-                parent_extra_fields[field] = np.concatenate(
-                    (
-                        parent_extra_fields[field],
-                        tile_content.body.batch_table.get_binary_property(field),
-                    )
-                )
-
-            # update aabb
-            xyz_float = xyz.view(np.float32)
-            new_bounding_volume_box = BoundingVolumeBox.from_points(xyz_float)
-
-            parent_bounding_volume.add(new_bounding_volume_box)
-
-            parent_pnts_path.unlink()
-            points_to_pnts_file(
-                folder,
-                parent_node.name,
-                Points(
-                    positions=parent_xyz,
-                    colors=parent_rgb,
-                    extra_fields=parent_extra_fields,
-                ),
-            )
-            pnts_path.unlink()
+            parent_tile_content.save_as(parent_path)
+            tile_path.unlink()
             prune = True
 
         content_uri = None
         if not prune:
-            content_uri = pnts_path.relative_to(folder)
-            xyz_float = xyz.view(np.float32)
+            content_uri = tile_path.relative_to(folder)
 
             # update aabb based on real values
-            bounding_box = BoundingVolumeBox.from_points(xyz_float)
+            bounding_box = tile_content.get_bounding_volume_box()
 
         else:
             # if it is a leaf that should be pruned
@@ -500,14 +472,18 @@ class Node:
             and children_tileset_parts
             and len(json.dumps(tile.to_dict())) > 100000
         ):
-            tile = split_tileset(tile, self.name.decode(), folder)
+            tile = split_tileset(
+                tile, self.name.decode(), folder, spec_version=self.spec_version
+            )
 
         return tile
 
 
-def split_tileset(tile: Tile, split_name: str, folder: Path) -> Tile:
+def split_tileset(
+    tile: Tile, split_name: str, folder: Path, spec_version: SpecVersion
+) -> Tile:
     tile.set_refine_mode("ADD")
-    tileset = TileSet(geometric_error=tile.geometric_error)
+    tileset = TileSet(geometric_error=tile.geometric_error, spec_version=spec_version)
     tileset.root_tile = copy.deepcopy(tile)
     tileset_name = Path(f"tileset.{split_name}.json")
     tileset.write_as_json(folder / tileset_name)

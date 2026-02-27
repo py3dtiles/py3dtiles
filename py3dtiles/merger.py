@@ -5,12 +5,14 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
+from py3dtiles.constants import SpecVersion
 from py3dtiles.exceptions import (
     TileContentMissingException,
 )
 from py3dtiles.points import Points
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content import Pnts
+from py3dtiles.tileset.content.gltf import PointsGltf
 from py3dtiles.tileset.content.tile_content import TileContent
 from py3dtiles.tileset.tile import Tile
 from py3dtiles.tileset.tileset import TileSet
@@ -21,6 +23,7 @@ _MAX_POINTS_IN_PREVIEW = 50_000
 def _get_preview_tile_from_tiles(
     tiles: list[Tile],
     inv_transform: npt.NDArray[np.float64],
+    spec_version: SpecVersion = SpecVersion.V1_0,
 ) -> tuple[TileContent, float] | None:
     """
     Get a preview of all the tilesets.
@@ -50,8 +53,9 @@ def _get_preview_tile_from_tiles(
             # So we raise it to the caller so that the content loading is done where it can be done
             raise TileContentMissingException(tile.content_uri)
 
-        if isinstance(tile.tile_content, Pnts):
-            point_count += tile.tile_content.body.feature_table.header.points_length
+        # the None check is for the type checker, we know it's not None because of the raise above
+        if tile.tile_content is not None and not isinstance(tile.tile_content, TileSet):
+            point_count += tile.tile_content.get_vertex_count()
 
     if point_count == 0:
         # at the moment, we support only points, so let's bail out now if there is none
@@ -64,7 +68,9 @@ def _get_preview_tile_from_tiles(
         tile_content = tile.tile_content
         if isinstance(tile_content, TileSet):
             tile_content = tile_content.root_tile.tile_content
-        if not isinstance(tile_content, Pnts):
+        if not isinstance(tile_content, Pnts) and not isinstance(
+            tile_content, PointsGltf
+        ):
             # at the moment we can only create previews of Pnts tile
             geometric_errors_with_ratio.append(tile.geometric_error)
             continue
@@ -72,7 +78,7 @@ def _get_preview_tile_from_tiles(
         geometric_errors_with_ratio.append(tile.geometric_error / ratio)
 
         # get points in absolute coordinates
-        points = tile_content.body.get_points(tile.transform)
+        points = tile_content.to_points(tile.transform)
         _xyz = points.positions
         _rgb = points.colors
         _extra_fields = points.extra_fields
@@ -111,7 +117,10 @@ def _get_preview_tile_from_tiles(
     points.transform(inv_transform)
 
     geometric_error = max(geometric_errors_with_ratio)
-    return Pnts.from_points(points), geometric_error
+    if spec_version == SpecVersion.V1_0:
+        return Pnts.from_points(points), geometric_error
+    else:
+        return PointsGltf.from_points(points), geometric_error
 
 
 def _get_transform_from_root_tile(root_tile: Tile) -> npt.NDArray[np.float64]:
@@ -123,7 +132,9 @@ def _get_transform_from_root_tile(root_tile: Tile) -> npt.NDArray[np.float64]:
     return transform
 
 
-def create_tileset_from_root_tiles(root_tiles: list[Tile]) -> TileSet:
+def create_tileset_from_root_tiles(
+    root_tiles: list[Tile], spec_version: SpecVersion = SpecVersion.V1_0
+) -> TileSet:
     """
     Creates a TileSet from all the root tiles. This method will calculate a
     reasonable world-transformation and reverse-apply it to each tile
@@ -133,7 +144,7 @@ def create_tileset_from_root_tiles(root_tiles: list[Tile]) -> TileSet:
 
     The resulting TileSet might have a root tile with contents. It's the responsibility of the caller to save this content on disk (see :obj:`py3dtiles.tileset.tile.Tile.write_content`).
     """
-    global_tileset = TileSet()
+    global_tileset = TileSet(spec_version=spec_version)
     root_tile = global_tileset.root_tile
     # create the hierarchy : one intermediate wrapping tile for each tile
     for tile in root_tiles:
@@ -152,10 +163,13 @@ def create_tileset_from_root_tiles(root_tiles: list[Tile]) -> TileSet:
     root_tile.bounding_volume.transform(inv_transform)  # type: ignore [arg-type] # tracking: https://github.com/numpy/numpy/issues/30405
 
     # preview tile
-    preview = _get_preview_tile_from_tiles(root_tiles, inv_transform)  # type: ignore [arg-type] # tracking: https://github.com/numpy/numpy/issues/30405
+    preview = _get_preview_tile_from_tiles(root_tiles, inv_transform, spec_version=spec_version)  # type: ignore [arg-type] # tracking: https://github.com/numpy/numpy/issues/30405
     if preview is not None:
         root_tile.tile_content, geometric_error = preview
-        root_tile.content_uri = Path("./preview.pnts")
+        if spec_version == SpecVersion.V1_0:
+            root_tile.content_uri = Path("./preview.pnts")
+        else:
+            root_tile.content_uri = Path("./preview.glb")
     # now combine the inverse transformation to the children tiles
     # this must be done last, so that the preview points are calculated correctly
     for tile in root_tile.children:
@@ -172,7 +186,9 @@ def create_tileset_from_root_tiles(root_tiles: list[Tile]) -> TileSet:
 
 
 def merge(
-    tilesets: list[TileSet], tileset_paths: dict[TileSet, Path] | None = None
+    tilesets: list[TileSet],
+    tileset_paths: dict[TileSet, Path] | None = None,
+    spec_version: SpecVersion = SpecVersion.V1_0,
 ) -> TileSet:
     """
     Create a tileset that include all input tilesets. The tilesets don't need to be written.
@@ -195,13 +211,14 @@ def merge(
         tile.tile_content = tileset
         tiles.append(tile)
 
-    return create_tileset_from_root_tiles(tiles)
+    return create_tileset_from_root_tiles(tiles, spec_version=spec_version)
 
 
 def merge_from_files(
     tileset_paths: list[Path],
     output_tileset_path: Path,
     overwrite: bool = True,
+    spec_version: SpecVersion = SpecVersion.V1_0,
 ) -> None:
     output_tileset_path = output_tileset_path.absolute()
     if output_tileset_path.exists():
@@ -226,7 +243,7 @@ def merge_from_files(
         for tileset, path in zip(tilesets, tileset_paths)
     }
 
-    tileset = merge(tilesets, relative_tileset_paths)
+    tileset = merge(tilesets, relative_tileset_paths, spec_version=spec_version)
 
     tileset.root_uri = output_tileset_path.parent
     if tileset.root_tile.has_content():
@@ -259,4 +276,5 @@ def _main(args: argparse.Namespace) -> None:
         [Path(tileset_file) for tileset_file in args.tilesets],
         Path(args.output_tileset),
         args.overwrite,
+        SpecVersion(args.spec_version),
     )

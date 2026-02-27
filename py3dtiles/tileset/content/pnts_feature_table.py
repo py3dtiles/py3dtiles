@@ -62,6 +62,7 @@ SEMANTIC_TYPE_MAP = {
 }
 
 SEMANTIC_DIMENSION_MAP = {
+    SemanticPoint.NONE: 0,
     SemanticPoint.POSITION: 3,
     SemanticPoint.POSITION_QUANTIZED: 3,
     SemanticPoint.RGB: 3,
@@ -187,7 +188,13 @@ class PntsFeatureTableHeader(FeatureTableHeader):
             SemanticPoint.POSITION, SemanticPoint.POSITION_QUANTIZED
         ],
         color_semantic: (
-            Literal[SemanticPoint.RGB, SemanticPoint.RGBA, SemanticPoint.RGB565] | None
+            Literal[
+                SemanticPoint.RGB,
+                SemanticPoint.RGBA,
+                SemanticPoint.RGB565,
+                SemanticPoint.NONE,
+            ]
+            | None
         ),
         normal_semantic: (
             Literal[SemanticPoint.NORMAL, SemanticPoint.NORMAL_OCT16P] | None
@@ -216,7 +223,7 @@ class PntsFeatureTableHeader(FeatureTableHeader):
             fth.quantized_volume_offset = quantized_volume_offset
             fth.quantized_volume_scale = quantized_volume_scale
 
-        if color_semantic:
+        if color_semantic is not None and color_semantic != SemanticPoint.NONE:
             fth.colors = color_semantic
             fth.colors_offset = next_offset
             next_offset += SEMANTIC_ITEM_SIZE_MAP[fth.colors] * nb_points

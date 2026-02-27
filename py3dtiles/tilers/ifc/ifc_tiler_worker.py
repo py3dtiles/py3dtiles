@@ -11,10 +11,15 @@ import numpy as np
 import numpy.typing as npt
 from ifcopenshell import entity_instance
 
+from py3dtiles.constants import SpecVersion
 from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content.b3dm import B3dm
-from py3dtiles.tileset.content.gltf_utils import GltfMesh, GltfPrimitive
+from py3dtiles.tileset.content.gltf import Gltf
+from py3dtiles.tileset.content.gltf_utils import (
+    GltfMesh,
+    GltfPrimitive,
+)
 
 from .ifc_exceptions import IfcInvalidFile
 from .ifc_message_type import IfcTilerMessage, IfcWorkerMessage
@@ -220,14 +225,24 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
                 )
         # no point in creating a b3dm if there is no geom in this tile
         has_content = False
-        b3dm_path = None
         if len(meshes) > 0:
             has_content = True
-            b3dm_path = self.shared_metadata.out_folder / Path(f"{tile.tile_id}.b3dm")
+            extensions = (
+                "b3dm"
+                if self.shared_metadata.spec_version == SpecVersion.V1_0
+                else "glb"
+            )
+            content_path = self.shared_metadata.out_folder / Path(
+                f"{tile.tile_id}.{extensions}"
+            )
 
-            tile_content = B3dm.from_meshes(meshes, transform=Z_UP_MATRIX_4X4)
-            tile_content.sync()
-            tile_content.save_as(b3dm_path)
+            tile_content: B3dm | Gltf
+            if self.shared_metadata.spec_version == SpecVersion.V1_0:
+                tile_content = B3dm.from_meshes(meshes, transform=Z_UP_MATRIX_4X4)
+
+            else:
+                tile_content = Gltf.from_meshes(meshes, transform=Z_UP_MATRIX_4X4)
+            tile_content.save_as(content_path)
 
         # then create a tile of a tileset
 

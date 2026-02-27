@@ -1,6 +1,7 @@
 import argparse
 
 from py3dtiles import convert, export, info, merger, viewer
+from py3dtiles.constants import SpecVersion
 
 
 def main() -> None:
@@ -21,6 +22,12 @@ def main() -> None:
     # add the verbose argument for all sub-parsers so that it is after the command.
     for command_parser in command_parsers:
         command_parser.add_argument("--verbose", "-v", action="count", default=0)
+        command_parser.add_argument(
+            "--spec-version",
+            default="1.0",
+            choices=[version.value for version in SpecVersion],
+            help="Which 3dtiles spec version py3dtiles is allowed to use. If >=1.1, py3dtiles will produce gltf files instead of pnts or b3dm.",
+        )
 
     args = parser.parse_args()
 

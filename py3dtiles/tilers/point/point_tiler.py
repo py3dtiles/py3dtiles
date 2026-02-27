@@ -10,8 +10,9 @@ import numpy as np
 import numpy.typing as npt
 from pyproj import CRS, Transformer
 
-from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE
+from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE, SpecVersion
 from py3dtiles.exceptions import (
+    InvalidTileContentError,
     SrsInMissingException,
     SrsInMixinException,
     TilerException,
@@ -28,13 +29,14 @@ from py3dtiles.utils import (
     node_name_to_path,
 )
 
+from . import points_writer
+from .constants import MIN_POINT_SIZE
 from .matrix_manipulation import (
     make_rotation_matrix,
     make_scale_matrix,
     make_translation_matrix,
 )
 from .node import Node
-from .pnts import MIN_POINT_SIZE, pnts_writer
 from .point_message_type import PointManagerMessage, PointWorkerMessageType
 from .point_shared_metadata import PointSharedMetadata
 from .point_state import PointState
@@ -111,8 +113,9 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         force_crs_in: bool = False,
         pyproj_always_xy: bool = False,
         cache_size: int = DEFAULT_CACHE_SIZE,
-        verbosity: int = 0,
+        verbose: int = 0,
         number_of_jobs: int = CPU_COUNT,
+        spec_version: SpecVersion = SpecVersion.V1_0,
         rgb: bool = True,
         color_scale: float | None = None,
         extra_fields: list[str] | None = None,
@@ -127,8 +130,9 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             force_crs_in=force_crs_in,
             pyproj_always_xy=pyproj_always_xy,
             cache_size=cache_size,
-            verbosity=verbosity,
+            verbosity=verbose,
             number_of_jobs=number_of_jobs,
+            spec_version=spec_version,
         )
 
         self.rgb = rgb
@@ -139,8 +143,8 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         return PointTilerWorker(self.shared_metadata)
 
     def get_tasks(self) -> Generator[tuple[bytes, list[bytes]], None, None]:
-        while len(self.state.pnts_to_writing) > 0:
-            yield self.send_pnts_to_write()
+        while len(self.state.nodes_in_writing) > 0:
+            yield self.send_content_to_write()
 
         yield from self.send_points_to_process()
 
@@ -171,6 +175,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         )
 
         self.shared_metadata = PointSharedMetadata(
+            self.spec_version,
             self.transformer,
             self.root_aabb,
             self.root_spacing,
@@ -422,8 +427,8 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             if job_list:
                 yield PointManagerMessage.PROCESS_JOBS.value, job_list
 
-    def send_pnts_to_write(self) -> tuple[bytes, list[bytes]]:
-        node_name = self.state.pnts_to_writing.pop()
+    def send_content_to_write(self) -> tuple[bytes, list[bytes]]:
+        node_name = self.state.nodes_in_writing.pop()
         data = self.node_store.get(node_name)
         if not data:
             raise ValueError(f"{node_name!r} has no data")
@@ -431,7 +436,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         self.node_store.remove(node_name)
         self.state.number_of_writing_jobs += 1
 
-        return PointManagerMessage.WRITE_PNTS.value, [node_name, data]
+        return PointManagerMessage.WRITE_CONTENT.value, [node_name, data]
 
     def process_message(self, message_type: bytes, message: list[bytes]) -> None:
         if message_type == PointWorkerMessageType.READ.value:
@@ -446,7 +451,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
 
             self.dispatch_processed_nodes(content)
 
-        elif message_type == PointWorkerMessageType.PNTS_WRITTEN.value:
+        elif message_type == PointWorkerMessageType.CONTENT_WRITTEN.value:
             self.state.points_in_pnts += struct.unpack(">I", message[0])[0]
             self.state.number_of_writing_jobs -= 1
 
@@ -483,7 +488,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                 self.state.processing_nodes,
             ):
                 self.state.waiting_writing_nodes.pop(-1)
-                self.state.pnts_to_writing.append(finished_node)
+                self.state.nodes_in_writing.append(finished_node)
 
                 for i in range(len(self.state.waiting_writing_nodes) - 1, -1, -1):
                     candidate = self.state.waiting_writing_nodes[i]
@@ -495,17 +500,17 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                         self.state.processing_nodes,
                     ):
                         self.state.waiting_writing_nodes.pop(i)
-                        self.state.pnts_to_writing.append(candidate)
+                        self.state.nodes_in_writing.append(candidate)
 
         else:
             for c in self.state.waiting_writing_nodes:
-                self.state.pnts_to_writing.append(c)
+                self.state.nodes_in_writing.append(c)
             self.state.waiting_writing_nodes.clear()
 
     def validate(self) -> None:
         if self.state.points_in_pnts != self.files_info["point_count"]:
             raise ValueError(
-                "Invalid point count in the written .pnts"
+                "Invalid point count in the written file"
                 + f"(expected: {self.files_info['point_count']}, was: {self.state.points_in_pnts})"
             )
 
@@ -521,6 +526,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             self.root_aabb,
             self.root_spacing * 2,
             self.shared_metadata.write_rgb,
+            self.shared_metadata.spec_version,
             self.shared_metadata.extra_fields_to_include,
         )
         root_node.children = []
@@ -532,36 +538,39 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             )
         ).astype(np.float32)
         for child_num in range(8):
+            extension = ".pnts" if self.spec_version == SpecVersion.V1_0 else ".glb"
             tile_path = node_name_to_path(
-                self.out_folder, str(child_num).encode("ascii"), ".pnts"
+                self.out_folder, str(child_num).encode("ascii"), extension
             )
             if tile_path.exists():
                 tile_content = read_binary_tile_content(tile_path)
 
-                fth = tile_content.body.feature_table.header
-                xyz = tile_content.body.feature_table.body.position.view(
-                    np.float32
-                ).reshape((fth.points_length, 3))
+                xyz = tile_content.get_vertices()
+                if xyz is None:
+                    raise InvalidTileContentError(
+                        f"Tile content {tile_path} has no vertex!"
+                    )
                 if self.rgb:
-                    tile_color = tile_content.body.feature_table.body.color
-                    if tile_color is None:
+                    rgb = tile_content.get_colors()
+                    if rgb is None:
                         raise TilerException(
                             "tile_content.body.feature_table.body.color shouldn't be None here. Seems to be a py3dtiles issue."
                         )
-                    if tile_color.dtype != np.uint8:
+                    if rgb.dtype != np.uint8:
                         raise TilerException(
                             "The data type of tile_content.body.feature_table.body.color must be np.uint8. Seems to be a py3dtiles issue."
                         )
-                    rgb = tile_color.reshape((fth.points_length, 3)).astype(
-                        np.uint8, copy=False
-                    )  # the astype is used for typing
                 else:
                     rgb = np.zeros(xyz.shape, dtype=np.uint8)
 
                 extra_fields: dict[str, npt.NDArray[Any]] = {}
-                for item in tile_content.body.batch_table.header.data.keys():
-                    arr = tile_content.body.batch_table.get_binary_property(item)
-                    extra_fields[item] = arr
+                for fieldname in tile_content.get_extra_field_names():
+                    extra_field = tile_content.get_extra_field(fieldname)
+                    if extra_field is None:
+                        raise InvalidTileContentError(
+                            f"The tile at {tile_path} should contain {fieldname}"
+                        )
+                    extra_fields[fieldname] = extra_field
 
                 root_node.grid.insert(
                     self.root_aabb[0].astype(np.float32),
@@ -571,10 +580,11 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
                     extra_fields,
                 )
 
-        pnts_writer.node_to_pnts(
+        points_writer.node_to_content(
             b"",
             root_node,
             self.out_folder,
+            self.spec_version == SpecVersion.V1_0,
         )
 
         if use_process_pool:
@@ -586,6 +596,7 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
             self.root_aabb,
             self.root_spacing,
             self.shared_metadata.write_rgb,
+            self.shared_metadata.spec_version,
             self.shared_metadata.extra_fields_to_include,
         ).to_tile(self.out_folder, self.root_scale, None, 0, pool_executor)
         if pool_executor is not None:

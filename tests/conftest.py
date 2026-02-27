@@ -11,14 +11,21 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 import plyfile
+import pygltflib
 from plyfile import PlyData, PlyElement
+from pygltflib import GLTF2
 from pyproj import CRS
 from pytest import fixture
 
+from py3dtiles.constants import SpecVersion
 from py3dtiles.convert import convert
+from py3dtiles.points import Points
 from py3dtiles.tilers.b3dm.wkb_utils import PolygonType
 from py3dtiles.tilers.point.node import Grid, Node
 from py3dtiles.tileset import BoundingVolumeBox, Tile, TileSet
+from py3dtiles.tileset.content import gltf_utils
+from py3dtiles.tileset.content.gltf import PointsGltf
+from py3dtiles.tileset.content.gltf_utils import GltfMesh, GltfPrimitive
 from py3dtiles.tileset.extension.batch_table_hierarchy_extension import (
     BatchTableHierarchy,
 )
@@ -104,7 +111,12 @@ def tileset_pnts_2(tileset_pnts_path_2: Path) -> TileSet:
 @fixture
 def tileset_ifc_path_1(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
     tileset_folder = tmp_dir / "simple1_ifc"
-    convert(fixtures_dir / "simple1.ifc", outfolder=tileset_folder, overwrite=True)
+    convert(
+        fixtures_dir / "simple1.ifc",
+        outfolder=tileset_folder,
+        overwrite=True,
+        verbose=1,
+    )
     yield tileset_folder / "tileset.json"
 
 
@@ -215,6 +227,7 @@ def node() -> Node:
         bbox,
         compute_spacing(bbox),
         True,
+        SpecVersion.V1_0,
         [
             ExtraFieldsDescription(name="classification", dtype=np.dtype(np.uint8)),
             ExtraFieldsDescription(name="intensity", dtype=np.dtype(np.uint8)),
@@ -225,7 +238,7 @@ def node() -> Node:
 @fixture
 def node_position_only() -> Node:
     bbox = np.array([[0, 0, 0], [2, 2, 2]])
-    return Node(b"noeud", bbox, compute_spacing(bbox), False, [])
+    return Node(b"noeud", bbox, compute_spacing(bbox), False, SpecVersion.V1_0, [])
 
 
 @fixture
@@ -491,6 +504,64 @@ def complex_bounding_volume_box() -> BoundingVolumeBox:
         0, 0, 5
     ])
     # fmt: on
+
+
+@fixture
+def gltf_simple() -> GLTF2:
+    mesh1 = GltfMesh(
+        np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32),
+        normals=np.array([2, 2.5, 3.5], dtype=np.float32),
+    )
+    return gltf_utils.gltf_from_meshes([mesh1])
+
+
+@fixture
+def gltf_complex(z_up_matrix: npt.NDArray[np.float32]) -> GLTF2:
+    mesh1 = GltfMesh(
+        np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32),
+        normals=np.array([2, 2.5, 3.5], dtype=np.float32),
+    )
+    mesh2 = GltfMesh(
+        np.array([[11, 12, 13], [14, 15, 16], [17, 18, 19]], dtype=np.float32),
+    )
+
+    m1 = pygltflib.Material()
+    m2 = pygltflib.Material(emissiveFactor=[0, 1, 2])
+    p1 = GltfPrimitive(
+        triangles=np.array([0, 1, 2], dtype=np.uint8),
+        material=m1,
+        texture_uri="uri/texture.png",
+    )
+    p2 = GltfPrimitive(triangles=np.array([0, 2, 3], dtype=np.uint8), material=m2)
+    mesh3 = GltfMesh(
+        np.array(
+            [[21, 22, 23], [24, 16, 28], [-1, 2, 5], [12, 999, 2]], dtype=np.float32
+        ),
+        primitives=[p1, p2],
+    )
+
+    # assertions
+    return gltf_utils.gltf_from_meshes([mesh1, mesh2, mesh3], transform=z_up_matrix)
+
+
+@fixture
+def points_gltf1() -> PointsGltf:
+    pts1 = Points(
+        positions=np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=np.float32),
+        colors=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.uint32),
+        extra_fields={"field1": np.array([3, 5, 7], dtype=np.uint32)},
+    )
+    return PointsGltf.from_points(pts1, "pts1")
+
+
+@fixture
+def points_gltf2() -> PointsGltf:
+    pts2 = Points(
+        positions=np.array([[1, -1, 1], [2, -2, 2], [3, -3, 3]], dtype=np.float32),
+        colors=np.array([[256, 0, 0], [0, 256, 0], [0, 0, 256]], dtype=np.uint32),
+        extra_fields={"field1": np.array([11, 13, 17], dtype=np.uint32)},
+    )
+    return PointsGltf.from_points(pts2, "pts2")
 
 
 @dataclass()

@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 from numpy.testing import assert_array_equal
 
+from py3dtiles.constants import SpecVersion
 from py3dtiles.tilers.point.node.node import split_tileset
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.tile import Tile
@@ -16,7 +17,7 @@ def test_split_tileset(tmp_dir: Path) -> None:
     )
     tile.set_refine_mode("REPLACE")
 
-    split_tileset(tile, "split", tmp_dir)
+    split_tileset(tile, "split", tmp_dir, spec_version=SpecVersion.V1_0)
     assert tile.children == []
     assert tile.content_uri == Path("tileset.split.json")
 

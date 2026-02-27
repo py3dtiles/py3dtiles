@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING
 
 import lz4.frame as gzip
 
+from py3dtiles.constants import SpecVersion
 from py3dtiles.tilers.base_tiler import TilerWorker
 from py3dtiles.tilers.point.node import DummyNode
 from py3dtiles.utils import READER_MAP
 
+from . import points_writer
 from .node import NodeCatalog, NodeProcess
-from .pnts import pnts_writer
 from .point_message_type import PointManagerMessage, PointWorkerMessageType
 from .point_shared_metadata import PointSharedMetadata
 
@@ -29,8 +30,8 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
             yield from self.execute_read_file(content)
         elif command == PointManagerMessage.PROCESS_JOBS.value:
             yield from self.execute_process_jobs(content)
-        elif command == PointManagerMessage.WRITE_PNTS.value:
-            yield from self.execute_write_pnts(content[1], content[0])
+        elif command == PointManagerMessage.WRITE_CONTENT.value:
+            yield from self.execute_write_content(content[1], content[0])
         else:
             raise NotImplementedError(f"Unknown command {command!r}")
 
@@ -67,21 +68,24 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
 
         yield [PointWorkerMessageType.READ.value]
 
-    def execute_write_pnts(
+    def execute_write_content(
         self, content: bytes, node_name: bytes
     ) -> Iterator[Sequence[bytes]]:
-        # we can safely write the .pnts file
+        # we can safely write the content file
         if len(content) > 0:
             root = pickle.loads(gzip.decompress(content))
             total = 0
             for name in root:
                 node_data: DummyNodeDictType = pickle.loads(root[name])
                 node = DummyNode(node_data)
-                total += pnts_writer.node_to_pnts(
-                    name, node, self.shared_metadata.out_folder
+                total += points_writer.node_to_content(
+                    name,
+                    node,
+                    self.shared_metadata.out_folder,
+                    self.shared_metadata.spec_version == SpecVersion.V1_0,
                 )
             yield [
-                PointWorkerMessageType.PNTS_WRITTEN.value,
+                PointWorkerMessageType.CONTENT_WRITTEN.value,
                 struct.pack(">I", total),
                 node_name,
             ]
@@ -109,6 +113,7 @@ class PointTilerWorker(TilerWorker[PointSharedMetadata]):
                 self.shared_metadata.root_aabb,
                 self.shared_metadata.root_spacing,
                 self.shared_metadata.write_rgb,
+                self.shared_metadata.spec_version,
                 self.shared_metadata.extra_fields_to_include,
             )
 

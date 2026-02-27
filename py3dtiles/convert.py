@@ -14,7 +14,7 @@ from typing import Any
 import zmq
 from pyproj import CRS
 
-from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE, EXIT_CODES
+from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE, EXIT_CODES, SpecVersion
 from py3dtiles.exceptions import (
     Py3dtilesException,
     SrsInMissingException,
@@ -261,6 +261,7 @@ def convert(
     color_scale: float | None = None,
     use_process_pool: bool = True,
     verbose: int = False,
+    spec_version: SpecVersion = SpecVersion.V1_0,
 ) -> None:
     """
     Convert the input files into 3dtiles.
@@ -288,16 +289,17 @@ def convert(
     paths = [Path(file) for file in files]
     tilers: list[Tiler[Any, Any]] = [
         PointTiler(
-            crs_in,
-            crs_out,
-            force_crs_in,
-            pyproj_always_xy,
-            cache_size,
-            verbose,
-            jobs,
+            crs_in=crs_in,
+            crs_out=crs_out,
+            force_crs_in=force_crs_in,
+            pyproj_always_xy=pyproj_always_xy,
+            cache_size=cache_size,
+            verbose=verbose,
+            number_of_jobs=jobs,
             rgb=rgb,
             color_scale=color_scale,
             extra_fields=extra_fields,
+            spec_version=spec_version,
         ),
     ]
     if HAS_IFC_SUPPORT:
@@ -310,6 +312,7 @@ def convert(
                 cache_size,
                 verbose,
                 jobs,
+                spec_version=spec_version,
             )
         )
 
@@ -328,7 +331,9 @@ def convert(
     )
 
     try:
-        return converter.convert(paths, Path(outfolder), overwrite=overwrite)
+        return converter.convert(
+            paths, Path(outfolder), overwrite=overwrite, spec_version=spec_version
+        )
     except TilerNotFoundException:
         print("ERROR: support not found for files", files)
         print(
@@ -400,6 +405,7 @@ class Converter:
         files: Path | list[Path],
         out_folder: Path,
         overwrite: bool = False,
+        spec_version: SpecVersion = SpecVersion.V1_0,
     ) -> None:
         """
         Convert some files.
@@ -510,7 +516,9 @@ class Converter:
                 # we need to make sure the contents are loaded for the merger
                 if tile.has_content():
                     tile.get_or_fetch_content(out_folder)
-            tileset = create_tileset_from_root_tiles(root_tiles)
+            tileset = create_tileset_from_root_tiles(
+                root_tiles, spec_version=spec_version
+            )
             if tileset.root_tile.has_content():
                 tileset.root_tile.write_content(out_folder)
             tileset.write_as_json(out_folder / "tileset.json")
@@ -650,6 +658,7 @@ def _main(args: argparse.Namespace) -> None:
             color_scale=args.color_scale,
             use_process_pool=not args.disable_processpool,
             verbose=args.verbose,
+            spec_version=SpecVersion(args.spec_version),
         )
     except SrsInMissingException:
         print(
