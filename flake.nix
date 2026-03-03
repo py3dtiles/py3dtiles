@@ -32,7 +32,7 @@
               (pythonVersion:
                 let
                   # create the shell instance for the specific version
-                  shell = import ./shell.nix { pkgs = pkgs; python = pkgs."python3${pythonVersion}"; };
+                  shell = import ./nix/shell.nix { pkgs = pkgs; python = pkgs."python3${pythonVersion}"; };
                 in
                 {
                   name = "python3${pythonVersion}";
