@@ -16,7 +16,7 @@ NOTE: the CI does that automatically on each tag.
 
 The docker image has a volume on `/data/` and the entrypoint is directly the command `py3dtiles`.
 
-#### Examples
+### Examples
 
 Display the help
 ```bash
@@ -36,3 +36,15 @@ NOTE:
 
 - the `--mount` option is necessary for docker to read your source data and to write the result. The way it is written in this example only allows you to read source files in the current folder or in a subfolder
 - This line `--volume /etc/passwd:/etc/passwd:ro --volume /etc/group:/etc/group:ro --user $(id -u):$(id -g)` is only necessary if your uid is different from 1000.
+
+## How to upgrade dependencies
+
+Generally, we want to update the image version to match the *newest* supported python version, so that we benefit from the last performance improvements, but exceptions can be made if we have regressions for instance.
+
+To update the python dependencies:
+
+- create a fresh venv `python -m venv .venvdocker`
+- activate it `source .venvdocker/bin/activate`
+- install the necessary dependencies `pip install .[postgres,ply,las,ifc] && pip install laspy[laszip]`
+- update the requirements.txt : `pip freeze | grep -v py3dtiles > docker/requirements.txt`
+- test the build and commit the result
