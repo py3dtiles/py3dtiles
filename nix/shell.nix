@@ -10,7 +10,7 @@ pkgs.mkShell rec {
     # https://nixos.org/manual/nixpkgs/stable/#python-setup.py-bdist_wheel-cannot-create-.whl
     SOURCE_DATE_EPOCH=$(date +%s)
     # Let's allow compiling stuff
-    export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath (with pkgs; [ zlib stdenv.cc.cc ])}":LD_LIBRARY_PATH;
+    export LD_LIBRARY_PATH="${pkgs.lib.makeLibraryPath (with pkgs; [ zlib stdenv.cc.cc ])}":$LD_LIBRARY_PATH;
 
     export VENVPATH=.venv${python.version}
 
