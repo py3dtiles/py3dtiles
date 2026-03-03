@@ -72,16 +72,17 @@ For installing specific format dependencies (las/laz, ply, postgis, install from
 With docker
 ===========
 
-At the moment we only publish on gitlab registry.
-
 .. code-block:: bash
 
     docker run -it --rm \
-        --mount type=bind,source="$(pwd)",target=/app/data/ \
-        --volume /etc/passwd:/etc/passwd:ro --volume /etc/group:/etc/group:ro --user $(id -u):$(id -g) \
-        registry.gitlab.com/py3dtiles/py3dtiles:<version> \
+        --mount type=bind,source="$(pwd)",target=/data/ \
+        --volume /etc/passwd:/etc/passwd:ro \
+        --volume /etc/group:/etc/group:ro \
+        --user $(id -u):$(id -g) \
+        py3dtiles/py3dtiles:<version> \
         convert <file>
 
+The `3dtiles/` directory should appear in your current directory.
 
 NOTE:
 
