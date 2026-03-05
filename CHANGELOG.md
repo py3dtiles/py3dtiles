@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## v12.1.0 (2026-03-03)
+
+### Feat
+
+- **3dtiles**: allow gltf as tile content, following the 1.1 version of the spec
+- add a simple viewer to preview generated tilesets
+- add support for python 3.14
+
 ## v12.0.0 (2025-11-27)
 
 ### BREAKING CHANGE
