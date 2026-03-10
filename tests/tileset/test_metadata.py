@@ -86,27 +86,26 @@ def test_metadata_enum() -> None:
 
 
 def test_metadata_property() -> None:
-    """Test the MetadataProperty class."""
+    """Test the metadata property classes.
+
+    SimpleMetadataProperty, EnumMetadataProperty and CompositeMetadataProperty inheritates from a
+    generic MetadataProperty moter class.
+
+    """
     with pytest.raises(
         InvalidIdentifierException, match="does not respect the naming convention"
     ):
-        _ = metadata.MetadataProperty(
-            "prop-with-forbidden-characters", property_type="SCALAR"
+        _ = metadata.SimpleMetadataProperty(
+            "prop-with-forbidden-characters", property_type="STRING"
         )
-    with pytest.raises(
-        TypeError, match="component_type is required when property type is VEC3"
-    ):
-        _ = metadata.MetadataProperty("prop", property_type="VEC3")
-    with pytest.raises(
-        TypeError, match="enum_type is required when property type is ENUM"
-    ):
-        _ = metadata.MetadataProperty("prop", property_type="ENUM")
-    met_property = metadata.MetadataProperty("prop", "VEC3", component_type="INT16")
+    met_property = metadata.CompositeMetadataProperty(
+        "prop", "VEC3", component_type="INT16"
+    )
     assert met_property.to_json() == {
         "type": "VEC3",
         "componentType": "INT16",
     }
-    met_property = metadata.MetadataProperty(
+    met_property = metadata.CompositeMetadataProperty(
         "prop", "VEC3", name="test-property", component_type="INT16"
     )
     assert met_property.to_json() == {
@@ -114,7 +113,7 @@ def test_metadata_property() -> None:
         "name": "test-property",
         "componentType": "INT16",
     }
-    met_property = metadata.MetadataProperty(
+    met_property = metadata.CompositeMetadataProperty(
         "prop", "VEC3", component_type="INT16", nodata=np.int16(-9999)
     )
     assert met_property.to_json() == {
@@ -133,7 +132,9 @@ def test_metadata_class() -> None:
     met_class = metadata.MetadataClass("CLS0")
     assert len(met_class.properties) == 0
     assert met_class.to_json() == {}
-    met_property = metadata.MetadataProperty("prop", "VEC3", component_type="INT16")
+    met_property = metadata.CompositeMetadataProperty(
+        "prop", "VEC3", component_type="INT16"
+    )
     met_class.add_property(met_property)
     assert len(met_class.properties) == 1
     assert met_class.to_json() == {
@@ -155,9 +156,7 @@ def test_metadata_schema() -> None:
     met_schema = metadata.MetadataSchema("SCH0", name="Schema0")
     assert met_schema.to_json() == {"name": "Schema0"}
     met_class = metadata.MetadataClass("CLS0")
-    met_property = metadata.MetadataProperty(
-        "prop", property_type="ENUM", enum_type="testEnum"
-    )
+    met_property = metadata.EnumMetadataProperty("prop", enum_type="testEnum")
     met_class.add_property(met_property)
     with pytest.raises(KeyError):
         met_schema.add_class(met_class)

@@ -4,7 +4,8 @@ https://docs.ogc.org/cs/22-025r4/22-025r4.html#toc40.
 """
 
 import string
-from dataclasses import dataclass, field
+from abc import ABC, abstractmethod
+from dataclasses import KW_ONLY, dataclass, field
 from typing import Any, Literal, Union
 
 import numpy as np
@@ -49,7 +50,7 @@ MetadataNumpyEnumType = Union[
     np.uint64,
 ]
 
-MetadataPropertyTypeLiteral = Literal[
+CompositeMetadataPropertyTypeLiteral = Literal[
     "SCALAR",
     "VEC2",
     "VEC3",
@@ -57,10 +58,11 @@ MetadataPropertyTypeLiteral = Literal[
     "MAT2",
     "MAT3",
     "MAT4",
-    "STRING",
-    "BOOLEAN",
-    "ENUM",
 ]
+
+SimpleMetadataPropertyTypeLiteral = Literal["BOOLEAN", "STRING"]
+
+EnumMetadataPropertyTypeLiteral = Literal["ENUM"]
 
 
 def is_identifier_character_valid(char: str, first_char: bool = True) -> bool:
@@ -129,15 +131,18 @@ class MetadataEnum:
 
 
 @dataclass
-class MetadataProperty:
+class MetadataProperty(ABC):
     """Define a 3DTiles metadata property."""
 
     identifier: str
-    property_type: MetadataPropertyTypeLiteral
+    property_type: (
+        CompositeMetadataPropertyTypeLiteral
+        | SimpleMetadataPropertyTypeLiteral
+        | EnumMetadataPropertyTypeLiteral
+    )
+    _: KW_ONLY
     name: str | None = None
     description: str | None = None
-    component_type: MetadataComponentTypeLiteral | None = None
-    enum_type: str | None = None
     array: bool = False
     required: bool = False
     offset: (
@@ -161,20 +166,20 @@ class MetadataProperty:
 
     def __post_init__(self) -> None:
         self.identifier = check_identifier_validity(self.identifier)
-        if self.component_type is None and self.property_type not in (
-            "STRING",
-            "BOOLEAN",
-            "ENUM",
-        ):
-            raise TypeError(
-                "Missing 1 required positional argument: 'component_type'. "
-                f"Hint: component_type is required when property type is {self.property_type}!"
-            )
-        if self.enum_type is None and self.property_type == "ENUM":
-            raise TypeError(
-                "Missing 1 required positional argument: 'enum_type'. "
-                f"Hint: enum_type is required when property type is {self.property_type}!"
-            )
+
+    @abstractmethod
+    def to_json(self) -> dict[str, Any]: ...
+
+
+@dataclass
+class CompositeMetadataProperty(MetadataProperty):
+    """Define a 3DTiles metadata property for SCALAR, VEC and MAT types."""
+
+    property_type: CompositeMetadataPropertyTypeLiteral
+    component_type: MetadataComponentTypeLiteral
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
 
     def to_json(self) -> dict[str, Any]:
         """Convert the property to a JSON-like dictionary.
@@ -182,24 +187,68 @@ class MetadataProperty:
         :returns: Dictionary version of the metadata property.
         """
         property_as_json: dict[str, Any] = {"type": self.property_type}
-        if self.property_type in (
-            "SCALAR",
-            "VEC2",
-            "VEC3",
-            "VEC4",
-            "MAT2",
-            "MAT3",
-            "MAT4",
-        ):
-            property_as_json["componentType"] = self.component_type
-        elif self.property_type == "ENUM":
-            property_as_json["enumType"] = self.enum_type
+        property_as_json["componentType"] = self.component_type
         property_as_json.update(
             {
                 "noData" if key == "nodata" else key: value
                 for key, value in vars(self).items()
-                if key
-                not in ("identifier", "property_type", "component_type", "enum_type")
+                if key not in ("identifier", "property_type", "component_type")
+                and value is not None
+                and value
+            }
+        )
+        return property_as_json
+
+
+@dataclass
+class EnumMetadataProperty(MetadataProperty):
+    """Define a 3DTiles metadata property for ENUM types."""
+
+    enum_type: str
+    property_type: EnumMetadataPropertyTypeLiteral = field(default="ENUM", init=False)
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+    def to_json(self) -> dict[str, Any]:
+        """Convert the property to a JSON-like dictionary.
+
+        :returns: Dictionary version of the metadata property.
+        """
+        property_as_json: dict[str, Any] = {"type": self.property_type}
+        property_as_json["enumType"] = self.enum_type
+        property_as_json.update(
+            {
+                "noData" if key == "nodata" else key: value
+                for key, value in vars(self).items()
+                if key not in ("identifier", "property_type", "enum_type")
+                and value is not None
+                and value
+            }
+        )
+        return property_as_json
+
+
+@dataclass
+class SimpleMetadataProperty(MetadataProperty):
+    """Define a 3DTiles metadata property for simple types (BOOLEAN, STRING)."""
+
+    property_type: SimpleMetadataPropertyTypeLiteral
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+    def to_json(self) -> dict[str, Any]:
+        """Convert the property to a JSON-like dictionary.
+
+        :returns: Dictionary version of the metadata property.
+        """
+        property_as_json: dict[str, Any] = {"type": self.property_type}
+        property_as_json.update(
+            {
+                "noData" if key == "nodata" else key: value
+                for key, value in vars(self).items()
+                if key not in ("identifier", "property_type")
                 and value is not None
                 and value
             }
@@ -263,11 +312,13 @@ class MetadataSchema:
 
     def add_class(self, cls: MetadataClass) -> None:
         for class_property in cls.properties.values():
-            enum = class_property.enum_type
-            if enum is not None and enum not in self.enums.keys():
+            if (
+                isinstance(class_property, EnumMetadataProperty)
+                and class_property.enum_type not in self.enums.keys()
+            ):
                 raise KeyError(
                     f"The {class_property.identifier} property in the provided class "
-                    f"uses an unknown enum types ({enum})."
+                    f"uses an unknown enum types ({class_property.enum_type})."
                 )
         self.classes[cls.identifier] = cls
 
