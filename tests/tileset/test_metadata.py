@@ -64,14 +64,7 @@ def test_check_identifier_validity(identifier: str, expected_validity: bool) -> 
 
 def test_metadata_enum() -> None:
     """Test the MetadataEnum class."""
-    with pytest.raises(
-        InvalidIdentifierException, match="does not respect the naming convention"
-    ):
-        _ = metadata.MetadataEnum(
-            "enum-with-forbidden-characters", values={"foo": np.int8(1)}
-        )
     metadata_enum = metadata.MetadataEnum(
-        "_enum",
         description="A dummy enum.",
         values={"foo": np.int8(1), "bar": np.int8(22), "wiz": np.int16(333)},
     )
@@ -92,21 +85,13 @@ def test_metadata_property() -> None:
     generic MetadataProperty moter class.
 
     """
-    with pytest.raises(
-        InvalidIdentifierException, match="does not respect the naming convention"
-    ):
-        _ = metadata.SimpleMetadataProperty(
-            "prop-with-forbidden-characters", property_type="STRING"
-        )
-    met_property = metadata.CompositeMetadataProperty(
-        "prop", "VEC3", component_type="INT16"
-    )
+    met_property = metadata.CompositeMetadataProperty("VEC3", component_type="INT16")
     assert met_property.to_json() == {
         "type": "VEC3",
         "componentType": "INT16",
     }
     met_property = metadata.CompositeMetadataProperty(
-        "prop", "VEC3", name="test-property", component_type="INT16"
+        "VEC3", name="test-property", component_type="INT16"
     )
     assert met_property.to_json() == {
         "type": "VEC3",
@@ -114,7 +99,7 @@ def test_metadata_property() -> None:
         "componentType": "INT16",
     }
     met_property = metadata.CompositeMetadataProperty(
-        "prop", "VEC3", component_type="INT16", nodata=np.int16(-9999)
+        "VEC3", component_type="INT16", nodata=np.int16(-9999)
     )
     assert met_property.to_json() == {
         "type": "VEC3",
@@ -125,17 +110,17 @@ def test_metadata_property() -> None:
 
 def test_metadata_class() -> None:
     """Test the MetadataClass class."""
+    met_class = metadata.MetadataClass()
+    assert len(met_class.properties) == 0
+    assert met_class.to_json() == {}
+    met_property = metadata.CompositeMetadataProperty("VEC3", component_type="INT16")
+    # We can't add a property with an invalid identifier
     with pytest.raises(
         InvalidIdentifierException, match="does not respect the naming convention"
     ):
-        _ = metadata.MetadataClass("cls-with-forbidden-characters")
-    met_class = metadata.MetadataClass("CLS0")
-    assert len(met_class.properties) == 0
-    assert met_class.to_json() == {}
-    met_property = metadata.CompositeMetadataProperty(
-        "prop", "VEC3", component_type="INT16"
-    )
-    met_class.add_property(met_property)
+        met_class.add_property("prop-with-forbidden-characters", met_property)
+    #
+    met_class.add_property("prop", met_property)
     assert len(met_class.properties) == 1
     assert met_class.to_json() == {
         "properties": {
@@ -149,22 +134,36 @@ def test_metadata_class() -> None:
 
 def test_metadata_schema() -> None:
     """Test the MetadataSchema class."""
+    # We can't instanciate a schema with an invalid identifier
     with pytest.raises(
         InvalidIdentifierException, match="does not respect the naming convention"
     ):
         _ = metadata.MetadataSchema("schema-with-forbidden-characters")
+    #
     met_schema = metadata.MetadataSchema("SCH0", name="Schema0")
     assert met_schema.to_json() == {"name": "Schema0"}
-    met_class = metadata.MetadataClass("CLS0")
-    met_property = metadata.EnumMetadataProperty("prop", enum_type="testEnum")
-    met_class.add_property(met_property)
+    met_class = metadata.MetadataClass()
+    met_property = metadata.EnumMetadataProperty(enum_type="testEnum")
+    met_class.add_property("prop", met_property)
+    # We can't add an enum property if the corresponding enum has not been declared beforehand
     with pytest.raises(KeyError):
-        met_schema.add_class(met_class)
-    met_enum = metadata.MetadataEnum(
-        "testEnum", values={"test1": np.int8(1), "test2": np.int8(2)}
-    )
-    met_schema.add_enum(met_enum)
-    met_schema.add_class(met_class)
+        met_schema.add_class("CLS0", met_class)
+    #
+    met_enum = metadata.MetadataEnum(values={"test1": np.int8(1), "test2": np.int8(2)})
+    # We can't add an enum with an invalid identifier
+    with pytest.raises(
+        InvalidIdentifierException, match="does not respect the naming convention"
+    ):
+        met_schema.add_enum("enum-with-forbidden-characters", met_enum)
+    #
+    met_schema.add_enum("testEnum", met_enum)
+    # We can't add a class with an invalid identifier
+    with pytest.raises(
+        InvalidIdentifierException, match="does not respect the naming convention"
+    ):
+        met_schema.add_class("cls-with-forbidden-characters", met_class)
+    #
+    met_schema.add_class("CLS0", met_class)
     assert met_schema.to_json() == {
         "name": "Schema0",
         "classes": {

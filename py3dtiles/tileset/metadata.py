@@ -106,13 +106,9 @@ def check_identifier_validity(identifier: str) -> str:
 class MetadataEnum:
     """Define a 3DTile metadata enum."""
 
-    identifier: str
     values: dict[str, MetadataNumpyEnumType] = field(default_factory=dict)
     name: str | None = None
     description: str | None = None
-
-    def __post_init__(self) -> None:
-        self.identifier = check_identifier_validity(self.identifier)
 
     def to_json(self) -> dict[str, Any]:
         """Convert the metadata enum to a JSON-like dictionary.
@@ -134,7 +130,6 @@ class MetadataEnum:
 class MetadataProperty(ABC):
     """Define a 3DTiles metadata property."""
 
-    identifier: str
     property_type: (
         CompositeMetadataPropertyTypeLiteral
         | SimpleMetadataPropertyTypeLiteral
@@ -164,9 +159,6 @@ class MetadataProperty(ABC):
         MetadataNumpyComponentType | npt.NDArray[MetadataNumpyComponentType] | None
     ) = None
 
-    def __post_init__(self) -> None:
-        self.identifier = check_identifier_validity(self.identifier)
-
     @abstractmethod
     def to_json(self) -> dict[str, Any]: ...
 
@@ -177,9 +169,6 @@ class CompositeMetadataProperty(MetadataProperty):
 
     property_type: CompositeMetadataPropertyTypeLiteral
     component_type: MetadataComponentTypeLiteral
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
 
     def to_json(self) -> dict[str, Any]:
         """Convert the property to a JSON-like dictionary.
@@ -207,9 +196,6 @@ class EnumMetadataProperty(MetadataProperty):
     enum_type: str
     property_type: EnumMetadataPropertyTypeLiteral = field(default="ENUM", init=False)
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-
     def to_json(self) -> dict[str, Any]:
         """Convert the property to a JSON-like dictionary.
 
@@ -235,9 +221,6 @@ class SimpleMetadataProperty(MetadataProperty):
 
     property_type: SimpleMetadataPropertyTypeLiteral
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-
     def to_json(self) -> dict[str, Any]:
         """Convert the property to a JSON-like dictionary.
 
@@ -260,20 +243,18 @@ class SimpleMetadataProperty(MetadataProperty):
 class MetadataClass:
     """Define a 3DTiles metadata class, composed of enums and properties."""
 
-    identifier: str
     name: str | None = None
     description: str | None = None
     properties: dict[str, MetadataProperty] = field(default_factory=dict)
 
-    def __post_init__(self) -> None:
-        self.identifier = check_identifier_validity(self.identifier)
-
-    def add_property(self, new_property: MetadataProperty) -> None:
+    def add_property(self, identifier: str, new_property: MetadataProperty) -> None:
         """Add a new property to the metadata class.
 
+        :param identifier: ID of the metadata property within the metadata class.
         :param new_property: Property to add.
         """
-        self.properties[new_property.identifier] = new_property
+        identifier = check_identifier_validity(identifier)
+        self.properties[identifier] = new_property
 
     def to_json(self) -> dict[str, Any]:
         """Convert the metadata class to a JSON-like dictionary.
@@ -307,20 +288,22 @@ class MetadataSchema:
     def __post_init__(self) -> None:
         self.identifier = check_identifier_validity(self.identifier)
 
-    def add_enum(self, enum: MetadataEnum) -> None:
-        self.enums[enum.identifier] = enum
+    def add_enum(self, identifier: str, enum: MetadataEnum) -> None:
+        identifier = check_identifier_validity(identifier)
+        self.enums[identifier] = enum
 
-    def add_class(self, cls: MetadataClass) -> None:
-        for class_property in cls.properties.values():
+    def add_class(self, identifier: str, cls: MetadataClass) -> None:
+        identifier = check_identifier_validity(identifier)
+        for property_identifier, class_property in cls.properties.items():
             if (
                 isinstance(class_property, EnumMetadataProperty)
                 and class_property.enum_type not in self.enums.keys()
             ):
                 raise KeyError(
-                    f"The {class_property.identifier} property in the provided class "
+                    f"The {property_identifier} property in the provided class "
                     f"uses an unknown enum types ({class_property.enum_type})."
                 )
-        self.classes[cls.identifier] = cls
+        self.classes[identifier] = cls
 
     def to_json(self) -> dict[str, Any]:
         schema_as_json: dict[str, Any] = {}
