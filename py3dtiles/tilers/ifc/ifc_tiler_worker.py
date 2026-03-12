@@ -269,7 +269,11 @@ class IfcTilerWorker(TilerWorker[IfcSharedMetadata]):
     def parse_elem(self, elem: entity_instance) -> IfcMesh | None:
         if hasattr(elem, "Representation") and elem.Representation is not None:
             try:
-                shape = ifcopenshell.geom.create_shape(self.ifc_settings, elem)
+                shape = ifcopenshell.geom.create_shape(
+                    self.ifc_settings,
+                    elem,
+                    geometry_library="hybrid-cgal-simple-opencascade",
+                )  # use recommended geometry library, as described in issue #280
             except RuntimeError as e:
                 if e.args[0].startswith("Failed to process shape"):
                     # this is apparently possible... but we don't really care :-)
