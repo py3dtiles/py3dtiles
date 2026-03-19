@@ -5,8 +5,8 @@ import numpy as np
 import numpy.typing as npt
 from numpy.testing import assert_array_equal
 
-from py3dtiles.exceptions import Invalid3dtilesError
 from py3dtiles.tileset.content import PntsHeader
+from py3dtiles.tileset.content.b3dm import B3dmHeader
 from py3dtiles.tileset.content.batch_table import (
     BatchTable,
     BatchTableBody,
@@ -54,7 +54,7 @@ class TestBatchTableBody(unittest.TestCase):
         np.testing.assert_equal(
             btb.to_array(),
             np.concatenate(
-                (np.arange(1, 10, dtype=np.uint8), np.array([32] * 7, dtype=np.uint8))
+                (np.arange(1, 10, dtype=np.uint8), np.array([0] * 7, dtype=np.uint8))
             ),
         )
 
@@ -107,7 +107,8 @@ class TestBatchTable(unittest.TestCase):
         self.assertTrue(set(bt.header.data.keys()) == {"property_1", "property_2"})
         self.assertEqual(
             bt.header.data["property_2"],
-            {"byteOffset": 3, "componentType": "FLOAT", "type": "SCALAR"},
+            # byteOffset should be aligned with the byte-size of the property
+            {"byteOffset": 4, "componentType": "FLOAT", "type": "SCALAR"},
         )
         self.assertEqual(len(bt.body.data), 2)
         np.testing.assert_equal(bt.body.data[1], np.array([4, 5, 6], np.float32))
@@ -121,11 +122,27 @@ class TestBatchTable(unittest.TestCase):
         bt = BatchTable()
         bt.add_property_as_binary("property_1", np.array([1, 2, 3], np.uint8), "SCALAR")
         bt.add_property_as_binary("property_2", np.array([4, 5, 6], np.uint8), "SCALAR")
+        bt.add_property_as_binary(
+            "property_3", np.array([7, 8, 9], np.float32), "SCALAR"
+        )
         self.assertTrue(
             np.array_equal(
                 bt.to_array(),
                 np.concatenate((bt.header.to_array(), bt.body.to_array())),
             )
+        )
+
+        tile_header = B3dmHeader()
+        tile_header.bt_json_byte_length = len(bt.header.to_array())
+        res = BatchTable.from_array(tile_header, bt.to_array(), 3)
+        assert_array_equal(
+            res.get_binary_property("property_1"), np.array([1, 2, 3], np.uint8)
+        )
+        assert_array_equal(
+            res.get_binary_property("property_2"), np.array([4, 5, 6], np.uint8)
+        )
+        assert_array_equal(
+            res.get_binary_property("property_3"), np.array([7, 8, 9], np.uint32)
         )
 
     def test_from_array_only_json(self) -> None:
@@ -209,49 +226,6 @@ class TestBatchTable(unittest.TestCase):
         self.assertEqual(len(batch_table.body.data), 2)
         np.testing.assert_equal(batch_table_body_binary[0], batch_table.body.data[0])
         np.testing.assert_equal(batch_table_body_binary[1], batch_table.body.data[1])
-
-    def test_from_array_with_wrong_offset(self) -> None:
-        # build a minimal batch table
-        # json part
-        batch_table_header_dict = self.get_batch_table_header_dict_only_binary()
-        batch_table_header = BatchTableHeader(batch_table_header_dict)
-        batch_table_json = batch_table_header.to_array()
-
-        # binary part
-        batch_table_body_binary: list[npt.NDArray[ComponentNumpyType]] = [
-            np.array([1, 2, 3, 4], dtype=np.uint8),
-            np.array([1, -1, 2, -2, 3, -3, 4, -4], dtype=np.int32),
-        ]
-        batch_table_body = BatchTableBody(batch_table_body_binary)
-
-        # merge the 2 parts
-        batch_table_array = np.concatenate(
-            (batch_table_json, batch_table_body.to_array())
-        )
-
-        # and tile content
-        pnts_header = PntsHeader()
-        pnts_header.bt_json_byte_length = len(batch_table_json)
-
-        # import the array (wrong batch_len)
-        with self.assertRaisesRegex(
-            Invalid3dtilesError,
-            "The byte offset is 4 but the byte offset computed is 3",
-        ):
-            BatchTable.from_array(pnts_header, batch_table_array, 3)
-
-        # import the array (wrong byteOffset)
-        batch_table_header.data["binProperty2"]["byteOffset"] = 6  # type: ignore [call-overload]
-        batch_table_json = batch_table_header.to_array()
-        batch_table_array = np.concatenate(
-            (batch_table_json, batch_table_body.to_array())
-        )
-
-        with self.assertRaisesRegex(
-            Invalid3dtilesError,
-            "The byte offset is 6 but the byte offset computed is 4",
-        ):
-            BatchTable.from_array(pnts_header, batch_table_array, 4)
 
 
 def test_merge() -> None:
