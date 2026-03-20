@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v12.1.1 (2026-03-20)
+
+### Fix
+
+- **batch_table**: left-align each individual binary property with their itemsize
+- **ifc**: use optimal geometry library for ifcopenshell create_shape
+
 ## v12.1.0 (2026-03-03)
 
 ### Feat
