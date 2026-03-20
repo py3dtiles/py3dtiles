@@ -8,7 +8,6 @@ import ifcopenshell.geom
 import ifcopenshell.util.element
 import lz4.frame as gzip
 import numpy as np
-import numpy.typing as npt
 from ifcopenshell import entity_instance
 
 from py3dtiles.constants import SpecVersion
@@ -19,7 +18,6 @@ from py3dtiles.tileset.content.b3dm import B3dm
 from py3dtiles.tileset.content.gltf import Gltf
 from py3dtiles.tileset.content.gltf_utils import (
     GltfMesh,
-    GltfPrimitive,
 )
 
 from ..geometry.geometry_message_type import GeometryTilerMessage, GeometryWorkerMessage
@@ -30,9 +28,9 @@ from .ifc_model import (
     FeatureGroup,
     FileMetadata,
     FilenameAndOffset,
-    Geometry,
     IfcMaterial,
-    IfcMesh,
+    Mesh,
+    Primitive,
     TileInfo,
 )
 
@@ -149,7 +147,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
                     if m.mesh:
                         # just get the first coords we find as offset, it's good enough
                         found_offset = True
-                        offset = m.mesh.geom.verts[0:3]
+                        offset = m.mesh.vertices[0]
                         yield [
                             GeometryWorkerMessage.METADATA_READ.value,
                             pickle.dumps(
@@ -184,9 +182,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
         elem_max_size = 0.0
         for f in tile.members:
             if f.mesh is not None:
-                pts: npt.NDArray[np.float64] = np.array(
-                    f.mesh.geom.verts, dtype=np.float64
-                ).reshape((-1, 3))
+                pts = f.mesh.vertices
                 if transformer is not None:
                     xx, yy, zz = transformer.transform(pts[:, 0], pts[:, 1], pts[:, 2])
                     pts = np.vstack((xx, yy, zz)).transpose()
@@ -198,30 +194,15 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
                 elem_max_size = max(
                     elem_max_size, float(np.max(this_bbox.get_half_size()))
                 )
-                if f.mesh.geom.faces:
-                    triangles = np.array(f.mesh.geom.faces, dtype=np.uint32).reshape(
-                        (-1, 3)
-                    )
 
-                primitives = []
-                if f.mesh.materials:
-                    material_ids = np.array(f.mesh.material_ids, dtype=np.uint32)
-                    for mat_id in range(len(f.mesh.materials)):
-                        material = f.mesh.materials[mat_id].to_pygltflib_material()
-                        if f.mesh.geom.faces:
-                            tri = triangles.take(
-                                (material_ids == mat_id).nonzero(), axis=0
-                            )
-                        primitive = GltfPrimitive(triangles=tri, material=material)
-                        primitives.append(primitive)
-                else:
-                    # no material, only one primitive
-                    primitives.append(GltfPrimitive(triangles=triangles))
-                    material = None
-
-                # let' s split the vertices and triangles by material_ids
                 meshes.append(
-                    GltfMesh(points, primitives=primitives, properties=f.properties)
+                    GltfMesh(
+                        points,
+                        primitives=[
+                            p.to_gltflib_primitive() for p in f.mesh.primitives
+                        ],
+                        properties=f.properties,
+                    )
                 )
         # no point in creating a b3dm if there is no geom in this tile
         has_content = False
@@ -266,7 +247,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
             print("sending tile ready with metadata", tile_metadata)
         yield [GeometryWorkerMessage.TILE_READY.value, pickle.dumps(tile_metadata)]
 
-    def parse_elem(self, elem: entity_instance) -> IfcMesh | None:
+    def parse_elem(self, elem: entity_instance) -> Mesh | None:
         if hasattr(elem, "Representation") and elem.Representation is not None:
             try:
                 shape = ifcopenshell.geom.create_shape(
@@ -283,26 +264,43 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
             if shape is None:
                 return None
 
-            # materials
-            materials = []
-            for m in shape.geometry.materials:  # type: ignore  # need to generate stub types for ifcopenshell
-
-                material = IfcMaterial(
-                    diffuse=Color(r=m.diffuse.r(), g=m.diffuse.g(), b=m.diffuse.b()),
-                    specular=Color(
-                        r=m.specular.r(), g=m.specular.g(), b=m.specular.b()
-                    ),
-                    specularity=m.specularity,
-                    transparency=m.transparency,
+            if shape.geometry.faces:  # type: ignore
+                triangles = np.array(shape.geometry.faces, dtype=np.uint32).reshape(  # type: ignore
+                    (-1, 3)
                 )
-                materials.append(material)
-            return IfcMesh(
-                geom=Geometry(
-                    verts=shape.geometry.verts,  # type: ignore  # ifcopenshell needs to fix their type declarations
-                    faces=shape.geometry.faces,  # type: ignore
-                ),
-                materials=materials,
-                material_ids=shape.geometry.material_ids,  # type: ignore
+            else:
+                triangles = None
+
+            # materials
+            primitives = []
+            if shape.geometry.materials:  # type: ignore  # need to generate stub types for ifcopenshell
+                material_ids = np.array(shape.geometry.material_ids, dtype=np.uint32)  # type: ignore
+                for mat_id, m in enumerate(shape.geometry.materials):  # type: ignore
+                    material = IfcMaterial(
+                        diffuse=Color(
+                            r=m.diffuse.r(), g=m.diffuse.g(), b=m.diffuse.b()
+                        ),
+                        specular=Color(
+                            r=m.specular.r(), g=m.specular.g(), b=m.specular.b()
+                        ),
+                        specularity=m.specularity,
+                        transparency=m.transparency,
+                    )
+
+                    if triangles is not None and len(triangles) > 0:
+                        faces = triangles.take(
+                            (material_ids == mat_id).nonzero(), axis=0
+                        )
+
+                    primitive = Primitive(faces=faces, material=material)
+                    primitives.append(primitive)
+            else:
+                # no material, only one primitive
+                primitives.append(Primitive(faces=triangles, material=None))
+
+            return Mesh(
+                vertices=np.array(shape.geometry.verts, dtype=np.float64).reshape((-1, 3)),  # type: ignore
+                primitives=primitives,
             )
         else:
             return None

@@ -191,8 +191,9 @@ class GeometryTiler(Tiler[SharedMetadata]):
                     self.crs_in, self.crs_out, always_xy=self.pyproj_always_xy
                 )
                 if offset is not None:
-                    offset = list(
-                        transformer.transform(offset[0], offset[1], offset[2])
+                    offset = np.array(
+                        transformer.transform(offset[0], offset[1], offset[2]),
+                        dtype=np.float64,
                     )
             self.files_metadata[filename] = FileMetadata(
                 offset=offset,

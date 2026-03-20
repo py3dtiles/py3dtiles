@@ -9,17 +9,18 @@ import pygltflib
 from pyproj import Transformer
 
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
+from py3dtiles.tileset.content.gltf_utils import GltfPrimitive
 
 
 @dataclass
 class FilenameAndOffset:
     filename: str
-    offset: list[float]
+    offset: npt.NDArray[np.float64]
 
 
 @dataclass
 class FileMetadata:
-    offset: list[float] | None
+    offset: npt.NDArray[np.float64] | None
     crs_in: str | None
     transformer: Transformer | None
 
@@ -59,25 +60,37 @@ class IfcMaterial:
 
 
 @dataclass
-class Geometry:
-    """
-    A collection of vertices and associated faces.
-    """
-
-    verts: list[float]
-    """
-    List of vertices
-    """
-    faces: list[int]
+class Primitive:
     """
     List of face ids, to be matched with material ids
     """
+
+    faces: npt.NDArray[np.uint8 | np.uint16 | np.uint32] | None
+    material: IfcMaterial | None
+
+    def to_gltflib_primitive(self) -> GltfPrimitive:
+        if self.material is None:
+            return GltfPrimitive(triangles=self.faces, material=None)
+        else:
+            return GltfPrimitive(
+                triangles=self.faces, material=self.material.to_pygltflib_material()
+            )
+
+
+@dataclass
+class Mesh:
+    """
+    A mesh, represented by vertices and primitives
+    """
+
+    vertices: npt.NDArray[np.float64]
+    primitives: list[Primitive]
 
     def compute_bounding_volume_box(self) -> BoundingVolumeBox:
         """
         compute the bbox of this
         """
-        vertices_view = np.array(self.verts).reshape((-1, 3))
+        vertices_view = np.array(self.vertices).reshape((-1, 3))
         maxes = vertices_view.max(axis=0)
         mins = vertices_view.min(axis=0)
         bbox = BoundingVolumeBox()
@@ -86,15 +99,8 @@ class Geometry:
 
 
 @dataclass
-class IfcMesh:
-    geom: Geometry
-    materials: list[IfcMaterial]
-    material_ids: tuple[int] | None
-
-
-@dataclass
 class Feature:
-    mesh: IfcMesh | None
+    mesh: Mesh | None
     properties: dict[str, Any]
 
 
