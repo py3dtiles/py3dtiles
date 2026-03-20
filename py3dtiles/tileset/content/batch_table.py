@@ -8,7 +8,6 @@ import numpy as np
 import numpy.typing as npt
 
 from py3dtiles.exceptions import (
-    Invalid3dtilesError,
     InvalidBatchTableError,
 )
 from py3dtiles.typing import BatchTableHeaderDataType
@@ -71,13 +70,26 @@ class BatchTableBody:
         if not self.data:
             return np.empty((0,), dtype=np.uint8)
 
-        if self.nbytes % 8 != 0:
-            padding_str = " " * (8 - self.nbytes % 8)
-            padding = np.frombuffer(padding_str.encode("utf-8"), dtype=np.uint8)
-            self.data.append(padding)
+        all_data: list[Any] = []
+        current_byte_offset = 0
+        for curr_arr in self.data:
+            # *all* property data binary must start from a multiple of their own item size
+            # so we left-pad if needed
+            item_size = curr_arr.itemsize
+            padding_count = (item_size - (current_byte_offset % item_size)) % item_size
+            padding = np.zeros(padding_count, dtype=np.uint8)
+            all_data.append(padding)
+            current_byte_offset += padding.nbytes
+            # insert data
+            all_data.append(curr_arr)
+            current_byte_offset += curr_arr.nbytes
+
+        # general body padding
+        padding_count = (8 - (current_byte_offset % 8)) % 8
+        all_data.append(np.zeros(padding_count, dtype=np.uint8))
 
         return np.concatenate(
-            [data.view(np.uint8) for data in self.data], dtype=np.uint8
+            [data.view(np.uint8) for data in all_data], dtype=np.uint8
         )
 
     @property
@@ -111,8 +123,13 @@ class BatchTable:
                 f"Cannot find a component_type corresponding to the dtype ${array.dtype}"
             )
 
+        item_size = array.dtype.itemsize
+        byte_offset = self.body.nbytes
+        # pad data, see https://github.com/CesiumGS/3d-tiles/blob/main/specification/TileFormats/BatchTable/README.adoc#padding
+        if byte_offset % item_size != 0:
+            byte_offset += item_size - (byte_offset % item_size)
         self.header.data[property_name] = {
-            "byteOffset": self.body.nbytes,
+            "byteOffset": byte_offset,
             "componentType": component_type,
             "type": property_type,
         }
@@ -212,7 +229,6 @@ class BatchTable:
         batch_table.header.data = jsond
 
         # parse binary attributes
-        previous_byte_offset = 0
         for bt_property in batch_table.header.data:
             # ignore extensions
             if bt_property == "extensions" or bt_property == "extras":
@@ -223,11 +239,6 @@ class BatchTable:
             # ignore JSON attributes
             if isinstance(property_definition, list):
                 continue
-
-            if previous_byte_offset != property_definition["byteOffset"]:
-                raise Invalid3dtilesError(
-                    f"The byte offset is {property_definition['byteOffset']} but the byte offset computed is {previous_byte_offset}"
-                )
 
             numpy_type = COMPONENT_TYPE_NUMPY_MAPPING[
                 property_definition["componentType"]
@@ -242,6 +253,5 @@ class BatchTable:
                     property_definition["byteOffset"] : end_byte_offset
                 ].view(numpy_type)
             )
-            previous_byte_offset = end_byte_offset
 
         return batch_table
