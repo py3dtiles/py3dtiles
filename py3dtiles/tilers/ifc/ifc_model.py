@@ -1,11 +1,9 @@
-import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import numpy.typing as npt
-import pygltflib
 from pyproj import Transformer
 
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
@@ -26,65 +24,13 @@ class FileMetadata:
 
 
 @dataclass
-class Color:
-    r: float
-    g: float
-    b: float
-
-    def to_list(self) -> list[float]:
-        return [self.r, self.g, self.b]
-
-
-@dataclass
-class IfcMaterial:
-    diffuse: Color
-    specular: Color
-    specularity: float
-    transparency: float
-
-    def to_pygltflib_material(self) -> pygltflib.Material:
-        base_color_factor = self.diffuse.to_list()
-        transparency = (
-            self.transparency
-            if self.transparency and not math.isnan(self.transparency)
-            else 0.0
-        )
-        base_color_factor.append(1.0 - transparency)
-        pbr_metallic_roughness = pygltflib.PbrMetallicRoughness(
-            baseColorFactor=base_color_factor, roughnessFactor=0.5, metallicFactor=0.5
-        )
-        alpha_mode = pygltflib.BLEND if self.transparency else pygltflib.OPAQUE
-        return pygltflib.Material(
-            pbrMetallicRoughness=pbr_metallic_roughness, alphaMode=alpha_mode
-        )
-
-
-@dataclass
-class Primitive:
-    """
-    List of face ids, to be matched with material ids
-    """
-
-    faces: npt.NDArray[np.uint8 | np.uint16 | np.uint32] | None
-    material: IfcMaterial | None
-
-    def to_gltflib_primitive(self) -> GltfPrimitive:
-        if self.material is None:
-            return GltfPrimitive(triangles=self.faces, material=None)
-        else:
-            return GltfPrimitive(
-                triangles=self.faces, material=self.material.to_pygltflib_material()
-            )
-
-
-@dataclass
 class Mesh:
     """
     A mesh, represented by vertices and primitives
     """
 
     vertices: npt.NDArray[np.float64]
-    primitives: list[Primitive]
+    primitives: list[GltfPrimitive]
 
     def compute_bounding_volume_box(self) -> BoundingVolumeBox:
         """

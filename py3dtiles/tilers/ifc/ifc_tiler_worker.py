@@ -1,3 +1,4 @@
+import math
 import pickle
 import struct
 from collections.abc import Iterator, Sequence
@@ -8,6 +9,7 @@ import ifcopenshell.geom
 import ifcopenshell.util.element
 import lz4.frame as gzip
 import numpy as np
+import pygltflib
 from ifcopenshell import entity_instance
 
 from py3dtiles.constants import SpecVersion
@@ -18,19 +20,17 @@ from py3dtiles.tileset.content.b3dm import B3dm
 from py3dtiles.tileset.content.gltf import Gltf
 from py3dtiles.tileset.content.gltf_utils import (
     GltfMesh,
+    GltfPrimitive,
 )
 
 from ..geometry.geometry_message_type import GeometryTilerMessage, GeometryWorkerMessage
 from .ifc_exceptions import IfcInvalidFile
 from .ifc_model import (
-    Color,
     Feature,
     FeatureGroup,
     FileMetadata,
     FilenameAndOffset,
-    IfcMaterial,
     Mesh,
-    Primitive,
     TileInfo,
 )
 
@@ -198,9 +198,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
                 meshes.append(
                     GltfMesh(
                         points,
-                        primitives=[
-                            p.to_gltflib_primitive() for p in f.mesh.primitives
-                        ],
+                        primitives=f.mesh.primitives,
                         properties=f.properties,
                     )
                 )
@@ -276,15 +274,28 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
             if shape.geometry.materials:  # type: ignore  # need to generate stub types for ifcopenshell
                 material_ids = np.array(shape.geometry.material_ids, dtype=np.uint32)  # type: ignore
                 for mat_id, m in enumerate(shape.geometry.materials):  # type: ignore
-                    material = IfcMaterial(
-                        diffuse=Color(
-                            r=m.diffuse.r(), g=m.diffuse.g(), b=m.diffuse.b()
-                        ),
-                        specular=Color(
-                            r=m.specular.r(), g=m.specular.g(), b=m.specular.b()
-                        ),
-                        specularity=m.specularity,
-                        transparency=m.transparency,
+                    # TODO what to do with specular and specularity?
+                    transparency = (
+                        m.transparency
+                        if m.transparency and not math.isnan(m.transparency)
+                        else 0.0
+                    )
+                    base_color_factor = [
+                        m.diffuse.r(),
+                        m.diffuse.g(),
+                        m.diffuse.b(),
+                        1.0 - transparency,
+                    ]
+                    pbr_metallic_roughness = pygltflib.PbrMetallicRoughness(
+                        # check what blender is doing
+                        baseColorFactor=base_color_factor,
+                        roughnessFactor=0.5,
+                        metallicFactor=0.5,
+                    )
+                    alpha_mode = pygltflib.BLEND if transparency else pygltflib.OPAQUE
+                    material = pygltflib.Material(
+                        pbrMetallicRoughness=pbr_metallic_roughness,
+                        alphaMode=alpha_mode,
                     )
 
                     if triangles is not None and len(triangles) > 0:
@@ -292,11 +303,11 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
                             (material_ids == mat_id).nonzero(), axis=0
                         )
 
-                    primitive = Primitive(faces=faces, material=material)
+                    primitive = GltfPrimitive(triangles=faces, material=material)
                     primitives.append(primitive)
             else:
                 # no material, only one primitive
-                primitives.append(Primitive(faces=triangles, material=None))
+                primitives.append(GltfPrimitive(triangles=triangles, material=None))
 
             return Mesh(
                 vertices=np.array(shape.geometry.verts, dtype=np.float64).reshape((-1, 3)),  # type: ignore
