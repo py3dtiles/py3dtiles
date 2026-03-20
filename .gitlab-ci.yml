@@ -401,8 +401,6 @@ publish-to-pypi:
   stage: 🚀 deploy
   id_tokens:
     PYPI_ID_TOKEN:
-      # Use "pypi" if uploading to PyPI directly
-      # We'll do it later when we'll have validated it works correctly
       aud: pypi
   script:
     # Install dependencies
@@ -411,13 +409,11 @@ publish-to-pypi:
     - python -m pip install -U id
 
     # Retrieve the OIDC token from GitLab CI/CD, and exchange it for a PyPI API token
-    - oidc_token=$(python -m id PYPI)
-    # Replace "https://pypi.org/*" with "https://test.pypi.org/*" if uploading to TestPyPI
+    - oidc_token=$(python -m id pypi)
     - resp=$(curl -X POST https://pypi.org/_/oidc/mint-token -d "{\"token\":\"${oidc_token}\"}")
     - api_token=$(jq --raw-output '.token' <<< "${resp}")
 
     # Upload to PyPI authenticating via the newly-minted token
-    # Add "--repository testpypi" if uploading to TestPyPI
     - python -m build
     - twine check dist/py3dtiles-*
     - twine upload -u __token__ -p "${api_token}" dist/*
@@ -426,3 +422,32 @@ publish-to-pypi:
   environment:
     name: release
     url: https://pypi.org/project/py3dtiles/
+
+# Apparently testpypi is not made to automatically test releases on each commit / merge
+# keeping this job commented here, because it's handy when you have to fix/test the publishing logic.
+# (The amount of differences from the publish-to-pypi job is non trivial)
+# publish-to-test-pypi:
+#   stage: 🚀 deploy
+#   id_tokens:
+#     TESTPYPI_ID_TOKEN:
+#       aud: testpypi
+#   script:
+#     # Install dependencies
+#     - apt update && apt install -y jq
+#     - python -m pip install -e .[pack]
+#     - python -m pip install -U id
+
+#     # Retrieve the OIDC token from GitLab CI/CD, and exchange it for a PyPI API token
+#     - oidc_token=$(python -m id testpypi)
+#     # Replace "https://pypi.org/*" with "https://test.pypi.org/*" if uploading to TestPyPI
+#     - resp=$(curl -X POST https://test.pypi.org/_/oidc/mint-token -d "{\"token\":\"${oidc_token}\"}")
+#     - api_token=$(jq --raw-output '.token' <<< "${resp}")
+
+#     # Upload to PyPI authenticating via the newly-minted token
+#     - python -m build
+#     - twine check dist/py3dtiles-*
+#     # Add "--repository testpypi" if uploading to TestPyPI
+#     - twine upload -u __token__ -p "${api_token}" --repository testpypi dist/*
+#   environment:
+#     name: test-release
+#     url: https://test.pypi.org/project/py3dtiles/
