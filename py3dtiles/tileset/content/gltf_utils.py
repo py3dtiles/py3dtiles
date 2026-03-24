@@ -5,6 +5,7 @@ from typing import Any, NamedTuple, cast
 import numpy as np
 import numpy.typing as npt
 import pygltflib
+from pyproj import Transformer
 
 from py3dtiles.points import Points
 
@@ -124,9 +125,14 @@ class GltfMesh:
     """
     A data structure representing a mesh.
 
-    This is intended for higher-level usage than pygltflib.Mesh, which are an exact translation of the specification.
+    This is intended for higher-level usage than pygltflib.Mesh, which is an
+    exact translation of the specification. It is easier to build from mesh
+    encountered on the wild by keeping a more hierarchical and logical
+    organization. `GltfMesh` are constructed with all the vertices, normals,
+    uvs and additional attributes, and an optional list of `GltfPrimitive` that
+    contains indices and material information.
 
-    This is intented to be easier to construct by keeping a more hierarchical and logical organization. `GltfMesh` are constructed with all the vertices, normals, uvs and additional attributes, and an optional list of `GltfPrimitive` that contains indices and material information.
+    Also, this class supports vertices in float64. They will be converted to float32 when converting to a pygltflib.Mesh, as gltf doesn't support 64 bits vertices.
 
     Use `gltf_from_meshes` or `populate_gltf_from_mesh` to convert it to GLTF format.
 
@@ -140,7 +146,7 @@ class GltfMesh:
 
     def __init__(
         self,
-        points: npt.NDArray[np.float32 | np.uint16],
+        points: npt.NDArray[np.float32 | np.uint16 | np.float64],
         name: str | None = None,
         normals: npt.NDArray[np.float32] | None = None,
         primitives: list[GltfPrimitive] | None = None,
@@ -157,9 +163,8 @@ class GltfMesh:
             raise ValueError(
                 "points arguments should be an array of coordinate triplets (of shape (N, 3))"
             )
-        self.points: GltfAttribute = GltfAttribute(
-            "POSITION", pygltflib.VEC3, pygltflib.FLOAT, points
-        )
+        self.points = points
+
         self.name = name
         self.primitives = primitives or []
         if not self.primitives:
@@ -185,6 +190,24 @@ class GltfMesh:
             additional_attributes if additional_attributes is not None else []
         )
         self.properties = properties
+
+    @property
+    def vertices(self) -> GltfAttribute:
+        """
+        Returns the vertices attribute
+        """
+        return GltfAttribute(
+            "POSITION", pygltflib.VEC3, pygltflib.FLOAT, self.points.astype(np.float32)
+        )
+
+    def transform(self, transformer: Transformer) -> None:
+        xx, yy, zz = transformer.transform(
+            self.points[:, 0], self.points[:, 1], self.points[:, 2]
+        )
+        self.points = np.vstack((xx, yy, zz)).transpose()
+
+    def apply_offset(self, offset: npt.NDArray[np.float64]) -> None:
+        self.points = self.points - offset
 
 
 def gltf_from_points(points: Points, name: str | None = None) -> pygltflib.GLTF2:
@@ -322,7 +345,7 @@ def populate_gltf_from_mesh(
     gltf_binary_blob = cast(bytes, gltf.binary_blob()) or b""
 
     attributes_array: list[GltfAttribute | None] = [
-        mesh.points,
+        mesh.vertices,
         mesh.normals,
         mesh.uvs,
         mesh.batchids,
