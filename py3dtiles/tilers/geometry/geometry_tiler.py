@@ -17,7 +17,7 @@ from py3dtiles.tilers.shared_store import SharedStore
 from py3dtiles.tileset import Tile
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 
-from ..ifc.ifc_model import FileMetadata, FilenameAndOffset, TileInfo
+from ..model import FileMetadata, FilenameAndOffset, TileInfo
 from .geometry_message_type import GeometryTilerMessage, GeometryWorkerMessage
 
 

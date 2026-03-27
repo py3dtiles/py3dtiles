@@ -24,13 +24,13 @@ from py3dtiles.tileset.content.gltf_utils import (
 )
 
 from ..geometry.geometry_message_type import GeometryTilerMessage, GeometryWorkerMessage
-from .ifc_exceptions import IfcInvalidFile
-from .ifc_model import (
+from ..model import (
     FeatureGroup,
     FileMetadata,
     FilenameAndOffset,
     TileInfo,
 )
+from .ifc_exceptions import IfcInvalidFile
 
 Z_UP_MATRIX_4X4 = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]])
 
