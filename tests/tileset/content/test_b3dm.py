@@ -363,14 +363,14 @@ class TestTexturedTileBuilder(unittest.TestCase):
         meshes = [
             GltfMesh(
                 ts_0.vertices,
-                primitives=[GltfPrimitive(triangles=ts_0.triangle_indices)],
+                primitives=[GltfPrimitive(indices=ts_0.triangle_indices)],
                 normals=ts_0.compute_normals(),
             ),
             GltfMesh(
                 ts_1.vertices,
                 primitives=[
                     GltfPrimitive(
-                        triangles=ts_1.triangle_indices, texture_uri="squaretexture.jpg"
+                        indices=ts_1.triangle_indices, texture_uri="squaretexture.jpg"
                     )
                 ],
                 normals=ts_1.compute_normals(),
@@ -378,14 +378,14 @@ class TestTexturedTileBuilder(unittest.TestCase):
             ),
             GltfMesh(
                 ts_2.vertices,
-                primitives=[GltfPrimitive(triangles=ts_2.triangle_indices)],
+                primitives=[GltfPrimitive(indices=ts_2.triangle_indices)],
                 normals=ts_2.compute_normals(),
                 additional_attributes=[vertex_color],
             ),
             GltfMesh(
                 ts_3.vertices,
                 primitives=[
-                    GltfPrimitive(triangles=ts_3.triangle_indices, material=material)
+                    GltfPrimitive(indices=ts_3.triangle_indices, material=material)
                 ],
                 normals=ts_3.compute_normals(),
             ),

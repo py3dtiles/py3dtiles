@@ -216,7 +216,7 @@ def arrays2tileset(
 
             b3dm = B3dm.from_numpy_arrays(
                 points=np.concatenate([arr["vertices"] for arr in arrays]),
-                triangles=np.concatenate([arr["indices"] for arr in arrays]),
+                indices=np.concatenate([arr["indices"] for arr in arrays]),
                 normal=np.concatenate([arr["normal"] for arr in arrays]),
                 batch_table=bt,
             )

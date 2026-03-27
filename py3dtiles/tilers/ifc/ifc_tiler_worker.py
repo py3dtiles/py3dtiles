@@ -247,11 +247,11 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
                 return None
 
             if shape.geometry.faces:  # type: ignore
-                triangles = np.array(shape.geometry.faces, dtype=np.uint32).reshape(  # type: ignore
+                indices = np.array(shape.geometry.faces, dtype=np.uint32).reshape(  # type: ignore
                     (-1, 3)
                 )
             else:
-                triangles = None
+                indices = None
 
             # materials
             primitives = []
@@ -282,16 +282,14 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
                         alphaMode=alpha_mode,
                     )
 
-                    if triangles is not None and len(triangles) > 0:
-                        faces = triangles.take(
-                            (material_ids == mat_id).nonzero(), axis=0
-                        )
+                    if indices is not None and len(indices) > 0:
+                        faces = indices.take((material_ids == mat_id).nonzero(), axis=0)
 
-                    primitive = GltfPrimitive(triangles=faces, material=material)
+                    primitive = GltfPrimitive(indices=faces, material=material)
                     primitives.append(primitive)
             else:
                 # no material, only one primitive
-                primitives.append(GltfPrimitive(triangles=triangles, material=None))
+                primitives.append(GltfPrimitive(indices=indices, material=None))
 
             return GltfMesh(
                 points=np.array(shape.geometry.verts, dtype=np.float64).reshape((-1, 3)),  # type: ignore

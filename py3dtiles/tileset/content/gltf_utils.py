@@ -101,7 +101,7 @@ class GltfPrimitive:
 
     def __init__(
         self,
-        triangles: npt.NDArray[np.uint8 | np.uint16 | np.uint32] | None = None,
+        indices: npt.NDArray[np.uint8 | np.uint16 | np.uint32] | None = None,
         material: pygltflib.Material | None = None,
         texture_uri: str | None = None,
         mode: int = pygltflib.TRIANGLES,
@@ -110,10 +110,10 @@ class GltfPrimitive:
             GltfAttribute(
                 "INDICE",
                 pygltflib.SCALAR,
-                get_component_type_from_dtype(triangles.dtype),
-                triangles,
+                get_component_type_from_dtype(indices.dtype),
+                indices,
             )
-            if triangles is not None
+            if indices is not None
             else None
         )
         self.material: pygltflib.Material | None = material

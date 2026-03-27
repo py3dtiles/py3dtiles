@@ -426,8 +426,8 @@ In a nutshell:
     >>> m1 = Material(pbrMetallicRoughness=PbrMetallicRoughness(baseColorFactor=[1, 0, 0]))
     >>> m2 = Material(pbrMetallicRoughness=PbrMetallicRoughness(baseColorFactor=[0, 1, 0]))
     >>>
-    >>> p1 = GltfPrimitive(triangles=np.array([0, 1, 3], dtype=np.uint8), material=m1)
-    >>> p2 = GltfPrimitive(triangles=np.array([1, 2, 3], dtype=np.uint8), material=m2)
+    >>> p1 = GltfPrimitive(indices=np.array([0, 1, 3], dtype=np.uint8), material=m1)
+    >>> p2 = GltfPrimitive(indices=np.array([1, 2, 3], dtype=np.uint8), material=m2)
     >>> mesh = GltfMesh(points=np.array([[0, 0, 0], [1, 0, 0], [1, 1, 1], [0, 0, 1]], dtype=np.float32), primitives=[p1, p2])
     >>>
     >>> gltf = gltf_from_meshes([mesh])
