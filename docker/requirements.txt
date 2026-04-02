@@ -20,6 +20,7 @@ psycopg2-binary==2.9.11
 pygltflib==1.16.5
 pyproj==3.7.1
 python-dateutil==2.9.0.post0
+PyWavefront==1.3.3
 pyzmq==27.1.0
 shapely==2.1.2
 six==1.17.0

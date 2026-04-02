@@ -45,6 +45,6 @@ To update the python dependencies:
 
 - create a fresh venv `python -m venv .venvdocker`
 - activate it `source .venvdocker/bin/activate`
-- install the necessary dependencies `pip install .[postgres,ply,las,ifc] && pip install laspy[laszip]`
+- install the necessary dependencies `pip install .[postgres,ply,las,ifc,obj] && pip install laspy[laszip]`
 - update the requirements.txt : `pip freeze | grep -v py3dtiles > docker/requirements.txt`
 - test the build and commit the result
