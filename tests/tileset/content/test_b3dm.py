@@ -427,9 +427,9 @@ class TestTexturedTileBuilder(unittest.TestCase):
         self.assertEqual(
             t.body.gltf.materials[1].pbrMetallicRoughness.baseColorTexture.index, 0
         )
-        # the textCoord are statically the 5th component of a mesh currently
+        # texCoord are always TEXCOORD_0 currently
         self.assertEqual(
-            t.body.gltf.materials[1].pbrMetallicRoughness.baseColorTexture.texCoord, 5
+            t.body.gltf.materials[1].pbrMetallicRoughness.baseColorTexture.texCoord, 0
         )
 
         self.assertEqual(
