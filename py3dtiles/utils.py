@@ -223,3 +223,15 @@ def safe_relative_path(from_path: str | Path, to_path: str | Path) -> Path:
             to_parts[common_length:]
         )
         return Path(*rel_parts)
+
+
+Numeric = TypeVar("Numeric", int, float)
+
+
+def clamp(n: Numeric, min_val: Numeric, max_val: Numeric) -> Numeric:
+    if n < min_val:
+        return min_val
+    elif n > max_val:
+        return max_val
+    else:
+        return n

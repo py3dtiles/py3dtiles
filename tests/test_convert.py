@@ -5,6 +5,7 @@ import shutil
 from collections.abc import Iterator, Sequence
 from contextlib import nullcontext
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from time import sleep
 from unittest.mock import patch
 
@@ -29,7 +30,7 @@ from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
 from py3dtiles.tileset import TileSet, number_of_points_in_tileset
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content import Pnts
-from py3dtiles.tileset.content.gltf import PointsGltf
+from py3dtiles.tileset.content.gltf import Gltf, PointsGltf
 from py3dtiles.tileset.tile import Tile
 
 
@@ -188,6 +189,125 @@ def test_convert_ifc_new_format(fixtures_dir: Path, tmp_dir: Path) -> None:
         assert content_path.startswith("geometry/")
         assert content_path.endswith(".glb")
         assert Path(tileset_ifc.root_uri, content_path).exists()
+
+
+def test_convert_obj_simple(fixtures_dir: Path) -> None:
+    with TemporaryDirectory() as tmp:
+        tmp_dir = Path(tmp)
+        convert(
+            fixtures_dir / "obj" / "simple.obj",
+            outfolder=tmp_dir,
+            overwrite=True,
+            spec_version=SpecVersion.V1_1,
+            verbose=1,
+        )
+
+        # basic asserts
+        tileset_path = tmp_dir / "tileset.json"
+        with tileset_path.open() as f:
+            tileset = json.load(f)
+
+        assert len(tileset["root"]["children"]) == 1
+        obj_root = tileset["root"]["children"][0]
+        assert obj_root["transform"] == [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            1,
+            1,
+            -1,
+            1.0,
+        ]
+        expecting_box = [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]
+        box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+        assert box == expecting_box
+
+        assert Path(tmp_dir, "preview.glb").exists()
+        glb_file = Path(tmp_dir, "geometry", "0.glb")
+        assert glb_file.exists()
+
+        glb = Gltf.from_file(glb_file)
+        # TODO don't use pywavefront :-(
+        assert glb.get_vertex_count() == 36
+        assert glb.get_uvs() is None
+
+        assert len(glb._gltf.materials) == 2
+        mat = glb._gltf.materials[1]
+        assert mat.pbrMetallicRoughness.baseColorTexture is None
+        assert len(glb._gltf.images) == 0
+
+
+def test_convert_obj_simple_with_texture(fixtures_dir: Path) -> None:
+    with TemporaryDirectory() as tmp:
+        tmp_dir = Path(tmp)
+        convert(
+            fixtures_dir / "obj" / "simple_with_texture.obj",
+            outfolder=tmp_dir,
+            overwrite=True,
+            spec_version=SpecVersion.V1_1,
+            verbose=1,
+        )
+
+        # basic asserts
+        tileset_path = tmp_dir / "tileset.json"
+        with tileset_path.open() as f:
+            tileset = json.load(f)
+
+        assert len(tileset["root"]["children"]) == 1
+        obj_root = tileset["root"]["children"][0]
+        assert obj_root["transform"] == [
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            1,
+            1,
+            -1,
+            1.0,
+        ]
+        expecting_box = [0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]
+        box = [round(value, 4) for value in tileset["root"]["boundingVolume"]["box"]]
+        assert box == expecting_box
+
+        assert Path(tmp_dir, "preview.glb").exists()
+        glb_file = Path(tmp_dir, "geometry", "0.glb")
+        assert glb_file.exists()
+
+        glb = Gltf.from_file(glb_file)
+        # TODO don't use pywavefront :-(
+        assert glb.get_vertex_count() == 36
+        uvs = glb.get_uvs()
+        assert uvs is not None
+
+        assert_array_almost_equal(
+            uvs[0:3], [[0.837739, -0.25869], [0.837739, -0.90107], [0.16247, -0.90107]]
+        )
+
+        assert len(glb._gltf.materials) == 2
+        mat = glb._gltf.materials[1]
+        assert mat.pbrMetallicRoughness.baseColorTexture is not None
+        assert mat.pbrMetallicRoughness.baseColorTexture.index == 0
+        assert len(glb._gltf.images) == 1
+        img = glb._gltf.images[0]
+        assert img.uri == "textures/simple_logo.png"
+        assert (glb_file.parent / "textures/simple_logo.png").exists()
 
 
 def test_convert_with_prune(tmp_dir: Path, fixtures_dir: Path) -> None:
