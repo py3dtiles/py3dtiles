@@ -100,7 +100,8 @@ def _init_parser(
 
 
 def open_giro3d(giro3d_base: str, tileset_url: str) -> None:
-    url = f"{giro3d_base}/3dtiles_simple_viewer.html?tileset_url={tileset_url}"
+    url = f"{giro3d_base}/3d-tiles-simple-viewer.html?tileset_url={tileset_url}"
+    print("opening url", url)
     webbrowser.open(url)
 
 
