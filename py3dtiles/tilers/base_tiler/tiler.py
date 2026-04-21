@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from pyproj import CRS
 
@@ -12,10 +12,9 @@ from .shared_metadata import SharedMetadata
 from .tiler_worker import TilerWorker
 
 _SharedMetadataT = TypeVar("_SharedMetadataT", bound=SharedMetadata)
-_TilerWorkerT = TypeVar("_TilerWorkerT", bound=TilerWorker[Any])
 
 
-class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
+class Tiler(ABC, Generic[_SharedMetadataT]):
     """
     This class is the superclass for all tilers in py3dtilers. It is
     responsible to instantiate the workers it will use and generate new tasks
@@ -32,8 +31,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
     - the `name` class attribute should be overwritten by subclasses and should be unique
     - `__init__` should not read any files on the disk, `initialize` on the
       other hand is expected to gather metadata for input files
-    - as this class is generic over the type of SharedMetadata and TilerWorker,
-      subclassing these 2 classes is also needed when creating a Tiler
+    - as this class is generic over the type of SharedMetadata and as the method `get_worker` returns TilerWorker, subclassing these 2 classes is also needed when creating a Tiler
     - modifications to the SharedMetadata instance will *not* be transmitted to
       other processes, initialize it in `initialize` and **don't mutate it
       afterwards**
@@ -134,7 +132,7 @@ class Tiler(ABC, Generic[_SharedMetadataT, _TilerWorkerT]):
         """
 
     @abstractmethod
-    def get_worker(self) -> _TilerWorkerT:
+    def get_worker(self) -> TilerWorker[_SharedMetadataT]:
         """
         Returns an instantiated tiler worker.
         """

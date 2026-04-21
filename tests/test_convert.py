@@ -1381,7 +1381,9 @@ def test_convert_crs_traditional_ordering(
 class Metadata(SharedMetadata):
 
     def __init__(self) -> None:
-        super().__init__(spec_version=SpecVersion.V1_0)
+        super().__init__(
+            spec_version=SpecVersion.V1_0, verbosity=0, out_folder=Path("dummy")
+        )
 
 
 class Worker(TilerWorker[Metadata]):
@@ -1391,7 +1393,7 @@ class Worker(TilerWorker[Metadata]):
         yield [b"WORK"]
 
 
-class Tiler1(Tiler[Metadata, Worker]):
+class Tiler1(Tiler[Metadata]):
     name = "tiler1"
 
     def initialize(
@@ -1422,7 +1424,7 @@ class Tiler1(Tiler[Metadata, Worker]):
         return root_tile
 
 
-class Tiler2(Tiler[Metadata, Worker]):
+class Tiler2(Tiler[Metadata]):
     name = "tiler2"
 
     def initialize(

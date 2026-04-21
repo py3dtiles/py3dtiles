@@ -287,7 +287,7 @@ def convert(
 
     files = [files] if isinstance(files, (str, Path)) else files
     paths = [Path(file) for file in files]
-    tilers: list[Tiler[Any, Any]] = [
+    tilers: list[Tiler[Any]] = [
         PointTiler(
             crs_in=crs_in,
             crs_out=crs_out,
@@ -361,7 +361,7 @@ class Converter:
 
     def __init__(
         self,
-        tilers: list[Tiler[Any, Any]],
+        tilers: list[Tiler[Any]],
         overwrite: bool = False,
         jobs: int = CPU_COUNT,
         cache_size: int = DEFAULT_CACHE_SIZE,
@@ -535,7 +535,7 @@ class Converter:
 
             self.zmq_manager.context.destroy()
 
-    def _process_message(self, tiler: Tiler[Any, Any]) -> None:
+    def _process_message(self, tiler: Tiler[Any]) -> None:
         # Blocking read but it's fine because either all our child processes are busy
         # or we know that there's something to read (zmq.POLLIN)
         start = time.time()

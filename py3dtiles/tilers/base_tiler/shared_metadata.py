@@ -1,5 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass
+from pathlib import Path
 
 from py3dtiles.constants import SpecVersion
 
@@ -11,3 +12,5 @@ class SharedMetadata(ABC):
     """
 
     spec_version: SpecVersion
+    verbosity: int
+    out_folder: Path

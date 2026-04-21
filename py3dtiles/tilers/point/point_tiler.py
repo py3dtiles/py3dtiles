@@ -72,7 +72,7 @@ def can_pnts_be_written(
     )
 
 
-class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
+class PointTiler(Tiler[PointSharedMetadata]):
     """
     Tiler that split pointclouds.
 
@@ -175,16 +175,16 @@ class PointTiler(Tiler[PointSharedMetadata, PointTilerWorker]):
         )
 
         self.shared_metadata = PointSharedMetadata(
-            self.spec_version,
-            self.transformer,
-            self.root_aabb,
-            self.root_spacing,
-            self.root_scale,
-            self.out_folder,
-            self.rgb,
-            self.color_scale,
-            self.files_info["extra_fields"],
-            self.verbosity,
+            spec_version=self.spec_version,
+            verbosity=self.verbosity,
+            out_folder=self.out_folder,
+            transformer=self.transformer,
+            root_aabb=self.root_aabb,
+            root_spacing=self.root_spacing,
+            scale=self.root_scale,
+            write_rgb=self.rgb,
+            color_scale=self.color_scale,
+            extra_fields_to_include=self.files_info["extra_fields"],
         )
 
     def supports(self, file: Path) -> bool:
