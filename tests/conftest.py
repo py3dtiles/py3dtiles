@@ -528,11 +528,11 @@ def gltf_complex(z_up_matrix: npt.NDArray[np.float32]) -> GLTF2:
     m1 = pygltflib.Material()
     m2 = pygltflib.Material(emissiveFactor=[0, 1, 2])
     p1 = GltfPrimitive(
-        triangles=np.array([0, 1, 2], dtype=np.uint8),
+        indices=np.array([0, 1, 2], dtype=np.uint8),
         material=m1,
         texture_uri="uri/texture.png",
     )
-    p2 = GltfPrimitive(triangles=np.array([0, 2, 3], dtype=np.uint8), material=m2)
+    p2 = GltfPrimitive(indices=np.array([0, 2, 3], dtype=np.uint8), material=m2)
     mesh3 = GltfMesh(
         np.array(
             [[21, 22, 23], [24, 16, 28], [-1, 2, 5], [12, 999, 2]], dtype=np.float32

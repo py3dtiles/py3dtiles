@@ -47,10 +47,10 @@ def test_gtlf_primitive_creation() -> None:
     assert p2.texture_uri == "texture/uri.png"
 
     # assert type of triangles are kept
-    p3 = GltfPrimitive(triangles=np.array([1, 2, 3], dtype=np.uint32))
+    p3 = GltfPrimitive(indices=np.array([1, 2, 3], dtype=np.uint32))
     assert p3.triangles is not None
     assert p3.triangles.component_type == pygltflib.UNSIGNED_INT
-    p4 = GltfPrimitive(triangles=np.array([1, 2, 3], dtype=np.uint16))
+    p4 = GltfPrimitive(indices=np.array([1, 2, 3], dtype=np.uint16))
     assert p4.triangles is not None
     assert p4.triangles.component_type == pygltflib.UNSIGNED_SHORT
 
@@ -119,7 +119,7 @@ def test_populate_gltf_from_mesh_simple() -> None:
 
 def test_populate_gltf_from_mesh_one_primitive_with_indices() -> None:
     g = pygltflib.GLTF2()
-    p1 = GltfPrimitive(triangles=np.array([[0, 1, 2]], dtype=np.uint8))
+    p1 = GltfPrimitive(indices=np.array([[0, 1, 2]], dtype=np.uint8))
     m1 = GltfMesh(
         np.array(
             [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
@@ -157,8 +157,8 @@ def test_populate_gltf_from_mesh_one_primitive_with_indices() -> None:
 
 def test_populate_gltf_from_mesh_several_primitive() -> None:
     g = pygltflib.GLTF2()
-    p1 = GltfPrimitive(triangles=np.array([[0, 1, 2]], dtype=np.uint8))
-    p2 = GltfPrimitive(triangles=np.array([[2, 1, 3]], dtype=np.uint8))
+    p1 = GltfPrimitive(indices=np.array([[0, 1, 2]], dtype=np.uint8))
+    p2 = GltfPrimitive(indices=np.array([[2, 1, 3]], dtype=np.uint8))
     m1 = GltfMesh(
         np.array(
             [[1, 2, 3], [4, 5, 6], [7, 8, 9], [11, 12, 13]],
@@ -223,7 +223,7 @@ def test_populate_gltf_from_mesh_several_primitive() -> None:
         )
     )
     p3 = GltfPrimitive(
-        triangles=np.array([[0, 1, 3]], dtype=np.uint8),
+        indices=np.array([[0, 1, 3]], dtype=np.uint8),
         texture_uri="the_texture/uri.png",
         material=pygltflib.Material(),
     )

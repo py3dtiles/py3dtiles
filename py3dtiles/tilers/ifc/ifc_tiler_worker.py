@@ -1,3 +1,4 @@
+import math
 import pickle
 import struct
 from collections.abc import Iterator, Sequence
@@ -8,7 +9,7 @@ import ifcopenshell.geom
 import ifcopenshell.util.element
 import lz4.frame as gzip
 import numpy as np
-import numpy.typing as npt
+import pygltflib
 from ifcopenshell import entity_instance
 
 from py3dtiles.constants import SpecVersion
@@ -23,18 +24,13 @@ from py3dtiles.tileset.content.gltf_utils import (
 )
 
 from ..geometry.geometry_message_type import GeometryTilerMessage, GeometryWorkerMessage
-from .ifc_exceptions import IfcInvalidFile
-from .ifc_model import (
-    Color,
-    Feature,
+from ..model import (
     FeatureGroup,
     FileMetadata,
     FilenameAndOffset,
-    Geometry,
-    IfcMaterial,
-    IfcMesh,
     TileInfo,
 )
+from .ifc_exceptions import IfcInvalidFile
 
 Z_UP_MATRIX_4X4 = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]])
 
@@ -69,10 +65,9 @@ def convert_deg_min_sec_to_float(
     return float_coord
 
 
-def _get_elem_info(
-    element: entity_instance, container: entity_instance | None
-) -> dict[str, Any]:
+def _get_elem_info(element: entity_instance) -> dict[str, Any]:
     infos = element.get_info()
+    container = ifcopenshell.util.element.get_container(element)
 
     infos_dict = {
         "id": infos["id"],
@@ -146,17 +141,16 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
             )
             if not found_offset:
                 for m in tile.members:
-                    if m.mesh:
-                        # just get the first coords we find as offset, it's good enough
-                        found_offset = True
-                        offset = m.mesh.geom.verts[0:3]
-                        yield [
-                            GeometryWorkerMessage.METADATA_READ.value,
-                            pickle.dumps(
-                                FilenameAndOffset(filename=str(filename), offset=offset)
-                            ),
-                        ]
-                        break
+                    # just get the first coords we find as offset, it's good enough
+                    found_offset = True
+                    offset = m.points[0]
+                    yield [
+                        GeometryWorkerMessage.METADATA_READ.value,
+                        pickle.dumps(
+                            FilenameAndOffset(filename=str(filename), offset=offset)
+                        ),
+                    ]
+                    break
 
             current_tile_id += 1
             # send the tile to main process
@@ -182,47 +176,16 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
         meshes: list[GltfMesh] = []
         bbox = BoundingVolumeBox()
         elem_max_size = 0.0
-        for f in tile.members:
-            if f.mesh is not None:
-                pts: npt.NDArray[np.float64] = np.array(
-                    f.mesh.geom.verts, dtype=np.float64
-                ).reshape((-1, 3))
-                if transformer is not None:
-                    xx, yy, zz = transformer.transform(pts[:, 0], pts[:, 1], pts[:, 2])
-                    pts = np.vstack((xx, yy, zz)).transpose()
-                points = (pts - offset).astype(np.float32)
+        for mesh in tile.members:
+            if transformer is not None:
+                mesh.transform(transformer)
+            mesh.apply_offset(offset)
 
-                # extend the bounding box
-                this_bbox = BoundingVolumeBox.from_points(points)
-                bbox.add(this_bbox)
-                elem_max_size = max(
-                    elem_max_size, float(np.max(this_bbox.get_half_size()))
-                )
-                if f.mesh.geom.faces:
-                    triangles = np.array(f.mesh.geom.faces, dtype=np.uint32).reshape(
-                        (-1, 3)
-                    )
-
-                primitives = []
-                if f.mesh.materials:
-                    material_ids = np.array(f.mesh.material_ids, dtype=np.uint32)
-                    for mat_id in range(len(f.mesh.materials)):
-                        material = f.mesh.materials[mat_id].to_pygltflib_material()
-                        if f.mesh.geom.faces:
-                            tri = triangles.take(
-                                (material_ids == mat_id).nonzero(), axis=0
-                            )
-                        primitive = GltfPrimitive(triangles=tri, material=material)
-                        primitives.append(primitive)
-                else:
-                    # no material, only one primitive
-                    primitives.append(GltfPrimitive(triangles=triangles))
-                    material = None
-
-                # let' s split the vertices and triangles by material_ids
-                meshes.append(
-                    GltfMesh(points, primitives=primitives, properties=f.properties)
-                )
+            # extend the bounding box
+            this_bbox = BoundingVolumeBox.from_points(mesh.points)
+            bbox.add(this_bbox)
+            elem_max_size = max(elem_max_size, float(np.max(this_bbox.get_half_size())))
+            meshes.append(mesh)
         # no point in creating a b3dm if there is no geom in this tile
         has_content = False
         if len(meshes) > 0:
@@ -266,7 +229,7 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
             print("sending tile ready with metadata", tile_metadata)
         yield [GeometryWorkerMessage.TILE_READY.value, pickle.dumps(tile_metadata)]
 
-    def parse_elem(self, elem: entity_instance) -> IfcMesh | None:
+    def parse_elem(self, elem: entity_instance) -> GltfMesh | None:
         if hasattr(elem, "Representation") and elem.Representation is not None:
             try:
                 shape = ifcopenshell.geom.create_shape(
@@ -283,26 +246,55 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
             if shape is None:
                 return None
 
-            # materials
-            materials = []
-            for m in shape.geometry.materials:  # type: ignore  # need to generate stub types for ifcopenshell
-
-                material = IfcMaterial(
-                    diffuse=Color(r=m.diffuse.r(), g=m.diffuse.g(), b=m.diffuse.b()),
-                    specular=Color(
-                        r=m.specular.r(), g=m.specular.g(), b=m.specular.b()
-                    ),
-                    specularity=m.specularity,
-                    transparency=m.transparency,
+            if shape.geometry.faces:  # type: ignore
+                indices = np.array(shape.geometry.faces, dtype=np.uint32).reshape(  # type: ignore
+                    (-1, 3)
                 )
-                materials.append(material)
-            return IfcMesh(
-                geom=Geometry(
-                    verts=shape.geometry.verts,  # type: ignore  # ifcopenshell needs to fix their type declarations
-                    faces=shape.geometry.faces,  # type: ignore
-                ),
-                materials=materials,
-                material_ids=shape.geometry.material_ids,  # type: ignore
+            else:
+                indices = None
+
+            # materials
+            primitives = []
+            if shape.geometry.materials:  # type: ignore  # need to generate stub types for ifcopenshell
+                material_ids = np.array(shape.geometry.material_ids, dtype=np.uint32)  # type: ignore
+                for mat_id, m in enumerate(shape.geometry.materials):  # type: ignore
+                    # TODO what to do with specular and specularity?
+                    transparency = (
+                        m.transparency
+                        if m.transparency and not math.isnan(m.transparency)
+                        else 0.0
+                    )
+                    base_color_factor = [
+                        m.diffuse.r(),
+                        m.diffuse.g(),
+                        m.diffuse.b(),
+                        1.0 - transparency,
+                    ]
+                    pbr_metallic_roughness = pygltflib.PbrMetallicRoughness(
+                        # check what blender is doing
+                        baseColorFactor=base_color_factor,
+                        roughnessFactor=0.5,
+                        metallicFactor=0.5,
+                    )
+                    alpha_mode = pygltflib.BLEND if transparency else pygltflib.OPAQUE
+                    material = pygltflib.Material(
+                        pbrMetallicRoughness=pbr_metallic_roughness,
+                        alphaMode=alpha_mode,
+                    )
+
+                    if indices is not None and len(indices) > 0:
+                        faces = indices.take((material_ids == mat_id).nonzero(), axis=0)
+
+                    primitive = GltfPrimitive(indices=faces, material=material)
+                    primitives.append(primitive)
+            else:
+                # no material, only one primitive
+                primitives.append(GltfPrimitive(indices=indices, material=None))
+
+            return GltfMesh(
+                points=np.array(shape.geometry.verts, dtype=np.float64).reshape((-1, 3)),  # type: ignore
+                primitives=primitives,
+                properties=_get_elem_info(elem),
             )
         else:
             return None
@@ -321,23 +313,17 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
         parents = []
         stack = _get_children(parent_elem)
         parent_mesh = self.parse_elem(parent_elem)
-        parent_feature = Feature(
-            mesh=parent_mesh,
-            properties=_get_elem_info(
-                parent_elem, ifcopenshell.util.element.get_container(parent_elem)
-            ),
-        )
-        members: list[Feature] = [parent_feature]
+        members: list[GltfMesh] = []
+        if parent_mesh is not None:
+            members.append(parent_mesh)
         while len(stack) > 0:
             current = stack.pop(0)
             if current.is_a("IfcSpatialStructureElement"):
                 parents.append(current)
             else:
                 new_mesh = self.parse_elem(current)
-                new_feat = Feature(
-                    mesh=new_mesh, properties=_get_elem_info(current, parent_elem)
-                )
-                members.append(new_feat)
+                if new_mesh is not None:
+                    members.append(new_mesh)
                 stack.extend(_get_children(current))
 
         tile = FeatureGroup(
@@ -345,6 +331,6 @@ class IfcTilerWorker(TilerWorker[SharedMetadata]):
             filename=filename,
             parent_id=parent_tile_id,
             members=members,
-            properties={"spatialStructure": parent_feature.properties},
+            properties={"spatialStructure": _get_elem_info(parent_elem)},
         )
         return tile, parents

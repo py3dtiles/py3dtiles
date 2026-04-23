@@ -55,7 +55,7 @@ class B3dm(LegacyTileContent):
     @staticmethod
     def from_numpy_arrays(
         points: npt.NDArray[np.float32],
-        triangles: npt.NDArray[np.uint8] | None = None,
+        indices: npt.NDArray[np.uint8] | None = None,
         batch_table: BatchTable | None = None,
         feature_table: B3dmFeatureTable | None = None,
         normal: npt.NDArray[np.float32] | None = None,
@@ -69,7 +69,7 @@ class B3dm(LegacyTileContent):
         Creates a B3DM body from numpy arrays.
 
         :param points: array of vertex positions, must have a (n, 3) shape.
-        :param triangles: array of triangle indices, must have a (n, 3) shape.
+        :param indices: array of triangle indices, must have a (n, 3) shape.b3dm
         :param batch_table: a batch table.
         :param feature_table: a feature table.
         :param normals: array of vertex normals, must have a (n, 3) shape.
@@ -84,7 +84,7 @@ class B3dm(LegacyTileContent):
                     points,
                     primitives=[
                         gltf_utils.GltfPrimitive(
-                            triangles=triangles,
+                            indices=indices,
                             material=material,
                             texture_uri=texture_uri,
                         )

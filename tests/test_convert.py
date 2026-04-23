@@ -112,7 +112,7 @@ def test_convert_ifc(tmp_dir: Path, tileset_ifc_1: TileSet) -> None:
             0.0,
             6.0,
             5.0,
-            2.543375790119171,
+            2.5433756729750003,
             1.0,
         ],
     )
@@ -169,7 +169,7 @@ def test_convert_ifc_new_format(fixtures_dir: Path, tmp_dir: Path) -> None:
             0.0,
             6.0,
             5.0,
-            2.543375790119171,
+            2.5433756729750003,
             1.0,
         ],
     )

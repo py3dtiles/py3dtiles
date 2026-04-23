@@ -17,7 +17,7 @@ from py3dtiles.tilers.shared_store import SharedStore
 from py3dtiles.tileset import Tile
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 
-from ..ifc.ifc_model import FileMetadata, FilenameAndOffset, TileInfo
+from ..model import FileMetadata, FilenameAndOffset, TileInfo
 from .geometry_message_type import GeometryTilerMessage, GeometryWorkerMessage
 
 
@@ -191,8 +191,9 @@ class GeometryTiler(Tiler[SharedMetadata]):
                     self.crs_in, self.crs_out, always_xy=self.pyproj_always_xy
                 )
                 if offset is not None:
-                    offset = list(
-                        transformer.transform(offset[0], offset[1], offset[2])
+                    offset = np.array(
+                        transformer.transform(offset[0], offset[1], offset[2]),
+                        dtype=np.float64,
                     )
             self.files_metadata[filename] = FileMetadata(
                 offset=offset,
