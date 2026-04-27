@@ -128,7 +128,7 @@ def test_convert_ifc(tmp_dir: Path, tileset_ifc_1: TileSet) -> None:
     children = tileset["root"]["children"][0]["children"]
     for child in children:
         content_path = child["content"]["uri"]
-        assert content_path.startswith("ifc/")
+        assert content_path.startswith("geometry/")
         assert content_path.endswith(".b3dm")
         assert Path(tileset_ifc_1.root_uri, content_path).exists()
 
@@ -185,7 +185,7 @@ def test_convert_ifc_new_format(fixtures_dir: Path, tmp_dir: Path) -> None:
     children = tileset["root"]["children"][0]["children"]
     for child in children:
         content_path = child["content"]["uri"]
-        assert content_path.startswith("ifc/")
+        assert content_path.startswith("geometry/")
         assert content_path.endswith(".glb")
         assert Path(tileset_ifc.root_uri, content_path).exists()
 

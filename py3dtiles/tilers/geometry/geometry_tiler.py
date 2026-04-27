@@ -1,10 +1,9 @@
+import importlib.util
 import math
 import pickle
-import struct
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
 
 import numpy as np
 import numpy.typing as npt
@@ -13,12 +12,19 @@ from pyproj import CRS, Transformer
 from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE, SpecVersion
 from py3dtiles.tilers.base_tiler import Tiler
 from py3dtiles.tilers.base_tiler.shared_metadata import SharedMetadata
+from py3dtiles.tilers.geometry.geometry_tiler_worker import GeometryTilerWorker
 from py3dtiles.tilers.shared_store import SharedStore
 from py3dtiles.tileset import Tile
 from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 
 from ..model import FileMetadata, FilenameAndOffset, TileInfo
 from .geometry_message_type import GeometryTilerMessage, GeometryWorkerMessage
+
+ifcopenshell_spec = importlib.util.find_spec("ifcopenshell")
+HAS_IFC_SUPPORT = ifcopenshell_spec is not None
+
+obj_spec = importlib.util.find_spec("pywavefront")
+HAS_OBJ_SUPPORT = obj_spec is not None
 
 
 @dataclass
@@ -68,6 +74,17 @@ class GeometryTiler(Tiler[SharedMetadata]):
         self.files_metadata: dict[str, FileMetadata] = {}
         # that's what we're going to build folks!
         self.root_tile = Tile()
+
+    def supports(self, file: Path) -> bool:
+        supported_formats = []
+        if HAS_IFC_SUPPORT:
+            supported_formats.append(".ifc")
+        if HAS_OBJ_SUPPORT:
+            supported_formats.append(".obj")
+        return file.suffix.lower() in supported_formats
+
+    def get_worker(self) -> GeometryTilerWorker:
+        return GeometryTilerWorker(self.shared_metadata)
 
     def initialize(
         self,
@@ -158,8 +175,8 @@ class GeometryTiler(Tiler[SharedMetadata]):
         if self.verbosity >= 1:
             print("Received message", message_type)
         if message_type == GeometryWorkerMessage.TILE_PARSED.value:
-            filename: str = message[0].decode()
-            tile_id = cast(int, struct.unpack(">I", message[1]))
+            filename: str = pickle.loads(message[0])
+            tile_id: int = pickle.loads(message[1])
             tile_byte = message[2]
             self.add_tile_to_queue(tile_id, filename, tile_byte)
         elif message_type == GeometryWorkerMessage.TILE_READY.value:
@@ -172,7 +189,7 @@ class GeometryTiler(Tiler[SharedMetadata]):
             else:
                 self.add_tile_to_index(tile_metadata.parent_id, tile_metadata)
         elif message_type == GeometryWorkerMessage.FILE_READ.value:
-            filename = message[0].decode()
+            filename = pickle.loads(message[0])
             if self.verbosity >= 1:
                 print("File has been read", filename)
         elif message_type == GeometryWorkerMessage.METADATA_READ.value:
