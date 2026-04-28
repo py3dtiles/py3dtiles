@@ -375,10 +375,6 @@ def populate_gltf_from_mesh(
             if primitive.material is None:
                 primitive.material = pygltflib.Material()
             _set_texture_to_primitive(gltf, primitive.material, primitive.texture_uri)
-            primitive.material.pbrMetallicRoughness.baseColorTexture.texCoord = (
-                attributes_indices_by_name.get("TEXCOORD_0")
-            )
-
         # deal with material
         gltf_primitive = _create_gltf_primitive(gltf, primitive)
         gltf_mesh.primitives.append(gltf_primitive)
