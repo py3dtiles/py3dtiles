@@ -26,18 +26,9 @@ from py3dtiles.merger import create_tileset_from_root_tiles
 from py3dtiles.tilers.base_tiler import Tiler
 from py3dtiles.tilers.base_tiler.message_type import ManagerMessage, WorkerMessageType
 from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
+from py3dtiles.tilers.geometry.geometry_tiler import GeometryTiler
 from py3dtiles.tilers.point.point_tiler import PointTiler
 from py3dtiles.utils import mkdir_or_raise, str_to_CRS
-
-try:
-    from py3dtiles.tilers.ifc.ifc_tiler import IfcTiler
-
-    HAS_IFC_SUPPORT = True
-except ImportError as e:
-    if e.name == "ifcopenshell":
-        HAS_IFC_SUPPORT = False
-    else:
-        raise
 
 # IPC protocol is not supported on Windows
 if os.name == "nt":
@@ -301,30 +292,21 @@ def convert(
             extra_fields=extra_fields,
             spec_version=spec_version,
         ),
+        GeometryTiler(
+            crs_in,
+            crs_out,
+            force_crs_in,
+            pyproj_always_xy,
+            cache_size,
+            verbose,
+            jobs,
+            spec_version=spec_version,
+        ),
     ]
-    if HAS_IFC_SUPPORT:
-        tilers.append(
-            IfcTiler(
-                crs_in,
-                crs_out,
-                force_crs_in,
-                pyproj_always_xy,
-                cache_size,
-                verbose,
-                jobs,
-                spec_version=spec_version,
-            )
-        )
 
     converter = Converter(
         tilers,
-        overwrite=overwrite,
         jobs=jobs,
-        cache_size=cache_size,
-        crs_out=crs_out,
-        crs_in=crs_in,
-        force_crs_in=force_crs_in,
-        pyproj_always_xy=pyproj_always_xy,
         benchmark=benchmark,
         use_process_pool=use_process_pool,
         verbose=verbose,
@@ -362,13 +344,7 @@ class Converter:
     def __init__(
         self,
         tilers: list[Tiler[Any]],
-        overwrite: bool = False,
         jobs: int = CPU_COUNT,
-        cache_size: int = DEFAULT_CACHE_SIZE,
-        crs_out: CRS | None = None,
-        crs_in: CRS | None = None,
-        force_crs_in: bool = False,
-        pyproj_always_xy: bool = False,
         benchmark: str | None = None,
         use_process_pool: bool = True,
         verbose: int = False,

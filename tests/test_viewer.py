@@ -57,7 +57,7 @@ def test_requests(test_viewer_server: HttpInfo) -> None:
     assert r.getheader("Content-type") == "text/html; charset=utf-8"
     assert (
         r.read()
-        == b'<h1>Available Files in tmp/simple1_ifc</h1><ul><li><a href="/0/ifc">tmp/simple1_ifc/ifc</a></li><li><a href="/0/tileset.json">tmp/simple1_ifc/tileset.json</a></li></ul>'
+        == b'<h1>Available Files in tmp/simple1_ifc</h1><ul><li><a href="/0/geometry">tmp/simple1_ifc/geometry</a></li><li><a href="/0/tileset.json">tmp/simple1_ifc/tileset.json</a></li></ul>'
     )
 
     r = urllib.request.urlopen(f"{url}/1")
@@ -89,7 +89,7 @@ def test_requests(test_viewer_server: HttpInfo) -> None:
     r = urllib.request.urlopen(f"{url}/1/preview.pnts")
     assert r.status == 200
     assert r.getheader("Content-type") == "application/octet-stream"
-    r = urllib.request.urlopen(f"{url}/0/ifc/1.b3dm")
+    r = urllib.request.urlopen(f"{url}/0/geometry/1.b3dm")
     assert r.status == 200
     assert r.getheader("Content-type") == "application/octet-stream"
 
