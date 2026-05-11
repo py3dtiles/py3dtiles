@@ -349,3 +349,23 @@ def test_union(
             [1, 1, 2],
         ],
     )
+
+    newbb = BoundingVolumeBox.union(
+        BoundingVolumeBox.from_points([[0, 0, 0], [1, 1, 1]]),
+        BoundingVolumeBox.from_points([[0, 0, 1], [1, 1, 2]]),
+        BoundingVolumeBox.from_points([[0, 0, 1], [3, 3, 2]]),
+    )
+    assert newbb._box is not None
+    assert_array_equal(
+        newbb.get_corners(),
+        [
+            [0, 0, 0],
+            [3, 0, 0],
+            [0, 3, 0],
+            [3, 3, 0],
+            [0, 0, 2],
+            [3, 0, 2],
+            [0, 3, 2],
+            [3, 3, 2],
+        ],
+    )

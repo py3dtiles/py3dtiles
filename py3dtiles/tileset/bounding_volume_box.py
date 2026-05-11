@@ -44,13 +44,13 @@ class BoundingVolumeBox(BoundingVolume[BoundingVolumeBoxDictType]):
         self._box: npt.NDArray[np.float64] | None = None
 
     @classmethod
-    def union(cls, bbox1: BoundingVolumeBox, bbox2: BoundingVolumeBox) -> Self:
+    def union(cls, *bbox: BoundingVolumeBox) -> Self:
         """
-        Create a box containing the 2 box parameters.
+        Create a box containing all the boxes passed as parameters.
         """
         bounding_volume_box = cls()
-        bounding_volume_box.add(bbox1)
-        bounding_volume_box.add(bbox2)
+        for box in bbox:
+            bounding_volume_box.add(box)
         return bounding_volume_box
 
     @classmethod
