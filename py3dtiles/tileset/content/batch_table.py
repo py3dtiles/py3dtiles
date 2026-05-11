@@ -10,9 +10,11 @@ import numpy.typing as npt
 from py3dtiles.exceptions import (
     InvalidBatchTableError,
 )
+from py3dtiles.tileset.constants import (
+    COMPONENT_TYPE_NUMPY_MAPPING,
+    DTYPE_TO_COMPONENT_TYPE_MAPPING,
+)
 from py3dtiles.typing import BatchTableHeaderDataType
-
-from .constants import COMPONENT_TYPE_NUMPY_MAPPING, DTYPE_TO_COMPONENT_TYPE_MAPPING
 
 if TYPE_CHECKING:
     from py3dtiles.tileset.content import TileContentHeader

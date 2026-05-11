@@ -114,3 +114,11 @@ class TileContentMissingException(Py3dtilesException):
             f"Content with uri {tile_content_uri} wasn't loaded. Please load it first with `Tile.get_or_fetch_content`."
         )
         self.content_uri: Path = tile_content_uri
+
+
+class InvalidIdentifierException(Py3dtilesException):
+    """This exception is raised when a metadata item is instanciated with an invalid ID. As denoted by the standard:
+
+    > IDs (identifiers) are strings that match the regular expression ^[a-zA-Z_][a-zA-Z0-9_]*$: Strings that consist of upper- or lowercase letters, digits, or underscores, starting with either a letter or an underscore.
+
+    """
