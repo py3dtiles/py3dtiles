@@ -4,10 +4,11 @@ Command line usage
 info
 ~~~~
 
-The info sub-command outputs information from a 3DTiles file in the .pnts or .b3dm format.
+Prints information about a tile.
 
-Here is an example on how to retrieve basic information about a tile binary content, in this
-case *pointCloudRGB.pnts*:
+The info sub-command outputs information from a 3D Tiles file in the ``.pnts`` or ``.b3dm`` format.
+
+The following example shows how to retrieve a basic information about a point cloud tile's binary content:
 
 .. code-block:: shell
 
@@ -32,27 +33,30 @@ case *pointCloudRGB.pnts*:
 convert
 ~~~~~~~
 
-The convert sub-command can be used to convert one or several pointcloud files to a 3dtiles tileset.
+Converts one or more input files to 3D Tiles.
 
-It also support crs reprojection of the points (see ``py3dtiles convert --help`` for all the options).
+This commands also support CRS reprojection of the points (see ``py3dtiles convert --help`` for all the options).
 
 .. code-block:: shell
 
     py3dtiles convert mypointcloud.las --out /tmp/destination
 
-For each format documentation and the assumptions made for them (csv/xyz format, ply property names etc.), please see `the documentation of the corresponding reader <./api/py3dtiles.reader.html>`_.
+For each format documentation and the assumptions made for them (CSV/XYZ format, PLY property names etc.), please see `the documentation of the corresponding reader <./api/py3dtiles.reader.html>`_.
+
 
 merge
 ~~~~~
 
-The merge feature is a special use case: it generates a meta-tileset from a group of existing tilesets.
+Creates a meta-tileset from tilesets.
 
-It's useful to be able only a part of a pointcloud. For instance: if one has 6 input las file (A.las, B.las, ..., F.las), there are 2 solutions to vizualize them all in a 3dtiles viewer:
-  * run `py3dtiles convert A.las B.las ... F.las` and diplay the resulting tileset
-  * or run `py3dtiles convert A.las`, then `py3dtiles convert B.las`, ... and then run `py3dtiles merge`
+The merge feature is a special use case: it generates a `meta-tileset` from a group of existing tilesets. A meta-tileset simply references other tilesets without directly referencing tiles.
 
-  The advantage of the 2nd option, is that it allows to update a part of the pointcloud easily.
-  e.g: if a new B.las is available, with option 1 the full tileset has to be rebuild from scratch, while with option 2, only the B.las part has to be rebuilt + the merge command.
+For example: with 6 input LAS files (``A.las``, ``B.las``, up to ``F.las``), there are 2 ways to vizualize them all in a 3D Tiles viewer:
+
+* run ``py3dtiles convert A.las B.las ... F.las`` to generate a single tileset from the 6 LAS files, then diplay the resulting tileset,
+* or run ``py3dtiles convert A.las``, then ``py3dtiles convert B.las``, ... and then run ``py3dtiles merge`` to generate one tileset per input file, then one meta-tileset that references the 6 tilesets.
+
+The second approach makes it possible to update a subset of pointcloud easily, without having to rebuild every tile. For example, if ``B.las`` has been updated, the first approache will re-generate the entire tileset from scratch, while with the second approach, only the tilesets for `B.las` and the meta-tilsets have to be rebuilt.
 
 
 export
@@ -63,6 +67,7 @@ They both transform all the geometries provided in .b3dm files, along with a
 tileset.json file which organizes them.
 
 The directory export will use all the .wkb files in the provided directory.
+
 Warning: the coordinates are read as floats, not doubles. Make sure to offset
 the coordinates beforehand to reduce their size. Afterwards, you can indicate
 in the command line the offset that needs to be applied to the tileset so it is
@@ -84,10 +89,10 @@ the object's ID. Usage example:
 view
 ~~~~
 
-Py3dtiles has a view subcommand, allowing to preview the results of your conversions.
+Opens a web viewer to visualize a tileset.
 
 .. code-block:: shell
 
     $ py3dtiles view 3dtiles/tileset.json
 
-This command will launch a local webserver and opens an online demo pointing to that local url.
+This command will launch a local webserver and opens an online demo pointing to that local URL.
