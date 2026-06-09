@@ -69,6 +69,9 @@ class Gltf(TileContent):
         """
         return gltf_utils.get_attribute(self._gltf, "COLOR_0")
 
+    def get_uvs(self) -> npt.NDArray[np.float32] | None:
+        return gltf_utils.get_attribute(self._gltf, "TEXCOORD_0")
+
     def get_extra_field(self, fieldname: str) -> npt.NDArray[Any] | None:
         """
         Get an extra field in the order they are defined, taking indices into account.

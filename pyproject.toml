@@ -56,6 +56,7 @@ postgres = ["psycopg2-binary"]
 las = ["laspy>=2.5,<3.0"]
 ply = ["plyfile"]
 ifc = ["ifcopenshell", "lark"]
+obj = ["pywavefront"]
 
 dev = [
     "line_profiler",
@@ -159,6 +160,7 @@ module = [
     "pygltflib",
     "pyproj",
     "pytest_benchmark.*",
+    "pywavefront.*",
 ]
 
 ignore_missing_imports = true

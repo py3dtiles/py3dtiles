@@ -1,4 +1,5 @@
 import pickle
+import shutil
 from collections.abc import Iterator, Sequence
 from pathlib import Path
 
@@ -32,11 +33,23 @@ except ImportError as e:
     else:
         raise
 
+try:
+    from ..obj.obj_reader import ObjReader
+
+    HAS_OBJ_SUPPORT = True
+except ImportError as e:
+    if e.name == "pywavefront":
+        HAS_OBJ_SUPPORT = False
+    else:
+        raise
+
 
 def get_reader(filename: Path, shared_metadata: SharedMetadata) -> FormatReader | None:
     # normally, the format support check has already been done by GeometryTiler
     if filename.suffix == ".ifc" and HAS_IFC_SUPPORT:
         return IfcReader(shared_metadata)
+    elif filename.suffix == ".obj" and HAS_OBJ_SUPPORT:
+        return ObjReader(shared_metadata)
     else:
         return None
 
@@ -87,6 +100,17 @@ class GeometryTilerWorker(TilerWorker[SharedMetadata]):
             bbox.add(this_bbox)
             elem_max_size = max(elem_max_size, float(np.max(this_bbox.get_half_size())))
             meshes.append(mesh)
+
+            # cp textures
+            for primitive in mesh.primitives:
+                if primitive.texture_uri is not None:
+                    old_path = Path(primitive.texture_uri)
+                    new_texture_uri = Path("textures") / old_path.name
+                    new_texture_path = self.shared_metadata.out_folder / new_texture_uri
+                    new_texture_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy(old_path, new_texture_path)
+                    primitive.texture_uri = new_texture_uri.as_posix()
+
         # no point in creating a b3dm if there is no geom in this tile
         has_content = False
         if len(meshes) > 0:

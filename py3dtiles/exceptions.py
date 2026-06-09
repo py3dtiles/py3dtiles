@@ -120,5 +120,10 @@ class InvalidIdentifierException(Py3dtilesException):
     """This exception is raised when a metadata item is instanciated with an invalid ID. As denoted by the standard:
 
     > IDs (identifiers) are strings that match the regular expression ^[a-zA-Z_][a-zA-Z0-9_]*$: Strings that consist of upper- or lowercase letters, digits, or underscores, starting with either a letter or an underscore.
+    """
 
+
+class InvalidInputFileError(Py3dtilesException):
+    """
+    Raised when an input file is invalid from the point of view of py3dtiles
     """
