@@ -330,7 +330,7 @@ class FastQuadricMeshSimplification:
             raise ValueError("target_tris_count must be >= 0")
 
         opts = self.options
-        deleted_tris = 0
+        deleted_tris_count = 0
         triangle_count = len(self._triangle_vertex_indices)
         start_tris = triangle_count
 
@@ -338,7 +338,7 @@ class FastQuadricMeshSimplification:
         max_vertex_count = float("inf")  # unlimited
 
         for iteration in range(opts.max_iteration_count):
-            current = start_tris - deleted_tris
+            current = start_tris - deleted_tris_count
             if opts.verbose and (iteration % 5) == 0:
                 print(f"  iteration {iteration} - triangles {current}")
 
@@ -359,15 +359,14 @@ class FastQuadricMeshSimplification:
 
             deleted0: list[bool] = []
             deleted1: list[bool] = []
-            self._remove_vertex_pass(
+            deleted_tris_count = self._remove_vertex_pass(
                 start_tris,
                 target_tris_count,
                 threshold,
                 deleted0,
                 deleted1,
-                deleted_tris_ref := [deleted_tris],
+                deleted_tris_count=deleted_tris_count,
             )
-            deleted_tris = deleted_tris_ref[0]
 
         self._compact_mesh()
 
@@ -385,12 +384,11 @@ class FastQuadricMeshSimplification:
             if self.options.verbose:
                 print(f"  Lossless iteration {iteration}")
 
-            deleted_tris_ref = [0]
-            self._remove_vertex_pass(
-                start_tris, 0, self._DOUBLE_EPSILON, [], [], deleted_tris_ref
+            deleted_tris_count = self._remove_vertex_pass(
+                start_tris, 0, self._DOUBLE_EPSILON, [], [], deleted_tris_count=0
             )
 
-            if deleted_tris_ref[0] <= 0:
+            if deleted_tris_count <= 0:
                 break
 
         self._compact_mesh()
@@ -556,11 +554,11 @@ class FastQuadricMeshSimplification:
         ia0: int,
         v_idx: int,
         deleted: list[bool],
-        deleted_tris_ref: list[int],
-    ) -> list[tuple[int, int]]:
+    ) -> tuple[list[tuple[int, int]], int]:
         tstart = self._vertex_ref_start[v_idx]
         tcount = self._vertex_ref_count[v_idx]
         new_refs = []
+        deleted_tris_count = 0
         for k in range(tcount):
             rid = tstart + k
             tid = self._ref_triangle_id[rid]
@@ -569,7 +567,7 @@ class FastQuadricMeshSimplification:
                 continue
             if deleted[k]:
                 self._triangle_deleted[tid] = True
-                deleted_tris_ref[0] += 1
+                deleted_tris_count += 1
                 continue
 
             self._triangle_vertex_indices[tid][tv] = i0
@@ -595,7 +593,7 @@ class FastQuadricMeshSimplification:
             self._triangle_edge_errors[tid][3] = min(e0, e1, e2)
             new_refs.append((tid, tv))
 
-        return new_refs
+        return new_refs, deleted_tris_count
 
     # ------------------------------------------------------------------
     @staticmethod
@@ -694,9 +692,8 @@ class FastQuadricMeshSimplification:
         threshold: float,
         deleted0: list[bool],
         deleted1: list[bool],
-        # TODO actually, claude just use this list to pass deleted_tris by ref, let's refactor this to use an object or just to aggregate outside of this function
-        deleted_tris_ref: list[int],
-    ) -> None:
+        deleted_tris_count: int,
+    ) -> int:
         opts = self.options
         triangle_count = len(self._triangle_vertex_indices)
 
@@ -769,12 +766,14 @@ class FastQuadricMeshSimplification:
                 effective_ia0 = -1 if self._v_seam[i0] else ia0
 
                 len(self._ref_triangle_id)
-                new_refs0 = self._update_triangles(
-                    i0, effective_ia0, i0, deleted0, deleted_tris_ref
+                new_refs0, deleted_count0 = self._update_triangles(
+                    i0, effective_ia0, i0, deleted0
                 )
-                new_refs1 = self._update_triangles(
-                    i0, effective_ia0, i1, deleted1, deleted_tris_ref
+                deleted_tris_count += deleted_count0
+                new_refs1, deleted_count1 = self._update_triangles(
+                    i0, effective_ia0, i1, deleted1
                 )
+                deleted_tris_count += deleted_count1
                 all_new = new_refs0 + new_refs1
                 tcount_new = len(all_new)
 
@@ -798,7 +797,7 @@ class FastQuadricMeshSimplification:
                 self._remaining_vertices -= 1
                 break
 
-            current = start_tris - deleted_tris_ref[0]
+            current = start_tris - deleted_tris_count
             # TODO condition always true (second part)
             if current <= target_tris and self._remaining_vertices < float("inf"):
                 if opts.verbose:
@@ -813,6 +812,8 @@ class FastQuadricMeshSimplification:
             print("because_border", because_border)
             print("because_seam", because_seam)
             print("because_foldover", because_foldover)
+
+        return deleted_tris_count
 
     # ------------------------------------------------------------------
     def _update_mesh(self, iteration: int) -> None:
