@@ -334,18 +334,12 @@ class FastQuadricMeshSimplification:
         triangle_count = len(self._triangle_vertex_indices)
         start_tris = triangle_count
 
-        # TODO implement that limit?
-        max_vertex_count = float("inf")  # unlimited
-
         for iteration in range(opts.max_iteration_count):
             current = start_tris - deleted_tris_count
             if opts.verbose and (iteration % 5) == 0:
                 print(f"  iteration {iteration} - triangles {current}")
 
-            if (
-                current <= target_tris_count
-                and self._remaining_vertices < max_vertex_count
-            ):
+            if current <= target_tris_count:
                 break
 
             if (iteration % 5) == 0:
@@ -799,7 +793,7 @@ class FastQuadricMeshSimplification:
 
             current = start_tris - deleted_tris_count
             # TODO condition always true (second part)
-            if current <= target_tris and self._remaining_vertices < float("inf"):
+            if current <= target_tris:
                 if opts.verbose:
                     print(
                         f"breaking because current is {current}, target_tris is {target_tris} (remaining vertices is) ${self._remaining_vertices}"
