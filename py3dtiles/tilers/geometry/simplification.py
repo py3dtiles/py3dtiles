@@ -369,7 +369,7 @@ class FastQuadricMeshSimplification:
         """Lossless decimation – removes only zero-error edges."""
         start_tris = len(self._triangle_vertex_indices)
 
-        for iteration in range(9999):
+        for iteration in range(self.opts.max_iteration_count):
             self._update_mesh(iteration)
 
             for i in range(len(self._triangle_vertex_indices)):
