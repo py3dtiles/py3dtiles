@@ -343,7 +343,7 @@ class FastQuadricMeshSimplification:
                 break
 
             if (iteration % 5) == 0:
-                self._update_mesh(iteration)
+                self._update_mesh(iteration == 0)
 
             # Clear dirty
             for i in range(len(self._triangle_vertex_indices)):
@@ -369,8 +369,8 @@ class FastQuadricMeshSimplification:
         """Lossless decimation – removes only zero-error edges."""
         start_tris = len(self._triangle_vertex_indices)
 
-        for iteration in range(self.opts.max_iteration_count):
-            self._update_mesh(iteration)
+        for iteration in range(self.options.max_iteration_count):
+            self._update_mesh(iteration == 0)
 
             for i in range(len(self._triangle_vertex_indices)):
                 self._triangle_dirty[i] = False
@@ -809,11 +809,11 @@ class FastQuadricMeshSimplification:
         return deleted_tris_count
 
     # ------------------------------------------------------------------
-    def _update_mesh(self, iteration: int) -> None:
+    def _update_mesh(self, first_iteration: bool) -> None:
         triangle_count = len(self._triangle_vertex_indices)
         vertex_count = len(self._vertex_positions)
 
-        if iteration > 0:
+        if not first_iteration:
             # Compact deleted triangles
             new_tv, new_tva, new_terr, new_tdel, new_tdirty, new_tn, new_tsub = (
                 [],
@@ -848,7 +848,7 @@ class FastQuadricMeshSimplification:
 
         self._update_references()
 
-        if iteration == 0:
+        if first_iteration:
             # Reset flags
             for i in range(vertex_count):
                 self._v_border[i] = False
