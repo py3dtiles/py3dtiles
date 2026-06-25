@@ -465,10 +465,9 @@ class FastQuadricMeshSimplification:
 
     def _calculate_error(
         self, i0: int, i1: int
-    ) -> tuple[float, npt.NDArray[np.float64], int]:
+    ) -> tuple[float, npt.NDArray[np.float64]]:
         """
-        Returns (error, result_point, result_index).
-        result_index: 0=p1, 1=p2, 2=midpoint-or-optimal
+        Returns (error, result_point).
         """
         q = self._vertex_quadrics[i0] + self._vertex_quadrics[i1]
         border = self._v_border[i0] and self._v_border[i1]
@@ -478,7 +477,7 @@ class FastQuadricMeshSimplification:
                 [-1.0 / det * q.det2(), 1.0 / det * q.det3(), -1.0 / det * q.det4()]
             )
             error = self._vertex_error(q, result[0], result[1], result[2])
-            return error, result, 2
+            return error, result
         else:
             p1 = self._vertex_positions[i0]
             p2 = self._vertex_positions[i1]
@@ -488,20 +487,20 @@ class FastQuadricMeshSimplification:
             e3 = self._vertex_error(q, p3[0], p3[1], p3[2])
             error = min(e1, e2, e3)
             if error == e3:
-                return error, p3, 2
+                return error, p3
             elif error == e2:
-                return error, p2, 1
+                return error, p2
             else:
-                return error, p1, 0
+                return error, p1
 
     def _calculate_error_with_curvature(
         self, i0: int, i1: int
-    ) -> tuple[float, npt.NDArray[np.float64], int]:
-        error, result, idx = self._calculate_error(i0, i1)
+    ) -> tuple[float, npt.NDArray[np.float64]]:
+        error, result = self._calculate_error(i0, i1)
         if hasattr(self, "_vert_curvatures") and self._vert_curvatures is not None:
             curvature = max(self._vert_curvatures[i0], self._vert_curvatures[i1])
             error += error * curvature
-        return error, result, idx
+        return error, result
 
     # ------------------------------------------------------------------
     def _flipped(
@@ -569,15 +568,15 @@ class FastQuadricMeshSimplification:
                 self._triangle_attribute_indices[tid][tv] = ia0
 
             self._triangle_dirty[tid] = True
-            e0, _, _ = self._calculate_error_with_curvature(
+            e0, _ = self._calculate_error_with_curvature(
                 int(self._triangle_vertex_indices[tid][0]),
                 int(self._triangle_vertex_indices[tid][1]),
             )
-            e1, _, _ = self._calculate_error_with_curvature(
+            e1, _ = self._calculate_error_with_curvature(
                 int(self._triangle_vertex_indices[tid][1]),
                 int(self._triangle_vertex_indices[tid][2]),
             )
-            e2, _, _ = self._calculate_error_with_curvature(
+            e2, _ = self._calculate_error_with_curvature(
                 int(self._triangle_vertex_indices[tid][2]),
                 int(self._triangle_vertex_indices[tid][0]),
             )
@@ -729,7 +728,7 @@ class FastQuadricMeshSimplification:
                 if opts.preserve_uv_foldover_edges and self._v_foldover[i0]:
                     continue
 
-                _, p, _ = self._calculate_error_with_curvature(i0, i1)
+                _, p = self._calculate_error_with_curvature(i0, i1)
                 # if iteration > 10:
                 #     print("error", threshold, p)
 
@@ -981,15 +980,15 @@ class FastQuadricMeshSimplification:
 
             # Calculate per-edge errors
             for i in range(triangle_count):
-                e0, _, _ = self._calculate_error_with_curvature(
+                e0, _ = self._calculate_error_with_curvature(
                     int(self._triangle_vertex_indices[i][0]),
                     int(self._triangle_vertex_indices[i][1]),
                 )
-                e1, _, _ = self._calculate_error_with_curvature(
+                e1, _ = self._calculate_error_with_curvature(
                     int(self._triangle_vertex_indices[i][1]),
                     int(self._triangle_vertex_indices[i][2]),
                 )
-                e2, _, _ = self._calculate_error_with_curvature(
+                e2, _ = self._calculate_error_with_curvature(
                     int(self._triangle_vertex_indices[i][2]),
                     int(self._triangle_vertex_indices[i][0]),
                 )
