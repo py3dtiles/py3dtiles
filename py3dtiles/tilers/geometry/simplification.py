@@ -688,6 +688,7 @@ class FastQuadricMeshSimplification:
         deleted_tris_count: int,
     ) -> int:
         opts = self.options
+        new_deleted_tris_count = deleted_tris_count
         triangle_count = len(self._triangle_vertex_indices)
 
         flipped_count = 0
@@ -762,11 +763,11 @@ class FastQuadricMeshSimplification:
                 new_refs0, deleted_count0 = self._update_triangles(
                     i0, effective_ia0, i0, deleted0
                 )
-                deleted_tris_count += deleted_count0
+                new_deleted_tris_count += deleted_count0
                 new_refs1, deleted_count1 = self._update_triangles(
                     i0, effective_ia0, i1, deleted1
                 )
-                deleted_tris_count += deleted_count1
+                new_deleted_tris_count += deleted_count1
                 all_new = new_refs0 + new_refs1
                 tcount_new = len(all_new)
 
@@ -790,7 +791,7 @@ class FastQuadricMeshSimplification:
                 self._remaining_vertices -= 1
                 break
 
-            current = start_tris - deleted_tris_count
+            current = start_tris - new_deleted_tris_count
             # TODO condition always true (second part)
             if current <= target_tris:
                 if opts.verbose:
@@ -806,7 +807,7 @@ class FastQuadricMeshSimplification:
             print("because_seam", because_seam)
             print("because_foldover", because_foldover)
 
-        return deleted_tris_count
+        return new_deleted_tris_count
 
     # ------------------------------------------------------------------
     def _update_mesh(self, first_iteration: bool) -> None:
