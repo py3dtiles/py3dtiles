@@ -1177,3 +1177,19 @@ def simplify_mesh_lossless(
     sim.initialize(mesh)
     sim.decimate_mesh_lossless()
     return sim.to_mesh()
+
+
+def _write_obj(filename: str, mesh: SimplificationMesh) -> None:
+    """
+    Write a simple obj from a SimplificationMesh, for debug purposes
+    """
+    tris = mesh.indices[0]
+    with open(filename, "w") as f:
+        for v in mesh.vertices:
+            f.write(f"v {v[0]} {v[1]} {v[2]}\n")
+        for i in range(len(tris) // 3):
+            f.write(
+                "f "
+                + " ".join([str(val + 1) for val in tris[3 * i : 3 * (i + 1)]])
+                + "\n"
+            )
