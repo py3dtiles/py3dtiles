@@ -345,59 +345,169 @@ class FastQuadricMeshSimplification:
 
     _DOUBLE_EPSILON = 1.0e-3
 
-    # ------------------------------------------------------------------
     def __init__(self, options: SimplificationOptions | None = None):
         self.options = options or SimplificationOptions()
         self._reset()
 
-    # ------------------------------------------------------------------
     def _reset(self) -> None:
-        # Vertex arrays
+        # ------------------------------------------------------------------ #
+        # Vertex arrays                                                        #
+        # ------------------------------------------------------------------ #
+
+        # The 3D position of each vertex. Updated in-place as edge collapses
+        # move vertices to their optimal positions.
         self._vertex_positions: list[npt.NDArray[np.float64]] = []
-        # accumulated quadric error matrices
-        self._vertex_quadrics: list[SymmetricMatrix] = []  # quadrics
-        # The ref arrays are actually a lookup table to know which triangle touch vertex i
-        # start index into the ref list
+
+        # The accumulated quadric error matrix for each vertex. Initialised
+        # from the planes of surrounding triangles, then absorbs the quadric
+        # of the other vertex each time an edge collapse happens. Encodes how
+        # much error is introduced by moving this vertex away from its original
+        # surface position.
+        self._vertex_quadrics: list[SymmetricMatrix] = []
+
+        # ------------------------------------------------------------------ #
+        # Ref lookup table                                                     #
+        # ------------------------------------------------------------------ #
+        # Refs are a flat list of (triangle_id, corner_index) pairs that acts
+        # as an adjacency structure: given a vertex i, the slice
+        #   _ref_triangle_id   [_vertex_ref_start[i] : _vertex_ref_start[i] + _vertex_ref_count[i]]
+        #   _ref_corner_index  [_vertex_ref_start[i] : _vertex_ref_start[i] + _vertex_ref_count[i]]
+        # gives every triangle that touches vertex i and which of its three
+        # corners (0, 1 or 2) that vertex occupies.
+        # This table is rebuilt from scratch every 5 iterations by
+        # _update_references(), since edge collapses invalidate it.
+
+        # Index into the flat ref list where vertex i's entries begin.
         self._vertex_ref_start: list[int] = []
-        # how many refs (= how many triangle) touch this vertex
+
+        # Number of triangles currently touching vertex i. Together with
+        # _vertex_ref_start this defines the slice of refs for that vertex.
         self._vertex_ref_count: list[int] = []
-        # vertices on border, mesh boundary
+
+        # ------------------------------------------------------------------ #
+        # Vertex classification flags                                          #
+        # ------------------------------------------------------------------ #
+        # These flags are computed once in the first call to _update_mesh()
+        # and drive several collapse-prevention rules.
+
+        # True if the vertex sits on the geometric boundary of the mesh —
+        # i.e. it belongs to at least one edge that is shared by only one
+        # triangle. Border vertices require special handling because collapsing
+        # them can change the silhouette of the mesh.
         self._v_border: list[bool] = []
-        # coincident border verts with different uvs
+
+        # True if this vertex was welded to a nearby border vertex (via the
+        # smart link pass) but the two vertices have different UV coordinates.
+        # The edge between them is a UV seam: continuous in 3D but split in
+        # texture space. Collapsing it would cause texture tearing.
         self._v_seam: list[bool] = []
-        # coincident border verts with same uvs
+
+        # True if this vertex was welded to a nearby border vertex and both
+        # share the same UV coordinates. The edge between them is a foldover:
+        # the mesh doubles back on itself but is consistent in UV space.
         self._v_foldover: list[bool] = []
 
-        # Triangle arrays (all parallel lists)
-        self._triangle_vertex_indices: list[npt.NDArray[np.int32]] = (
-            []
-        )  # shape (3,) int  – vertex indices
-        self._triangle_attribute_indices: list[npt.NDArray[np.int32]] = (
-            []
-        )  # shape (3,) int  – attribute indices
-        self._triangle_edge_errors: list[npt.NDArray[np.float64]] = (
-            []
-        )  # shape (4,) float – err0..err3
+        # ------------------------------------------------------------------ #
+        # Triangle arrays (parallel lists, one entry per triangle)            #
+        # ------------------------------------------------------------------ #
+
+        # The three vertex indices (into _vertex_positions) for each corner
+        # of the triangle. Updated during collapse when a vertex is redirected.
+        self._triangle_vertex_indices: list[npt.NDArray[np.int32]] = []
+
+        # The three attribute indices for each corner. Usually identical to
+        # _triangle_vertex_indices, but can diverge at UV seams where two
+        # geometrically coincident vertices carry different UV coordinates and
+        # therefore different attribute data.
+        self._triangle_attribute_indices: list[npt.NDArray[np.int32]] = []
+
+        # Quadric error for each of the three edges (slots 0-2) plus the
+        # minimum of those three in slot 3. Slot 3 is used as a fast pre-filter
+        # in _remove_vertex_pass: if err[3] already exceeds the current
+        # threshold, all three edges can be skipped without evaluating them
+        # individually.
+        self._triangle_edge_errors: list[npt.NDArray[np.float64]] = []
+
+        # Tombstone flag set when a triangle is removed by an edge collapse.
+        # Deleted triangles are skipped during passes and compacted out of the
+        # list every 5 iterations by _update_mesh().
         self._triangle_deleted: list[bool] = []
+
+        # Set when a triangle's edge errors need to be recomputed because one
+        # of its vertices moved during the current pass. Dirty triangles are
+        # skipped for the remainder of the pass to avoid collapsing edges whose
+        # error estimates are stale.
         self._triangle_dirty: list[bool] = []
-        self._triangle_normals: list[npt.NDArray[np.float64]] = []  # shape (3,)
+
+        # The face normal of each triangle, computed from its vertex positions.
+        # Used by the flip-detection check to verify that a collapse does not
+        # reverse the orientation of any surrounding triangle.
+        self._triangle_normals: list[npt.NDArray[np.float64]] = []
+
+        # Which sub-mesh (material slot) each triangle belongs to. Preserved
+        # through simplification so the output mesh has the same sub-mesh
+        # structure as the input.
         self._triangle_sub_mesh: list[int] = []
 
-        # Ref arrays
+        # ------------------------------------------------------------------ #
+        # Ref arrays (flat adjacency table, parallel lists)                   #
+        # ------------------------------------------------------------------ #
+
+        # The triangle that this ref entry points to.
         self._ref_triangle_id: list[int] = []
+
+        # Which corner (0, 1 or 2) of that triangle corresponds to the vertex
+        # that owns this ref entry.
         self._ref_corner_index: list[int] = []
 
-        # Vertex attributes
+        # ------------------------------------------------------------------ #
+        # Interpolatable vertex attributes                                     #
+        # ------------------------------------------------------------------ #
+        # When an edge is collapsed and the surviving vertex moves to a new
+        # position, these attributes are re-interpolated from the three
+        # vertices of the original triangle using barycentric coordinates,
+        # so the visual appearance of the mesh is preserved as closely as
+        # possible.
+
+        # Per-vertex surface normals, shape (3,) per entry.
+        # None if the input mesh has no normals.
         self._va_normals: list[npt.NDArray[np.float32]] | None = None
+
+        # Per-vertex UV coordinates, one slot per channel.
+        # _va_uvs[ch] is None if that channel is unused, otherwise a list of
+        # per-vertex arrays whose size is 2, 3 or 4 depending on UV dimension.
+        # In practice almost all meshes use only channel 0 with 2D (u, v) coords.
         self._va_uvs: list[list[npt.NDArray[np.float32]] | None] = [
             None
         ] * SimplificationMesh.UV_CHANNEL_COUNT
+
+        # Dimensionality (2, 3 or 4) of each UV channel. 0 means unused.
         self._va_uv_dims: list[int] = [0] * SimplificationMesh.UV_CHANNEL_COUNT
+
+        # Per-vertex RGBA colours, shape (4,) per entry.
+        # None if the input mesh has no vertex colours.
         self._va_colors: list[npt.NDArray[np.float32]] | None = None
 
-        self._sub_mesh_count = 0
-        self._remaining_vertices = 0
+        # ------------------------------------------------------------------ #
+        # Algorithm state                                                      #
+        # ------------------------------------------------------------------ #
 
+        # Number of sub-meshes (material slots) in the original mesh.
+        # Carried through so ToMesh() can reconstruct the same structure.
+        self._sub_mesh_count: int = 0
+
+        # Number of vertices that still belong to at least one non-deleted
+        # triangle. Tracked incrementally (decremented on each collapse) and
+        # used to honour the optional MaxVertexCount stopping criterion.
+        self._remaining_vertices: int = 0
+
+        # Per-vertex curvature values, computed once at the start of
+        # simplification when preserve_surface_curvature is enabled.
+        # The curvature of a vertex is the maximum angular difference between
+        # the normals of any two triangles in its neighbourhood, mapped to
+        # [0, 1]. Used to scale the quadric error so high-curvature vertices
+        # (sharp features) are collapsed last.
+        # None if preserve_surface_curvature is False.
         self._vert_curvatures: list[float] | None = None
 
     # ===================================================================
