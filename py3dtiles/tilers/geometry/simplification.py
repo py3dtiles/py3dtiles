@@ -788,7 +788,6 @@ class FastQuadricMeshSimplification:
                 break
 
             current = start_tris - new_deleted_tris_count
-            # TODO condition always true (second part)
             if current <= target_tris:
                 if opts.verbose:
                     print(
