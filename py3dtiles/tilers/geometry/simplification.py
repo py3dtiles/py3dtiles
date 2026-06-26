@@ -351,14 +351,10 @@ class FastQuadricMeshSimplification:
 
             threshold = 1e-9 * math.pow(iteration + 3, opts.aggressiveness)
 
-            deleted0: list[bool] = []
-            deleted1: list[bool] = []
             deleted_tris_count = self._remove_vertex_pass(
                 start_tris,
                 target_tris_count,
                 threshold,
-                deleted0,
-                deleted1,
                 deleted_tris_count=deleted_tris_count,
             )
 
@@ -379,7 +375,7 @@ class FastQuadricMeshSimplification:
                 print(f"  Lossless iteration {iteration}")
 
             deleted_tris_count = self._remove_vertex_pass(
-                start_tris, 0, self._DOUBLE_EPSILON, [], [], deleted_tris_count=0
+                start_tris, 0, self._DOUBLE_EPSILON, deleted_tris_count=0
             )
 
             if deleted_tris_count <= 0:
@@ -683,10 +679,10 @@ class FastQuadricMeshSimplification:
         start_tris: int,
         target_tris: int,
         threshold: float,
-        deleted0: list[bool],
-        deleted1: list[bool],
         deleted_tris_count: int,
     ) -> int:
+        deleted0: list[bool] = []
+        deleted1: list[bool] = []
         opts = self.options
         new_deleted_tris_count = deleted_tris_count
         triangle_count = len(self._triangle_vertex_indices)
