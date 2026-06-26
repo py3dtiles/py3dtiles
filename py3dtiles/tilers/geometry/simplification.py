@@ -79,8 +79,21 @@ class SymmetricMatrix:
     # ------------------------------------------------------------------
     # Sub-determinants used by CalculateError
     # ------------------------------------------------------------------
-    def det1(self) -> float:
-        """det of the top-left 3×3 sub-matrix."""
+    def det_system(self) -> float:
+        """
+        Determinant of the top-left 3×3 sub-matrix of Q:
+
+            | m0  m1  m2 |
+            | m1  m4  m5 |
+            | m2  m5  m7 |
+
+        This is the determinant of the quadratic (position) part of the
+        quadric, used to check whether the optimal collapse point can be
+        solved analytically. If det1() == 0 the system is degenerate
+        (e.g. the vertex sits on a border or a sharp crease) and the
+        optimal point cannot be found by matrix inversion — the algorithm
+        falls back to testing the two endpoints and their midpoint instead.
+        """
         m = self.m
         # we know the array has enough elements, let's override the float|Any return type
         return cast(
@@ -92,7 +105,17 @@ class SymmetricMatrix:
             - m[1] * m[1] * m[7],
         )
 
-    def det2(self) -> float:
+    def det_for_x(self) -> float:
+        """
+        Determinant used to solve for the x-coordinate of the optimal
+        collapse point via Cramer's rule:
+
+            x = -det2() / det1()
+
+        Concretely, det2() is det1() with its first column replaced by
+        the right-hand side of the linear system (the m3/m6/m8 column),
+        following the standard Cramer's rule substitution.
+        """
         m = self.m
         return cast(
             float,
@@ -104,7 +127,17 @@ class SymmetricMatrix:
             - m[2] * m[2] * m[6],
         )
 
-    def det3(self) -> float:
+    def det_for_y(self) -> float:
+        """
+        Determinant used to solve for the y-coordinate of the optimal
+        collapse point via Cramer's rule:
+
+            y = det3() / det1()
+
+        Note the positive sign, unlike x and z which are negated. This
+        comes from the alternating signs in Cramer's rule when substituting
+        into the second column.
+        """
         m = self.m
         return cast(
             float,
@@ -116,7 +149,18 @@ class SymmetricMatrix:
             - m[1] * m[1] * m[8],
         )
 
-    def det4(self) -> float:
+    def det_for_z(self) -> float:
+        """
+        Determinant used to solve for the z-coordinate of the optimal
+        collapse point via Cramer's rule:
+
+            z = -det4() / det1()
+
+        Together det2, det3, det4 form the numerators of the three
+        coordinates of the point that minimises vᵀQv — i.e. the position
+        in 3D space that is closest (in quadric error terms) to all the
+        planes of the triangles that contributed to this quadric.
+        """
         m = self.m
         return cast(
             float,
@@ -128,22 +172,112 @@ class SymmetricMatrix:
         )
 
 
-# ---------------------------------------------------------------------------
-# Options
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class SimplificationOptions:
+    """
+    Controls the behaviour of the Fast Quadric Mesh Simplification algorithm.
+    """
+
     preserve_border_edges: bool = False
+    """
+    Protect edges that lie on the geometric boundary of the mesh (i.e. edges
+    belonging to only one triangle). Useful when the mesh is an open surface
+    and you want to keep its silhouette intact — for example a terrain patch
+    whose edges must align with neighbours.
+
+    An edge is only collapsed when both its vertices share the same
+    classification, so this acts as a hard constraint: matching border edges
+    are skipped entirely regardless of their quadric error.
+    """
+
     preserve_uv_seam_edges: bool = False
+    """
+    Protect edges where two border vertices are nearly coincident in 3D space
+    but have different UV coordinates. These are UV seam edges: the surface is
+    continuous in 3D but split in texture space. Collapsing them would shift
+    the seam and cause visible texture stretching or tearing.
+    """
+
     preserve_uv_foldover_edges: bool = False
+    """
+    Protect edges where two border vertices are nearly coincident in both 3D
+    space and UV space. These are foldover edges — typically where the mesh
+    doubles back on itself. Less commonly needed than seam preservation, but
+    useful when the UV layout relies on the fold.
+    """
+
     preserve_surface_curvature: bool = False
+    """
+    Weight the quadric error of each edge by the maximum curvature of its
+    endpoints. Vertices on flat regions get a lower effective error and are
+    collapsed first; vertices on sharp creases or high-curvature areas are
+    penalised and collapse last.
+
+    Adds a pre-pass to compute per-vertex curvature from face-normal
+    differences, so it is slightly more expensive but produces better results
+    on organic or curved shapes.
+    """
+
     enable_smart_link: bool = True
+    """
+    Before the first iteration, scan all border vertices and weld together any
+    two that are within vertex_link_distance of each other in 3D space. This
+    closes cracks between separately-loaded mesh pieces that are supposed to be
+    connected but have slightly mismatched vertex positions due to floating-point
+    export differences.
+
+    Welded pairs are then classified as seam or foldover edges rather than
+    borders, so they participate in simplification as interior edges. Disable
+    this if your mesh intentionally has separate shells that happen to be close
+    together and should not be merged.
+    """
+
     vertex_link_distance: float = float(np.finfo(np.float64).eps) * 100
+    """
+    Maximum 3D distance between two border vertices for them to be considered
+    coincident and welded by the smart link pass. The default (~2.2e-13) only
+    catches pure floating-point rounding differences between vertices that are
+    nominally identical. Increase this (e.g. to 1e-4) if your mesh pieces have
+    slightly larger positional gaps that should still be treated as connected.
+
+    Has no effect when enable_smart_link is False.
+    """
+
     max_iteration_count: int = 100
+    """
+    Maximum number of decimation iterations. Each iteration raises the error
+    threshold exponentially (controlled by aggressiveness), so later iterations
+    collapse edges with progressively higher quadric error. The loop exits early
+    if the target triangle count is reached before this limit.
+
+    Increase this if the mesh is not reaching the target count; decrease it to
+    cap computation time at the cost of quality.
+    """
+
     aggressiveness: float = 7.0
+    """
+    Controls how quickly the error threshold grows between iterations. The
+    threshold at iteration i is:
+
+        threshold = 1e-9 * (i + 3) ** aggressiveness
+
+    Higher values make the threshold grow faster, collapsing more edges per
+    iteration and reaching the target count in fewer but coarser passes. Lower
+    values are more conservative — each pass only removes the lowest-error
+    edges, producing better quality at the cost of more iterations.
+
+    The default of 7.0 works well for most meshes; the useful range is roughly
+    5 to 10.
+    """
+
     verbose: bool = False
+    """
+    Be more verbose:
+    - Print iteration number and current triangle count to stdout every 5
+    iterations. Useful for monitoring progress on large meshes or diagnosing
+    convergence issues.
+    - print statistiques about number of seam, foldover, edge vertices...
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +287,9 @@ class SimplificationOptions:
 
 @dataclass
 class SimplificationMesh:
-    """Simple triangle-mesh container."""
+    """
+    Simple triangle-mesh container.
+    """
 
     vertices: npt.NDArray[np.float64]  # (V, 3) float64
     indices: list[npt.NDArray[np.uint32]]  # one int32 array per sub-mesh, length = 3*T
@@ -173,6 +309,21 @@ class SimplificationMesh:
     @property
     def triangle_count(self) -> int:
         return sum(len(idx) // 3 for idx in self.indices)
+
+    def _write_obj(self, filename: str) -> None:
+        """
+        Write a simple obj from a SimplificationMesh, for debug purposes
+        """
+        tris = self.indices[0]
+        with open(filename, "w") as f:
+            for v in self.vertices:
+                f.write(f"v {v[0]} {v[1]} {v[2]}\n")
+            for i in range(len(tris) // 3):
+                f.write(
+                    "f "
+                    + " ".join([str(val + 1) for val in tris[3 * i : 3 * (i + 1)]])
+                    + "\n"
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -467,10 +618,14 @@ class FastQuadricMeshSimplification:
         """
         q = self._vertex_quadrics[i0] + self._vertex_quadrics[i1]
         border = self._v_border[i0] and self._v_border[i1]
-        det = q.det1()
+        det = q.det_system()
         if det != 0.0 and not border:
             result = np.array(
-                [-1.0 / det * q.det2(), 1.0 / det * q.det3(), -1.0 / det * q.det4()]
+                [
+                    -1.0 / det * q.det_for_x(),
+                    1.0 / det * q.det_for_y(),
+                    -1.0 / det * q.det_for_z(),
+                ]
             )
             error = self._vertex_error(q, result[0], result[1], result[2])
             return error, result
@@ -1173,19 +1328,3 @@ def simplify_mesh_lossless(
     sim.initialize(mesh)
     sim.decimate_mesh_lossless()
     return sim.to_mesh()
-
-
-def _write_obj(filename: str, mesh: SimplificationMesh) -> None:
-    """
-    Write a simple obj from a SimplificationMesh, for debug purposes
-    """
-    tris = mesh.indices[0]
-    with open(filename, "w") as f:
-        for v in mesh.vertices:
-            f.write(f"v {v[0]} {v[1]} {v[2]}\n")
-        for i in range(len(tris) // 3):
-            f.write(
-                "f "
-                + " ".join([str(val + 1) for val in tris[3 * i : 3 * (i + 1)]])
-                + "\n"
-            )
