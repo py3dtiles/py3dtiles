@@ -88,7 +88,7 @@ def _init_parser(
     )
     parser.add_argument(
         "--giro3d-base",
-        default="https://giro3d.org/examples",
+        default="https://giro3d.org/latest/examples",
         help="The base for the giro3d viewer",
     )
     parser.add_argument(
