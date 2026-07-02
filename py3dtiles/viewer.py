@@ -155,7 +155,7 @@ def _main(args: argparse.Namespace) -> None:
         for _, url_suffix in paths_and_urls_suffixes:
             # this is perfectly fine in our context, we can't nor we need having https here
             # SONAR-IGNORE
-            tileset_url = f"http://{httpd.server_name}:{httpd.server_port}/{url_suffix}"
+            tileset_url = f"http://localhost:{httpd.server_port}/{url_suffix}"
             # END-SONAR-IGNORE
             # technically, there is a race condition here because we open
             # giro3d before httpd is started that being said, in practice, this
