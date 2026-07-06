@@ -7,6 +7,7 @@ import numpy.typing as npt
 import pygltflib
 from pyproj import Transformer
 
+from py3dtiles.constants import Z_UP_TO_Y_UP
 from py3dtiles.points import Points
 
 
@@ -245,11 +246,13 @@ def gltf_from_points(points: Points, name: str | None = None) -> pygltflib.GLTF2
         primitives=[primitive],
         additional_attributes=attributes,
     )
-    return gltf_from_meshes(meshes=[mesh])
+
+    # glTF defines +Y as up but Points intermediate representation is Z-up.
+    return gltf_from_meshes(meshes=[mesh], transform=Z_UP_TO_Y_UP)
 
 
 def gltf_from_meshes(
-    meshes: list[GltfMesh], transform: npt.NDArray[np.float32] | None = None
+    meshes: list[GltfMesh], transform: npt.NDArray[np.float64] | None = None
 ) -> pygltflib.GLTF2:
     """
     Builds a GLTF2 instance from a list of meshes.

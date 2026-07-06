@@ -61,7 +61,7 @@ class B3dm(LegacyTileContent):
         normal: npt.NDArray[np.float32] | None = None,
         uvs: npt.NDArray[np.float32] | None = None,
         batchids: npt.NDArray[np.uint32] | None = None,
-        transform: npt.NDArray[np.float32] | None = None,
+        transform: npt.NDArray[np.float64] | None = None,
         texture_uri: str | None = None,
         material: pygltflib.Material | None = None,
     ) -> B3dm:
@@ -104,7 +104,7 @@ class B3dm(LegacyTileContent):
         meshes: list[gltf_utils.GltfMesh],
         batch_table: BatchTable | None = None,
         feature_table: B3dmFeatureTable | None = None,
-        transform: npt.NDArray[np.float32] | None = None,
+        transform: npt.NDArray[np.float64] | None = None,
     ) -> B3dm:
         """
         Create a b3dm from GltfMesh instances. This allows for finer control than `from_numpy_arrays` by allowing several meshes in one b3dm.
@@ -266,7 +266,7 @@ class B3dmBody(TileContentBody):
     @staticmethod
     def from_meshes(
         meshes: list[gltf_utils.GltfMesh],
-        transform: npt.NDArray[np.float32] | None = None,
+        transform: npt.NDArray[np.float64] | None = None,
     ) -> B3dmBody:
         gltf = gltf_utils.gltf_from_meshes(meshes, transform=transform)
         return B3dmBody.from_gltf(gltf)
