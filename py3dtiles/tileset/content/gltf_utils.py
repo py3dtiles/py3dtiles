@@ -211,17 +211,20 @@ class GltfMesh:
         self.points = self.points - offset
 
 
+def _color_gltf_attribute(
+    colors: npt.NDArray[np.uint8 | np.uint16 | np.float32],
+    set_index: int = 0,
+) -> GltfAttribute:
+    name = f"COLOR_{set_index}"
+    accessor_type = pygltflib.VEC3 if colors.shape[1] == 3 else pygltflib.VEC4
+    component_type = get_component_type_from_dtype(colors.dtype)
+    return GltfAttribute(name, accessor_type, component_type, colors)
+
+
 def gltf_from_points(points: Points, name: str | None = None) -> pygltflib.GLTF2:
     attributes = []
     if points.colors is not None:
-        attributes.append(
-            GltfAttribute(
-                "COLOR_0",
-                pygltflib.VEC3,
-                get_component_type_from_dtype(points.colors.dtype),
-                points.colors,
-            )
-        )
+        attributes.append(_color_gltf_attribute(points.colors))
     for field, array in points.extra_fields.items():
         component_type = get_component_type_from_dtype(array.dtype)
         if component_type == pygltflib.UNSIGNED_INT:
@@ -428,6 +431,12 @@ def prepare_gltf_component(
         count=count,
         type=attribute.accessor_type,
     )
+
+    if attribute.name.startswith("COLOR_") and attribute.component_type in (
+        pygltflib.UNSIGNED_BYTE,
+        pygltflib.UNSIGNED_SHORT,
+    ):
+        accessor.normalized = True
 
     # min / max for positions, mandatory
     if attribute.name == "POSITION":

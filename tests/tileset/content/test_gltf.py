@@ -9,13 +9,31 @@ from py3dtiles.points import Points
 from py3dtiles.tileset.content.gltf import PointsGltf
 
 
+def assert_points_gltf_invariants(gltf: PointsGltf) -> None:
+    assert (
+        len(gltf._gltf.scenes) == 1
+    ), "PointsGltf invariant: expected exactly one scene in the JSON chunk"
+    assert (
+        len(gltf._gltf.nodes) == 1
+    ), "PointsGltf invariant: expected exactly one node in the JSON chunk"
+    assert (
+        len(gltf._gltf.meshes) == 1
+    ), "PointsGltf invariant: expected exactly one mesh in the JSON chunk"
+    assert (
+        len(gltf._gltf.meshes[0].primitives) == 1
+    ), "PointsGltf invariant: expected exactly one primitive in the mesh"
+    assert (
+        gltf._gltf.binary_blob() is not None
+    ), "PointsGltf invariant: expected a single binary chunk"
+
+
 def test_points_gltf_from_points() -> None:
     gltf = PointsGltf.from_points(Points(positions=np.zeros((0, 3), dtype=np.float32)))
     assert gltf.get_vertex_count() == 0
 
     points = Points(
         positions=np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32),
-        colors=np.array([[256, 0, 0], [0, 0, 128], [0, 128, 0]], dtype=np.uint32),
+        colors=np.array([[256, 0, 0], [0, 0, 128], [0, 128, 0]], dtype=np.uint16),
         extra_fields={"intensity": np.array([3, 7, 9], dtype=np.float32)},
     )
     gltf = PointsGltf.from_points(points)
@@ -62,6 +80,94 @@ def test_points_gltf_from_points_transform(
         transformed,
         (positions @ z_up_matrix.T)[:, :3],
         err_msg="Applying node transform should convert positions from Z-up to Y-up",
+    )
+
+
+def test_points_gltf_from_points_nocolor() -> None:
+    points = Points(
+        positions=np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32),
+    )
+    gltf = PointsGltf.from_points(points)
+
+    assert_points_gltf_invariants(gltf)
+    assert gltf.get_colors() is None, "Expected no COLOR_0 attribute"
+
+
+def test_points_gltf_from_points_rgb8() -> None:
+    colors = np.array([[255, 0, 0], [0, 255, 0], [0, 0, 255]], dtype=np.uint8)
+    points = Points(
+        positions=np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32),
+        colors=colors,
+    )
+    gltf = PointsGltf.from_points(points)
+
+    assert_points_gltf_invariants(gltf)
+    color0 = gltf._gltf.meshes[0].primitives[0].attributes.COLOR_0
+    assert color0 is not None, "Expected COLOR_0 attribute in the primitive"
+    assert gltf._gltf.accessors[color0] is not None, "Expected COLOR_0 accessor"
+
+    accessor = gltf._gltf.accessors[color0]
+    buffer = gltf.get_colors()
+    assert accessor.type == pygltflib.VEC3
+    assert accessor.componentType == pygltflib.UNSIGNED_BYTE
+    assert accessor.normalized is True
+    assert_array_equal(
+        buffer,
+        colors,
+        "Expected colors to be the same as the input colors",
+    )
+
+
+def test_points_gltf_from_points_rgb16() -> None:
+    colors = np.array([[65535, 0, 0], [0, 65535, 0], [0, 0, 65535]], dtype=np.uint16)
+    points = Points(
+        positions=np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32),
+        colors=colors,
+    )
+    gltf = PointsGltf.from_points(points)
+
+    assert_points_gltf_invariants(gltf)
+    color0 = gltf._gltf.meshes[0].primitives[0].attributes.COLOR_0
+    assert color0 is not None, "Expected COLOR_0 attribute in the primitive"
+    assert gltf._gltf.accessors[color0] is not None, "Expected COLOR_0 accessor"
+
+    accessor = gltf._gltf.accessors[color0]
+    buffer = gltf.get_colors()
+    assert accessor.type == pygltflib.VEC3
+    assert accessor.componentType == pygltflib.UNSIGNED_SHORT
+    assert accessor.normalized is True
+    assert_array_equal(
+        buffer,
+        colors,
+        "Expected colors to be the same as the input colors",
+    )
+
+
+def test_points_gltf_from_points_rgb32f() -> None:
+    colors = np.array(
+        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], dtype=np.float32
+    )
+    points = Points(
+        positions=np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32),
+        colors=colors,
+    )
+    gltf = PointsGltf.from_points(points)
+
+    assert_points_gltf_invariants(gltf)
+    color0 = gltf._gltf.meshes[0].primitives[0].attributes.COLOR_0
+    assert color0 is not None, "Expected COLOR_0 attribute in the primitive"
+    assert gltf._gltf.accessors[color0] is not None, "Expected COLOR_0 accessor"
+
+    accessor = gltf._gltf.accessors[color0]
+    buffer = gltf.get_colors()
+    assert accessor.type == pygltflib.VEC3
+    assert accessor.componentType == pygltflib.FLOAT
+    assert accessor.normalized is False or None
+
+    assert_array_equal(
+        buffer,
+        colors,
+        "Expected buffer view to be the same as the input colors",
     )
 
 
