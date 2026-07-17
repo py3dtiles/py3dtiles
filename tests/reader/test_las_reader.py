@@ -33,7 +33,7 @@ class TestGetMetadata:
                 dtype=np.dtype(np.uint8),
             ),
             ExtraFieldsDescription(
-                name="raw_classification",
+                name="classification",
                 dtype=np.dtype(np.uint8),
             ),
             ExtraFieldsDescription(
@@ -72,7 +72,7 @@ class TestGetMetadata:
         assert metadata["extra_fields"] == [
             ExtraFieldsDescription(name="intensity", dtype=np.dtype(np.uint16)),
             ExtraFieldsDescription(name="bit_fields", dtype=np.dtype(np.uint8)),
-            ExtraFieldsDescription(name="raw_classification", dtype=np.dtype(np.uint8)),
+            ExtraFieldsDescription(name="classification", dtype=np.dtype(np.uint8)),
             ExtraFieldsDescription(name="scan_angle_rank", dtype=np.dtype(np.int8)),
             ExtraFieldsDescription(name="user_data", dtype=np.dtype(np.uint8)),
             ExtraFieldsDescription(name="point_source_id", dtype=np.dtype(np.uint16)),
@@ -103,7 +103,7 @@ class TestGetMetadata:
         assert metadata["extra_fields"] == [
             ExtraFieldsDescription(name="intensity", dtype=np.dtype(np.uint16)),
             ExtraFieldsDescription(name="bit_fields", dtype=np.dtype(np.uint8)),
-            ExtraFieldsDescription(name="raw_classification", dtype=np.dtype(np.uint8)),
+            ExtraFieldsDescription(name="classification", dtype=np.dtype(np.uint8)),
             ExtraFieldsDescription(name="scan_angle_rank", dtype=np.dtype(np.int8)),
             ExtraFieldsDescription(name="user_data", dtype=np.dtype(np.uint8)),
             ExtraFieldsDescription(name="point_source_id", dtype=np.dtype(np.uint16)),
@@ -134,7 +134,7 @@ class TestGetMetadata:
         assert metadata["extra_fields"] == [
             ExtraFieldsDescription(name="intensity", dtype=np.dtype(np.uint16)),
             ExtraFieldsDescription(name="bit_fields", dtype=np.dtype(np.uint8)),
-            ExtraFieldsDescription(name="raw_classification", dtype=np.dtype(np.uint8)),
+            ExtraFieldsDescription(name="classification", dtype=np.dtype(np.uint8)),
             ExtraFieldsDescription(name="scan_angle_rank", dtype=np.dtype(np.int8)),
             ExtraFieldsDescription(name="user_data", dtype=np.dtype(np.uint8)),
             ExtraFieldsDescription(name="point_source_id", dtype=np.dtype(np.uint16)),
