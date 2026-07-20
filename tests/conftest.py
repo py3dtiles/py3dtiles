@@ -80,7 +80,7 @@ def tileset_pnts_path_1(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
         fixtures_dir / "with_srs_3857.las",
         crs_out=CRS.from_epsg(3950),
         outfolder=tileset_folder,
-        extra_fields=["intensity", "raw_classification"],
+        extra_fields=["intensity", "classification"],
     )
     yield tileset_folder / "tileset.json"
 
@@ -96,7 +96,7 @@ def tileset_pnts_path_2(tmp_dir: Path, fixtures_dir: Path) -> Iterator[Path]:
     convert(
         fixtures_dir / "with_srs_3950.las",
         outfolder=tileset_folder,
-        extra_fields=["intensity", "raw_classification"],
+        extra_fields=["intensity", "classification"],
     )
     yield tileset_folder / "tileset.json"
 

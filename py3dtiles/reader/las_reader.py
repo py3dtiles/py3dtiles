@@ -39,7 +39,24 @@ def get_metadata(
         # extra fields
         extra_fields = []
         for fname, the_type in f.header.point_format.dtype().fields.items():
-            if fname not in ("X", "Y", "Z", "red", "green", "blue"):
+            # las spec < 1.5 uses only the lower 5 bits for the classification
+            # value, the higher 3 bits are used for a flag 1.5 has another
+            # dedicated field for that. laspy chooses to leak that and uses a
+            # `raw_classification` field for las < 1.5 when there is a
+            # classification in the source file.
+            # This forces us to make that ugly hack :-(
+            if (
+                fname == "raw_classification"
+                and f.header.version.major == 1
+                and f.header.version.minor < 5
+            ):
+                # workaround with laspy using raw_classification
+                extra_fields.append(
+                    ExtraFieldsDescription(
+                        name="classification", dtype=np.dtype(np.uint8)
+                    )
+                )
+            elif fname not in ("X", "Y", "Z", "red", "green", "blue"):
                 extra_fields.append(
                     ExtraFieldsDescription(name=fname, dtype=the_type[0])
                 )
@@ -146,9 +163,9 @@ def run(
             extra_fields_data = {}
             for extra_field in extra_fields:
                 if extra_field.name in f.header.point_format.dimension_names:
-                    extra_fields_data[extra_field.name] = points[
-                        extra_field.name
-                    ].astype(extra_field.dtype)
+                    extra_fields_data[extra_field.name] = np.array(
+                        points[extra_field.name]
+                    ).astype(extra_field.dtype)
                 else:
                     extra_fields_data[extra_field.name] = np.zeros(
                         len(points), dtype=extra_field.dtype
