@@ -26,6 +26,20 @@ from typing import cast
 import numpy as np
 from numpy import typing as npt
 
+
+def _init_attr(
+    arr: npt.NDArray[np.float32] | None, name: str, expected_len: int
+) -> list[npt.NDArray[np.float32]] | None:
+    if arr is not None:
+        if len(arr) == expected_len:
+            return [np.array(arr[i], dtype=np.float32) for i in range(expected_len)]
+        elif len(arr) > 0:
+            print(
+                f"Warning: attribute '{name}' has {len(arr)} elements, expected { expected_len}"
+            )
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Symmetric 4x4 matrix (upper-triangle only, 10 coefficients)
 # ---------------------------------------------------------------------------
@@ -292,7 +306,8 @@ class SimplificationMesh:
     """
 
     vertices: npt.NDArray[np.float64]  # (V, 3) float64
-    indices: list[npt.NDArray[np.uint32]]  # one int32 array per sub-mesh, length = 3*T
+    # one int32 array per sub-mesh, length = 3*T
+    indices: list[npt.NDArray[np.uint32]]
     normals: npt.NDArray[np.float32] | None = None  # (V, 3) float32
     colors: npt.NDArray[np.float32] | None = None  # (V, 4) float32
     uvs: list[npt.NDArray[np.float32] | None] = field(
@@ -510,9 +525,44 @@ class FastQuadricMeshSimplification:
         # None if preserve_surface_curvature is False.
         self._vert_curvatures: list[float] | None = None
 
-    # ===================================================================
-    # Public API
-    # ===================================================================
+    def _initialize_vertices(self, positions: npt.NDArray[np.float64]) -> None:
+        self._vertex_positions.append(np.array(positions, dtype=np.float64))
+        self._vertex_quadrics.append(SymmetricMatrix())
+        self._vertex_ref_start.append(0)
+        self._vertex_ref_count.append(0)
+        self._v_border.append(True)
+        self._v_seam.append(False)
+        self._v_foldover.append(False)
+
+    def _initialize_triangles(
+        self, i: int, sub_idx: int, sub_indices: npt.NDArray[np.uint32]
+    ) -> None:
+        v0, v1, v2 = (
+            int(sub_indices[i]),
+            int(sub_indices[i + 1]),
+            int(sub_indices[i + 2]),
+        )
+        self._triangle_vertex_indices.append(np.array([v0, v1, v2], dtype=np.int32))
+        self._triangle_attribute_indices.append(np.array([v0, v1, v2], dtype=np.int32))
+        self._triangle_edge_errors.append(np.zeros(4, dtype=np.float64))
+        self._triangle_deleted.append(False)
+        self._triangle_dirty.append(False)
+        self._triangle_normals.append(np.zeros(3, dtype=np.float64))
+        self._triangle_sub_mesh.append(sub_idx)
+
+    def _initialize_uvs(
+        self, mesh: SimplificationMesh, ch: int, vertices_count: int
+    ) -> None:
+        uv = mesh.uvs[ch] if ch < len(mesh.uvs) else None
+        if uv is not None and len(uv) == vertices_count:
+            dim = np.array(uv[0]).shape[0] if hasattr(uv[0], "__len__") else 2
+            self._va_uvs[ch] = [
+                np.array(uv[i], dtype=np.float32) for i in range(vertices_count)
+            ]
+            self._va_uv_dims[ch] = dim
+        else:
+            self._va_uvs[ch] = None
+            self._va_uv_dims[ch] = 0
 
     def initialize(self, mesh: SimplificationMesh) -> None:
         """Load mesh data into internal structures."""
@@ -521,68 +571,21 @@ class FastQuadricMeshSimplification:
 
         # Vertices
         for p in mesh.vertices:
-            self._vertex_positions.append(np.array(p, dtype=np.float64))
-            self._vertex_quadrics.append(SymmetricMatrix())
-            self._vertex_ref_start.append(0)
-            self._vertex_ref_count.append(0)
-            self._v_border.append(True)
-            self._v_seam.append(False)
-            self._v_foldover.append(False)
+            self._initialize_vertices(p)
 
         vertices_count = len(self._vertex_positions)
 
         # Triangles
         for sub_idx, sub_indices in enumerate(mesh.indices):
             for i in range(0, len(sub_indices), 3):
-                v0, v1, v2 = (
-                    int(sub_indices[i]),
-                    int(sub_indices[i + 1]),
-                    int(sub_indices[i + 2]),
-                )
-                self._triangle_vertex_indices.append(
-                    np.array([v0, v1, v2], dtype=np.int32)
-                )
-                self._triangle_attribute_indices.append(
-                    np.array([v0, v1, v2], dtype=np.int32)
-                )
-                self._triangle_edge_errors.append(np.zeros(4, dtype=np.float64))
-                self._triangle_deleted.append(False)
-                self._triangle_dirty.append(False)
-                # TODO shouldn't we initialize with mesh.normals? What's the diff with _va_normals?
-                self._triangle_normals.append(np.zeros(3, dtype=np.float64))
-                self._triangle_sub_mesh.append(sub_idx)
+                self._initialize_triangles(i, sub_idx, sub_indices)
 
         # Attributes
-        # TODO extract that elsewhere ?
-        # TODO use numpy.copy instead?
-        def _init_attr(
-            arr: npt.NDArray[np.float32] | None, name: str, expected_len: int
-        ) -> list[npt.NDArray[np.float32]] | None:
-            if arr is not None:
-                if len(arr) == expected_len:
-                    return [
-                        np.array(arr[i], dtype=np.float32) for i in range(expected_len)
-                    ]
-                elif len(arr) > 0:
-                    print(
-                        f"Warning: attribute '{name}' has {len(arr)} elements, expected {expected_len}"
-                    )
-            return None
-
         self._va_normals = _init_attr(mesh.normals, "normals", vertices_count)
         self._va_colors = _init_attr(mesh.colors, "colors", vertices_count)
 
         for ch in range(SimplificationMesh.UV_CHANNEL_COUNT):
-            uv = mesh.uvs[ch] if ch < len(mesh.uvs) else None
-            if uv is not None and len(uv) == vertices_count:
-                dim = np.array(uv[0]).shape[0] if hasattr(uv[0], "__len__") else 2
-                self._va_uvs[ch] = [
-                    np.array(uv[i], dtype=np.float32) for i in range(vertices_count)
-                ]
-                self._va_uv_dims[ch] = dim
-            else:
-                self._va_uvs[ch] = None
-                self._va_uv_dims[ch] = 0
+            self._initialize_uvs(mesh, ch, vertices_count)
 
     # ------------------------------------------------------------------
     def decimate_mesh(self, target_tris_count: int) -> None:
@@ -729,7 +732,7 @@ class FastQuadricMeshSimplification:
         q = self._vertex_quadrics[i0] + self._vertex_quadrics[i1]
         border = self._v_border[i0] and self._v_border[i1]
         det = q.det_system()
-        if det != 0.0 and not border:
+        if math.isclose(det, 0.0) and not border:
             result = np.array(
                 [
                     -1.0 / det * q.det_for_x(),
@@ -921,16 +924,16 @@ class FastQuadricMeshSimplification:
                 continue
             max_curv = 0.0
             for j in range(tcount):
-                tidA = self._ref_triangle_id[tstart + j]
-                if self._triangle_deleted[tidA]:
+                tid_a = self._ref_triangle_id[tstart + j]
+                if self._triangle_deleted[tid_a]:
                     continue
-                nA = self._triangle_normals[tidA]
+                n_a = self._triangle_normals[tid_a]
                 for k in range(j + 1, tcount):
-                    tidB = self._ref_triangle_id[tstart + k]
-                    if self._triangle_deleted[tidB]:
+                    tid_b = self._ref_triangle_id[tstart + k]
+                    if self._triangle_deleted[tid_b]:
                         continue
-                    nB = self._triangle_normals[tidB]
-                    dot = float(np.dot(nA, nB))
+                    n_b = self._triangle_normals[tid_b]
+                    dot = float(np.dot(n_a, n_b))
                     dot = max(-1.0, min(1.0, dot))
                     curv = (1.0 - dot) * 0.5
                     if curv > max_curv:
@@ -991,8 +994,6 @@ class FastQuadricMeshSimplification:
                     continue
 
                 _, p = self._calculate_error_with_curvature(i0, i1)
-                # if iteration > 10:
-                #     print("error", threshold, p)
 
                 tc0 = self._vertex_ref_count[i0]
                 tc1 = self._vertex_ref_count[i1]
@@ -1056,7 +1057,7 @@ class FastQuadricMeshSimplification:
             if current <= target_tris:
                 if opts.verbose:
                     print(
-                        f"breaking because current is {current}, target_tris is {target_tris} (remaining vertices is) ${self._remaining_vertices}"
+                        f"breaking because current is {current}, target_tris is { target_tris} (remaining vertices is) ${self._remaining_vertices}"
                     )
                 break
         if opts.verbose:
@@ -1400,7 +1401,7 @@ class FastQuadricMeshSimplification:
             if new_uvs[ch] is not None:
                 self._va_uvs[ch] = new_uvs[ch]
 
-        new_V = dst
+        new_v = dst
         # Trim per-vertex lists to new_V
         for lst in (
             self._vertex_quadrics,
@@ -1410,7 +1411,7 @@ class FastQuadricMeshSimplification:
             self._v_seam,
             self._v_foldover,
         ):
-            del lst[new_V:]
+            del lst[new_v:]
 
 
 # ---------------------------------------------------------------------------
