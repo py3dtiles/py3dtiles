@@ -35,7 +35,7 @@ def _init_attr(
             return [np.array(arr[i], dtype=np.float32) for i in range(expected_len)]
         elif len(arr) > 0:
             print(
-                f"Warning: attribute '{name}' has {len(arr)} elements, expected { expected_len}"
+                f"Warning: attribute '{name}' has {len(arr)} elements, expected { expected_len}: ignoring"
             )
     return None
 
