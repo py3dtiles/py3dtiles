@@ -35,7 +35,7 @@ class Gltf(TileContent):
     def from_meshes(
         cls,
         meshes: list[gltf_utils.GltfMesh],
-        transform: npt.NDArray[np.float32] | None = None,
+        transform: npt.NDArray[np.float64] | None = None,
     ) -> Self:
         return cls(gltf_utils.gltf_from_meshes(meshes, transform))
 

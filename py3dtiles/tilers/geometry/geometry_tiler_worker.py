@@ -6,7 +6,7 @@ from pathlib import Path
 import lz4.frame as gzip
 import numpy as np
 
-from py3dtiles.constants import SpecVersion
+from py3dtiles.constants import Z_UP_TO_Y_UP, SpecVersion
 from py3dtiles.exceptions import TilerNotFoundException
 from py3dtiles.tilers.base_tiler.shared_metadata import SharedMetadata
 from py3dtiles.tilers.base_tiler.tiler_worker import TilerWorker
@@ -20,8 +20,6 @@ from py3dtiles.tileset.bounding_volume_box import BoundingVolumeBox
 from py3dtiles.tileset.content.b3dm import B3dm
 from py3dtiles.tileset.content.gltf import Gltf
 from py3dtiles.tileset.content.gltf_utils import GltfMesh
-
-Z_UP_MATRIX_4X4 = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]])
 
 try:
     from ..ifc.ifc_reader import IfcReader
@@ -126,10 +124,10 @@ class GeometryTilerWorker(TilerWorker[SharedMetadata]):
 
             tile_content: B3dm | Gltf
             if self.shared_metadata.spec_version == SpecVersion.V1_0:
-                tile_content = B3dm.from_meshes(meshes, transform=Z_UP_MATRIX_4X4)
+                tile_content = B3dm.from_meshes(meshes, transform=Z_UP_TO_Y_UP)
 
             else:
-                tile_content = Gltf.from_meshes(meshes, transform=Z_UP_MATRIX_4X4)
+                tile_content = Gltf.from_meshes(meshes, transform=Z_UP_TO_Y_UP)
             tile_content.save_as(content_path)
 
         # then create a tile of a tileset

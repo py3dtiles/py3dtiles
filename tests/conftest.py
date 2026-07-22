@@ -516,7 +516,7 @@ def gltf_simple() -> GLTF2:
 
 
 @fixture
-def gltf_complex(z_up_matrix: npt.NDArray[np.float32]) -> GLTF2:
+def gltf_complex(z_up_matrix: npt.NDArray[np.float64]) -> GLTF2:
     mesh1 = GltfMesh(
         np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32),
         normals=np.array([2, 2.5, 3.5], dtype=np.float32),

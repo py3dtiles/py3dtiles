@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.typing as npt
 import pygltflib
 from numpy.testing import assert_array_equal
 from pytest import raises
@@ -35,6 +36,32 @@ def test_points_gltf_from_points() -> None:
     assert_array_equal(generated_points.extra_fields.keys(), points.extra_fields.keys())
     assert_array_equal(
         generated_points.extra_fields["intensity"], points.extra_fields["intensity"]
+    )
+
+
+def test_points_gltf_from_points_transform(
+    z_up_matrix: npt.NDArray[np.float32],
+) -> None:
+    points = Points(
+        positions=np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.float32)
+    )
+    gltf = PointsGltf.from_points(points)
+    positions = np.hstack(
+        (
+            points.positions,
+            np.ones((points.positions.shape[0], 1), dtype=points.positions.dtype),
+        )
+    )
+
+    assert len(gltf._gltf.nodes) == 1, "Expected a single node in the glTF root"
+    node = gltf._gltf.nodes[0]
+    transform = np.asarray(node.matrix or np.eye(4), dtype=np.float64)
+
+    transformed = gltf.to_points(transform).positions
+    assert_array_equal(
+        transformed,
+        (positions @ z_up_matrix.T)[:, :3],
+        err_msg="Applying node transform should convert positions from Z-up to Y-up",
     )
 
 
