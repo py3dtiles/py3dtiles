@@ -14,6 +14,7 @@ from typing import Any
 import zmq
 from pyproj import CRS
 
+from py3dtiles import __version__
 from py3dtiles.constants import CPU_COUNT, DEFAULT_CACHE_SIZE, EXIT_CODES, SpecVersion
 from py3dtiles.exceptions import (
     Py3dtilesException,
@@ -319,7 +320,7 @@ def convert(
     except TilerNotFoundException:
         print("ERROR: support not found for files", files)
         print(
-            "Please check https://py3dtiles.org/v9.0.0/install.html#file-formats-support"
+            f"Please check https://py3dtiles.org/{__version__}/install.html#file-formats-support"
         )
         sys.exit(1)
 
