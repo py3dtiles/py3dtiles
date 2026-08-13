@@ -92,6 +92,13 @@ def _init_parser(
         help="The base for the giro3d viewer",
     )
     parser.add_argument(
+        "--port",
+        "-p",
+        type=int,
+        default=0,
+        help="Port used to serve the 3dtiles. If empty, a random port will be chosen",
+    )
+    parser.add_argument(
         "files",
         nargs="+",
         help="List of tileset.json to view in the browser.",
@@ -146,7 +153,7 @@ def _main(args: argparse.Namespace) -> None:
     # The api of these RequestHandler is not simple and not nice :-/
     paths = [path for (path, _) in paths_and_urls_suffixes]
     handler_cls = _get_handler_class(paths)
-    with http.server.HTTPServer(("", 0), handler_cls) as httpd:
+    with http.server.HTTPServer(("", args.port), handler_cls) as httpd:
         path_str = "\n".join([f"- {str(p)}" for p in paths])
         print(
             f"Serving:\n{path_str}\nat http://{httpd.server_name}:{httpd.server_port}"
