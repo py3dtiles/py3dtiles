@@ -155,9 +155,7 @@ def _main(args: argparse.Namespace) -> None:
     handler_cls = _get_handler_class(paths)
     with http.server.HTTPServer(("", args.port), handler_cls) as httpd:
         path_str = "\n".join([f"- {str(p)}" for p in paths])
-        print(
-            f"Serving:\n{path_str}\nat http://{httpd.server_name}:{httpd.server_port}"
-        )
+        print(f"Serving:\n{path_str}\nat http://localhost:{httpd.server_port}")
         print("Now launching your browser!")
         for _, url_suffix in paths_and_urls_suffixes:
             # this is perfectly fine in our context, we can't nor we need having https here
