@@ -732,7 +732,7 @@ class FastQuadricMeshSimplification:
         q = self._vertex_quadrics[i0] + self._vertex_quadrics[i1]
         border = self._v_border[i0] and self._v_border[i1]
         det = q.det_system()
-        if math.isclose(det, 0.0) and not border:
+        if not math.isclose(det, 0.0) and not border:
             result = np.array(
                 [
                     -1.0 / det * q.det_for_x(),
