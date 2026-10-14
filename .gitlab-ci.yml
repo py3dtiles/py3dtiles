@@ -208,6 +208,7 @@ test-docker-build:
       - "docker/**/*"
 
 windows-test:
+  timeout: 30m
   stage: 🤞 test
   tags:
     -  saas-windows-medium-amd64
@@ -228,6 +229,7 @@ windows-test:
       - main
 
 macos-test:
+  timeout: 10m
   stage: 🤞 test
   image: macos-15-xcode-16
   tags:
